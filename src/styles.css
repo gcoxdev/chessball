@@ -659,15 +659,15 @@ h1 {
 
 .yard-number {
   position: absolute;
-  z-index: 2;
+  z-index: 0;
   display: block;
-  width: 18px;
-  height: 28px;
+  width: 22px;
+  height: 32px;
   color: rgba(244, 240, 222, 0.74);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.68rem;
+  font-size: 2.05rem;
   font-weight: 900;
-  line-height: 28px;
+  line-height: 32px;
   pointer-events: none;
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
@@ -683,6 +683,34 @@ h1 {
 
 .yard-number.inverted {
   transform: rotate(180deg);
+}
+
+.yard-ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 20%);
+  align-items: center;
+  pointer-events: none;
+}
+
+.yard-ticks.top {
+  top: 4px;
+}
+
+.yard-ticks.bottom {
+  bottom: 4px;
+}
+
+.yard-tick {
+  justify-self: start;
+  width: 2px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(244, 240, 222, 0.62);
+  box-shadow: 0 0 2px rgba(7, 17, 13, 0.3);
 }
 
 .yard-digit-left {
@@ -753,6 +781,7 @@ h1 {
 
 .piece {
   position: absolute;
+  z-index: 2;
   inset: 4px;
   display: flex;
   align-items: center;

@@ -93,15 +93,16 @@ describe('Chessball UI interactions', () => {
 
   it('shows football-style yard numbers at the top and bottom of the field', () => {
     render(<App />);
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
-    const bottom50Left = within(screen.getByTitle('11,10')).getByLabelText('Bottom 50 yard marker left digit');
-    const bottom50Right = within(screen.getByTitle('12,10')).getByLabelText('Bottom 50 yard marker right digit');
-    const top50Left = within(screen.getByTitle('11,0')).getByLabelText('Top 50 yard marker left digit');
-    const top50Right = within(screen.getByTitle('12,0')).getByLabelText('Top 50 yard marker right digit');
-    const bottomLeft40Left = within(screen.getByTitle('9,10')).getByLabelText('Bottom 40 yard marker left digit, arrow left');
-    const bottomLeft40Right = within(screen.getByTitle('10,10')).getByLabelText('Bottom 40 yard marker right digit');
-    const topRight40Left = within(screen.getByTitle('13,0')).getByLabelText('Top 40 yard marker left digit');
-    const topRight40Right = within(screen.getByTitle('14,0')).getByLabelText('Top 40 yard marker right digit, arrow right');
+    const bottom50Left = within(screen.getByTitle('11,9')).getByLabelText('Bottom 50 yard marker left digit');
+    const bottom50Right = within(screen.getByTitle('12,9')).getByLabelText('Bottom 50 yard marker right digit');
+    const top50Left = within(screen.getByTitle('11,1')).getByLabelText('Top 50 yard marker left digit');
+    const top50Right = within(screen.getByTitle('12,1')).getByLabelText('Top 50 yard marker right digit');
+    const bottomLeft40Left = within(screen.getByTitle('9,9')).getByLabelText('Bottom 40 yard marker left digit, arrow left');
+    const bottomLeft40Right = within(screen.getByTitle('10,9')).getByLabelText('Bottom 40 yard marker right digit');
+    const topRight40Left = within(screen.getByTitle('13,1')).getByLabelText('Top 40 yard marker left digit');
+    const topRight40Right = within(screen.getByTitle('14,1')).getByLabelText('Top 40 yard marker right digit, arrow right');
 
     expect(bottom50Left).toHaveTextContent('5');
     expect(bottom50Left).toHaveClass('yard-digit-left');
@@ -119,6 +120,41 @@ describe('Chessball UI interactions', () => {
     expect(topRight40Right).toHaveTextContent('4');
     expect(topRight40Right).toHaveClass('arrow-left');
     expect(topRight40Right).toHaveClass('inverted');
+    expect(screen.getByTitle('11,10')).not.toHaveTextContent('5');
+    expect(screen.getByTitle('11,0')).not.toHaveTextContent('0');
+    expect(cssText).toMatch(/\.yard-number\s*{[^}]*font-size: 2\.05rem/s);
+  });
+
+  it('renders five left-aligned one-yard ticks on every top and bottom field square', () => {
+    const { container } = render(<App />);
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+
+    expect(screen.getByTitle('0,0').querySelector('.yard-ticks')).not.toBeInTheDocument();
+    expect(screen.getByTitle('1,10').querySelector('.yard-ticks')).not.toBeInTheDocument();
+    expect(screen.getByTitle('22,0').querySelector('.yard-ticks')).not.toBeInTheDocument();
+    expect(screen.getByTitle('23,10').querySelector('.yard-ticks')).not.toBeInTheDocument();
+    expect(screen.getByTitle('2,0').querySelectorAll('.yard-tick')).toHaveLength(5);
+    expect(screen.getByTitle('12,10').querySelectorAll('.yard-tick')).toHaveLength(5);
+    expect(screen.getByTitle('2,4').querySelectorAll('.yard-ticks.interior.top .yard-tick')).toHaveLength(5);
+    expect(screen.getByTitle('12,6').querySelectorAll('.yard-ticks.interior.bottom .yard-tick')).toHaveLength(5);
+    expect(screen.getByTitle('1,4').querySelector('.yard-ticks')).not.toBeInTheDocument();
+    expect(screen.getByTitle('22,6').querySelector('.yard-ticks')).not.toBeInTheDocument();
+    expect(screen.getByTitle('12,5').querySelector('.yard-ticks')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.yard-ticks.sideline.top')).toHaveLength(20);
+    expect(container.querySelectorAll('.yard-ticks.sideline.bottom')).toHaveLength(20);
+    expect(container.querySelectorAll('.yard-ticks.interior.top')).toHaveLength(20);
+    expect(container.querySelectorAll('.yard-ticks.interior.bottom')).toHaveLength(20);
+    expect(cssText).toMatch(/\.yard-ticks\s*{[^}]*grid-template-columns: repeat\(5, 20%\)/s);
+    expect(cssText).toMatch(/\.yard-tick\s*{[^}]*justify-self: start/s);
+  });
+
+  it('layers yard numbers and ticks below pieces', () => {
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+
+    expect(cssText).toMatch(/\.yard-number\s*{[^}]*z-index: 0;/s);
+    expect(cssText).toMatch(/\.yard-ticks\s*{[^}]*z-index: 0;/s);
+    expect(cssText).toMatch(/\.piece\s*{[^}]*z-index: 2;/s);
+    expect(cssText).toMatch(/\.football-marker\s*{[^}]*z-index: 3;/s);
   });
 
   it('renders field goal posts on both end zones', () => {

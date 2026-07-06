@@ -454,6 +454,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     onClick={() => onSquareClick(coord)}
                     title={`${x},${y}`}
                   >
+                    {yardTicks(game, coord)}
                     {yardMarker(game, coord)}
                     {piece && (
                       <span className={`piece ${piece.team} ${selectedPieceId === piece.id ? 'selected' : ''}`}>
@@ -856,7 +857,9 @@ function ballLabel(game: GameState): string {
 }
 
 function yardMarker(game: GameState, coord: Coord) {
-  if (coord.y !== 0 && coord.y !== game.board.height - 1) return null;
+  const isTopNumberRow = coord.y === 1;
+  const isBottomNumberRow = coord.y === game.board.height - 2;
+  if (!isTopNumberRow && !isBottomNumberRow) return null;
   const rightDigitLineX = isNumberedYardLine(coord.x) ? coord.x : undefined;
   const leftDigitLineX = isNumberedYardLine(coord.x + 1) ? coord.x + 1 : undefined;
   const lineX = leftDigitLineX ?? rightDigitLineX;
@@ -866,24 +869,24 @@ function yardMarker(game: GameState, coord: Coord) {
   const yardsFromLeftGoal = (lineX - 2) * 5;
   const displayYards = yardsFromLeftGoal <= 50 ? yardsFromLeftGoal : 100 - yardsFromLeftGoal;
   const label = `${displayYards}`;
-  const digitIndex = coord.y === 0
+  const digitIndex = isTopNumberRow
     ? (digitSide === 'left' ? 1 : 0)
     : (digitSide === 'left' ? 0 : 1);
   const digit = label.charAt(digitIndex);
-  const edge = coord.y === 0 ? 'Top' : 'Bottom';
+  const edge = isTopNumberRow ? 'Top' : 'Bottom';
   const visualDirection =
     lineX < 12 && digitSide === 'left' ? 'left' :
     lineX > 12 && digitSide === 'right' ? 'right' :
     undefined;
-  const classDirection = coord.y === 0 && visualDirection
+  const classDirection = isTopNumberRow && visualDirection
     ? (visualDirection === 'left' ? 'right' : 'left')
     : visualDirection;
   const classes = [
     'yard-number',
     'yard-digit-marker',
     `yard-digit-${digitSide}`,
-    coord.y === 0 ? 'top' : 'bottom',
-    coord.y === 0 ? 'inverted' : '',
+    isTopNumberRow ? 'top' : 'bottom',
+    isTopNumberRow ? 'inverted' : '',
     classDirection ? `arrow-${classDirection}` : '',
   ].filter(Boolean).join(' ');
   const aria = visualDirection
@@ -891,6 +894,28 @@ function yardMarker(game: GameState, coord: Coord) {
     : `${edge} ${label} yard marker ${digitSide} digit`;
 
   return <span className={classes} aria-label={aria}>{digit}</span>;
+}
+
+function yardTicks(game: GameState, coord: Coord) {
+  if (fieldZone(coord) !== 'field') return null;
+  const tickPosition = yardTickPosition(game, coord.y);
+  if (!tickPosition) return null;
+
+  return (
+    <span className={`yard-ticks ${tickPosition.band} ${tickPosition.edge}`} aria-hidden="true">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <span key={index} className="yard-tick" />
+      ))}
+    </span>
+  );
+}
+
+function yardTickPosition(game: GameState, y: number): { band: 'sideline' | 'interior'; edge: 'top' | 'bottom' } | null {
+  if (y === 0) return { band: 'sideline', edge: 'top' };
+  if (y === game.board.height - 1) return { band: 'sideline', edge: 'bottom' };
+  if (y === 4) return { band: 'interior', edge: 'top' };
+  if (y === 6) return { band: 'interior', edge: 'bottom' };
+  return null;
 }
 
 function isNumberedYardLine(x: number): boolean {
