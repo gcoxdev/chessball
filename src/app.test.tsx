@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { App } from './main';
@@ -316,28 +316,27 @@ describe('Chessball UI interactions', () => {
     }, { timeout: 1800 });
   });
 
-  it('waits for a human defensive formation after kicking to a computer receiver', async () => {
+  it('waits for a human kick placement before a computer return', async () => {
     const kickoff = applyAction(
       applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' }),
       { type: 'chooseKickoffChoice', team: 'home', choice: 'kick' },
     );
-    render(<App initialGame={kickoff} initialPlayers={{ home: 'human', away: 'computer' }} />);
+    const { container } = render(<App initialGame={kickoff} initialPlayers={{ home: 'human', away: 'computer' }} />);
 
     fireEvent.click(screen.getByRole('button', { name: /kickoff/i }));
 
     await waitFor(() => {
-      expect(within(screen.getByText('Phase').closest('.down-card') as HTMLElement).getByText('Formation')).toBeInTheDocument();
-    });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 760));
+      expect(within(screen.getByText('Phase').closest('.down-card') as HTMLElement).getByText('Kick Placement')).toBeInTheDocument();
     });
 
-    expect(within(screen.getByText('Phase').closest('.down-card') as HTMLElement).getByText('Formation')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /nickel/i })).toBeEnabled();
+    const legalLanding = container.querySelector('.square.legal');
+    expect(legalLanding).toBeInTheDocument();
+    fireEvent.click(legalLanding as HTMLElement);
 
-    fireEvent.click(screen.getByRole('button', { name: /nickel/i }));
-
-    expect(screen.getByText('Defense formation: Nickel.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(screen.getByText('Phase').closest('.down-card') as HTMLElement).getByText('Kick Return')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /nickel/i })).not.toBeInTheDocument();
   });
 
   it('draws the line of scrimmage on the offense-facing edge of the formation', () => {
@@ -377,10 +376,36 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText(/passes, tackles, and kicks roll 2d6/i)).toBeInTheDocument();
   });
 
-  it('exposes punts on fourth down during live offensive play', () => {
-    render(<App initialGame={createGame({ phase: 'live', down: 4 })} />);
+  it('exposes punts on any down during live offensive play', () => {
+    render(<App initialGame={createGame({ phase: 'live', down: 2 })} />);
 
     expect(screen.getByRole('button', { name: /punt/i })).toBeEnabled();
+  });
+
+  it('requires an extra-point or two-point choice after touchdown', () => {
+    render(<App initialGame={createGame({
+      phase: 'betweenDowns',
+      score: { home: 6, away: 0 },
+      play: { actions: [], result: { type: 'touchdown', team: 'home' } },
+    })} />);
+
+    expect(screen.getByRole('button', { name: /extra point/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /two-point try/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^next$/i })).toBeDisabled();
+  });
+
+  it('sets up a two-point formation from the conversion choice', () => {
+    render(<App initialGame={createGame({
+      phase: 'betweenDowns',
+      score: { home: 6, away: 0 },
+      play: { actions: [], result: { type: 'touchdown', team: 'home' } },
+    })} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /two-point try/i }));
+
+    expect(within(screen.getByText('Phase').closest('.down-card') as HTMLElement).getByText('Formation')).toBeInTheDocument();
+    expect(within(screen.getByText('Down').closest('.down-card') as HTMLElement).getByText('2PT Try')).toBeInTheDocument();
+    expect(screen.getAllByText(/two-point try: home lines up from the goal line/i).length).toBeGreaterThan(0);
   });
 
   it('labels marker yardage by the scrimmage square, not the painted edge', () => {
@@ -448,6 +473,9 @@ describe('Chessball UI interactions', () => {
 
     expect(screen.getByRole('dialog', { name: /rules and how to play/i })).toBeInTheDocument();
     expect(screen.getByText(/a match starts with a coin toss and kickoff/i)).toBeInTheDocument();
+    expect(screen.getByText(/after a touchdown, choose an extra point kick or a two-point try/i)).toBeInTheDocument();
+    expect(screen.getByText(/incomplete passes are dead balls/i)).toBeInTheDocument();
+    expect(screen.queryByText(/block,/i)).not.toBeInTheDocument();
   });
 
   it('shows a football marker in the corner of the controlled ball square', () => {

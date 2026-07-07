@@ -36,6 +36,8 @@ type MatchProgress = {
   remaining: number;
 };
 
+const COMPUTER_ACTION_DELAY_MS = 120;
+
 export function App({ initialGame, initialPlayers }: { initialGame?: GameState; initialPlayers?: PlayerControl } = {}) {
   const initialEntry = useMemo<HistoryEntry>(() => ({
     id: 0,
@@ -65,7 +67,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const selectedPiece = selectedPieceId ? game.pieces.find((piece) => piece.id === selectedPieceId) : undefined;
   const formationsConfirmed = game.formationConfirmed.offense && game.formationConfirmed.defense;
   const showFormationPanel = game.phase === 'formation' && !formationsConfirmed;
-  const showCommandPanel = game.phase === 'kickoff' || game.phase === 'betweenDowns' || game.phase === 'live' || (game.phase === 'formation' && formationsConfirmed);
+  const showCommandPanel = game.phase === 'kickoff' || game.phase === 'kickPlacement' || game.phase === 'kickReturn' || game.phase === 'betweenDowns' || game.phase === 'live' || (game.phase === 'formation' && formationsConfirmed);
   const formationSideTeam = (side: FormationSide): Team => side === 'offense' ? game.possession : otherTeamForUi(game.possession);
   const canChooseFormationSide = (side: FormationSide): boolean =>
     !isViewingHistory && game.phase === 'formation' && players[formationSideTeam(side)] === 'human';
@@ -132,6 +134,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const onSquareClick = (coord: Coord) => {
     if (isViewingHistory || players[controlTeam] === 'computer') return;
 
+    if (game.phase === 'kickPlacement') {
+      runAction({ type: 'placeKick', at: coord });
+      return;
+    }
+
     if (targetMode === 'pass' && selectedBallCarrier?.team === game.turn) {
       runAction({ type: 'pass', passerId: selectedBallCarrier.id, target: coord });
       setTargetMode(null);
@@ -194,6 +201,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const extraPoint = () => {
     const team = game.play.result?.type === 'touchdown' ? game.play.result.team : game.possession;
     runAction({ type: 'kick', kickerId: `${team}-qb`, kind: 'extraPoint' });
+  };
+  const twoPointTry = () => {
+    const team = game.play.result?.type === 'touchdown' ? game.play.result.team : game.possession;
+    runAction({ type: 'startTwoPointTry', team });
   };
   const startPass = () => {
     if (!selectedBallCarrier) return;
@@ -296,7 +307,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
 
       const action = chooseComputerAction(game, legalActions, history.length, players);
       if (action) runAction(action, 'computer');
-    }, 220);
+    }, COMPUTER_ACTION_DELAY_MS);
 
     return () => window.clearTimeout(timer);
   }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players]);
@@ -374,18 +385,23 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                   <RadioTower size={17} /> Pass
                 </button>
                 {game.phase === 'betweenDowns' && game.play.result?.type === 'touchdown' ? (
-                  <button type="button" onClick={extraPoint} disabled={isViewingHistory || players[controlTeam] === 'computer'}>
-                    <Goal size={17} /> Extra Point
-                  </button>
+                  <>
+                    <button type="button" onClick={extraPoint} disabled={isViewingHistory || players[controlTeam] === 'computer'}>
+                      <Goal size={17} /> Extra Point
+                    </button>
+                    <button type="button" onClick={twoPointTry} disabled={isViewingHistory || players[controlTeam] === 'computer'}>
+                      <Flag size={17} /> Two-Point Try
+                    </button>
+                  </>
                 ) : (
                   <button type="button" onClick={fieldGoal} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || ballCarrier?.team !== game.turn}>
                     <Goal size={17} /> Field Goal
                   </button>
                 )}
-                <button type="button" onClick={punt} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || game.down !== 4 || ballCarrier?.team !== game.turn}>
+                <button type="button" onClick={punt} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || ballCarrier?.team !== game.turn}>
                   <Flag size={17} /> Punt
                 </button>
-                <button type="button" onClick={nextDown} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'betweenDowns'}>
+                <button type="button" onClick={nextDown} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'betweenDowns' || game.play.result?.type === 'touchdown'}>
                   <Flag size={17} /> Next
                 </button>
               </div>
@@ -393,20 +409,20 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               <div className="action-list">
                 {legalActions
                   .filter((action) => selectedPiece && actionForPiece(action, selectedPiece.id))
-                  .filter((action) => action.type !== 'move' && action.type !== 'shift' && action.type !== 'tackle')
+                  .filter((action) => action.type !== 'move' && action.type !== 'shift' && action.type !== 'tackle' && action.type !== 'pass')
                   .slice(0, 8)
                   .map((action, index) => (
                     <button key={`${action.type}-${index}`} type="button" onClick={() => runAction(action)}>
                       <Zap size={15} /> {actionLabel(action)}
                     </button>
                   ))}
-                {selectedPiece && game.phase === 'live' && tackleActions(game, selectedPiece, legalActions).map((action) => (
+                {selectedPiece && (game.phase === 'live' || game.phase === 'kickReturn') && tackleActions(game, selectedPiece, legalActions).map((action) => (
                   <button key={`${action.defenderId}-${action.targetId}`} type="button" onClick={() => runAction(action)}>
                     <Shield size={15} /> {tackleLabel(game, action)}
                   </button>
                 ))}
               </div>
-              <p className="hint">Passes, tackles, and kicks roll 2d6. Longer distance means a higher target number.</p>
+              <p className="hint">{game.phase === 'kickPlacement' ? 'Choose a landing row on the exact rolled-distance column.' : 'Passes, tackles, and kicks roll 2d6. Longer distance means a higher target number.'}</p>
             </div>
           )}
 
@@ -425,7 +441,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           <div className="field-toolbar">
             <DicePanel roll={lastRoll} />
             <div className="field-meta">
-              {game.phase !== 'pregame' && game.phase !== 'kickoff' && (
+              {showsScrimmageMarkers(game) && (
                 <>
                   <span className="marker-label scrimmage-label">Line of scrimmage {markerYardLabel(game, game.lineOfScrimmage)}</span>
                   <span className="marker-label gain-label">Line to gain {markerYardLabel(game, game.firstDownLine)}</span>
@@ -442,12 +458,13 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                 const ballHere = sameCoord(ballCoord(game), coord);
                 const legalMove = selectedPiece && legalActions.some((action) =>
                   (action.type === 'move' || action.type === 'shift') &&
-                  action.pieceId === selectedPiece.id &&
-                  sameCoord(action.to, coord),
+                    action.pieceId === selectedPiece.id &&
+                    sameCoord(action.to, coord),
                 );
+                const legalKickPlacement = game.phase === 'kickPlacement' && legalActions.some((action) => action.type === 'placeKick' && sameCoord(action.at, coord));
                 return (
                   <button
-                    className={squareClass(game, coord, piece, legalMove, ballHere)}
+                    className={squareClass(game, coord, piece, legalMove || legalKickPlacement, ballHere)}
                     key={`${x}-${y}`}
                     type="button"
                     role="gridcell"
@@ -610,21 +627,26 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
         <h2>Rules and How to Play</h2>
         <p>A match starts with a coin toss and kickoff. Heads means home wins, tails means away wins. The winner chooses to kick or receive, then each quarter uses two drives per team.</p>
         <ul>
-          <li>Kickoffs roll 2d6 for distance. After the kick resolves, press Next to line up the receiving team for 1st down.</li>
+          <li>Kickoffs and punts roll 2d6 for distance. Each dice point is 5 yards, so each point moves the landing column 1 grid square. The kicking team chooses only the landing row on that exact column.</li>
+          <li>The ball lands loose. The receiving team must move a player onto the landing square to control it, then the return continues. During returns, every player uses the same square-radius movement: return team up to 2 squares, coverage team up to 3 squares.</li>
           <li>Each normal down starts with formations. Choose a preset, change it freely, then confirm each side before the snap.</li>
           <li>Offense acts first after the snap, then turns alternate one action at a time.</li>
-          <li>Move, power move, pass, hand off, tackle, block, recover, punt, or attempt a field goal.</li>
-          <li>Gain 10 yards in four downs. On this 5-yard grid, that means advancing two columns.</li>
-          <li>On 4th down, punt if the line to gain is too far away, try a field goal in range, or fake it by running a normal play.</li>
+          <li>Move, power move, pass, hand off, tackle, recover, punt, or attempt a field goal.</li>
+          <li>Gain 10 yards in four downs. On this 5-yard grid, that means advancing two columns. Near the end zone, the series becomes goal-to-go.</li>
+          <li>Punts and field goals are offensive kicks from live play. Punts start a live return; field goals resolve immediately. They are normally fourth-down choices, but either can be attempted on any down as in football.</li>
           <li>Distance is counted by moving diagonally first, then straight. A pass from 4,5 to 5,9 is distance 4.</li>
+          <li>Movement: QB/FS moves 1 any direction; RB/MLB moves up to 3 orthogonal with one turn; FB/OLB moves up to 2 orthogonal; WR/CB moves up to 5 straight or diagonal; TE/SS moves up to 3 straight or diagonal; OL/DL moves 1 orthogonal.</li>
+          <li>When the offense controls the ball, offensive movement is reduced by 1 square so the defense has a pursuit advantage.</li>
           <li>RB, FB, and line pieces can power move through occupied orthogonal lanes. Roll 2d6 against a high target; more contact makes it harder. Failed power moves stay put and lose the turn.</li>
           <li>Forward passes must start behind the line and can be used once per down. A pass may be thrown through traffic; success is 2d6 against distance.</li>
-          <li>Snake eyes on a failed pass is an interception only when a defender is within one square of the receiver.</li>
-          <li>Tackles can be attempted from a defender's natural movement range. Roll 2d6 against 5 plus distance. A failed tackle keeps play live.</li>
-          <li>Double sixes on a tackle creates a rare fumble recovered by the tackling team.</li>
-          <li>Field goals roll 2d6 against distance to the goal line. After a touchdown, the extra point is one simple kick roll; two-point tries can still be played as a normal down later.</li>
-          <li>Scores lead to a kickoff by the scoring side. At halftime, the team that received the opening kickoff kicks to the other side.</li>
-          <li>Touchdowns, safeties, interceptions, turnovers on downs, punts, made or missed field goals, and stopped plays move the game into the next between-downs step.</li>
+          <li>Snake eyes on a failed pass is an interception only when a defender is within one square of an eligible receiver at the target.</li>
+          <li>Incomplete passes are dead balls. They stop the play at the previous line unless the failed forward pass creates a turnover on downs.</li>
+          <li>Tackles need a clear approach lane within the defender's movement range. Friendly pieces do not block the lane; opposing pieces do.</li>
+          <li>RB/MLB, FB/OLB, and OL/DL can power tackle through opposing blockers. Roll 2d6 against 8 plus distance plus blockers crossed. Clear tackles use 5 plus distance.</li>
+          <li>Double sixes on a tackle creates an immediate strip turnover recovered by the tackling team.</li>
+          <li>Field goals roll 2d6 against distance to the goal line. After a touchdown, choose an extra point kick or a two-point try from the goal line.</li>
+          <li>Touchdowns, extra points, two-point tries, and field goals are followed by a kickoff from the scoring team. After a safety, the team that allowed the safety kicks to the scoring team. At halftime, the team that received the opening kickoff kicks to the other side.</li>
+          <li>Touchdowns, safeties, interceptions, turnovers on downs, punts, made or missed field goals, failed conversions, and stopped plays move the game into the next between-downs step.</li>
         </ul>
       </section>
     </div>
@@ -932,8 +954,8 @@ function otherTeamForUi(team: Team): Team {
 
 function squareClass(game: GameState, coord: Coord, piece: Piece | undefined, legalMove: boolean | undefined, ballHere: boolean) {
   const classes = ['square', fieldZone(coord)];
-  if (game.phase !== 'pregame' && game.phase !== 'kickoff' && coord.x === game.lineOfScrimmage) classes.push('scrimmage', game.direction === 1 ? 'scrimmage-forward' : 'scrimmage-backward');
-  if (game.phase !== 'pregame' && game.phase !== 'kickoff' && coord.x === game.firstDownLine) classes.push('first-down', game.direction === 1 ? 'first-down-forward' : 'first-down-backward');
+  if (showsScrimmageMarkers(game) && coord.x === game.lineOfScrimmage) classes.push('scrimmage', game.direction === 1 ? 'scrimmage-forward' : 'scrimmage-backward');
+  if (showsScrimmageMarkers(game) && coord.x === game.firstDownLine) classes.push('first-down', game.direction === 1 ? 'first-down-forward' : 'first-down-backward');
   if (coord.x === 12) classes.push('midfield');
   if (coord.x >= 2 && coord.x <= 22) classes.push('five-yard-line');
   if (coord.x >= 2 && coord.x <= 22 && (coord.x - 2) % 2 === 0) classes.push('ten-yard-line');
@@ -952,7 +974,6 @@ function actionForPiece(action: Action, pieceId: string): boolean {
   if (action.type === 'pass') return action.passerId === pieceId;
   if (action.type === 'kick') return action.kickerId === pieceId;
   if (action.type === 'tackle') return action.defenderId === pieceId;
-  if (action.type === 'block') return action.blockerId === pieceId || action.targetId === pieceId;
   return false;
 }
 
@@ -968,23 +989,29 @@ function chooseComputerAction(game: GameState, legalActions: Action[], seed: num
     return { type: 'chooseKickoffChoice', team: game.coinToss.winner, choice: 'receive' };
   }
   if (game.phase === 'kickoff') return { type: 'kick', kickerId: `${game.turn}-qb`, kind: 'kickoff' };
+  if (game.phase === 'kickPlacement') return chooseComputerKickPlacement(game, legalActions, seed);
   if (game.phase === 'formation') return chooseComputerFormationAction(game, seed, players);
-  if (game.phase !== 'live') return null;
+  if (game.phase !== 'live' && game.phase !== 'kickReturn') return null;
 
   const ball = game.ball;
   const carrier = ball.kind === 'controlled' ? game.pieces.find((piece) => piece.id === ball.pieceId) : undefined;
   if (carrier && carrier.team !== game.turn) {
-    const tacklers = game.pieces
-      .filter((piece) => piece.team === game.turn)
-      .filter((piece) => chebyshevDistance(piece.coord, carrier.coord) <= naturalRange(piece));
-    const tackler = pickSeeded(tacklers, seed);
-    if (tackler) return { type: 'tackle', defenderId: tackler.id, targetId: carrier.id };
+    const tackles = legalActions.filter((action): action is Extract<Action, { type: 'tackle' }> => action.type === 'tackle');
+    const tackle = pickSeeded(tackles, seed);
+    if (tackle) return tackle;
   }
 
   const recovery = pickSeeded(legalActions.filter((action) => action.type === 'recover'), seed);
   if (recovery) return recovery;
 
   if (carrier?.team === game.turn) {
+    if (game.phase === 'kickReturn') {
+      const carrierMoves = legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
+        action.type === 'move' && action.pieceId === carrier.id,
+      );
+      return pickFromTopSeeded(carrierMoves.sort((a, b) => compareOffensiveMoves(game, a.to, b.to)), seed, 3) ?? null;
+    }
+
     if (game.down === 4 && fieldGoalTargetNumber(game, carrier.coord) <= 10) {
       return { type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' };
     }
@@ -1026,6 +1053,17 @@ function chooseComputerAction(game: GameState, legalActions: Action[], seed: num
   if (bestMove) return bestMove;
 
   return legalActions[0] ?? null;
+}
+
+function chooseComputerKickPlacement(game: GameState, legalActions: Action[], seed: number): Extract<Action, { type: 'placeKick' }> | null {
+  const placements = legalActions.filter((action): action is Extract<Action, { type: 'placeKick' }> => action.type === 'placeKick');
+  const direction = game.pendingKick ? directionForUi(game.pendingKick.kickingTeam) : directionForUi(game.turn);
+  return pickFromTopSeeded(placements.sort((a, b) => {
+    const depthA = direction === 1 ? a.at.x : -a.at.x;
+    const depthB = direction === 1 ? b.at.x : -b.at.x;
+    if (depthA !== depthB) return depthB - depthA;
+    return Math.abs(a.at.y - 1 - (seed % 9)) - Math.abs(b.at.y - 1 - (seed % 9));
+  }), seed, 6) ?? null;
 }
 
 function chooseComputerFormationAction(game: GameState, seed: number, players: PlayerControl): Action | null {
@@ -1175,6 +1213,8 @@ function recentMovingPieceIds(game: GameState): Set<string> {
 function actionLabel(action: Action): string {
   if (action.type === 'coinToss') return 'Flip coin';
   if (action.type === 'chooseKickoffChoice') return capitalize(action.choice);
+  if (action.type === 'startTwoPointTry') return 'Two-point try';
+  if (action.type === 'placeKick') return `Place kick at ${coordLabel(action.at)}`;
   if (action.type === 'handoff') return `Handoff to ${action.toId.split('-')[1].toUpperCase()}`;
   if (action.type === 'recover') return 'Recover ball';
   if (action.type === 'powerMove') return `Power move to ${coordLabel(action.to)}`;
@@ -1185,7 +1225,6 @@ function actionLabel(action: Action): string {
     if (action.kind === 'punt') return 'Punt';
     return 'Field goal';
   }
-  if (action.type === 'block') return 'Block';
   return action.type;
 }
 
@@ -1201,6 +1240,11 @@ function describeAction(before: GameState, action: Action, after: GameState): st
   }
   if (action.type === 'snap') return `Snap: ${before.possession} started the play.`;
   if (action.type === 'confirmFormation') return `Formation: ${capitalize(action.side)} confirmed.`;
+  if (action.type === 'startTwoPointTry') return `Two-point try: ${action.team} lines up from the goal line.`;
+  if (action.type === 'placeKick') {
+    const pending = before.pendingKick;
+    return `${pending?.kind === 'punt' ? 'Punt' : 'Kickoff'} placement: ${before.turn} placed the ball at ${coordLabel(action.at)}.`;
+  }
   if (action.type === 'chooseFormation') {
     const formation = action.side === 'offense'
       ? offensiveFormations.find((item) => item.id === action.formationId)
@@ -1230,7 +1274,6 @@ function describeAction(before: GameState, action: Action, after: GameState): st
     if (after.play.result?.type === 'safety') return `Tackle: ${action.defenderId} scored a safety${rollText(action.roll)}.`;
     return `Missed tackle: ${action.defenderId} missed ${action.targetId}${rollText(action.roll)}.`;
   }
-  if (action.type === 'block') return `Block: ${action.blockerId} engaged ${action.targetId}.`;
   if (action.type === 'kick') return `Kick: ${action.kickerId} attempted ${kickKindLabel(action.kind)}${rollText(action.roll, resultRoll(after))}.`;
   return 'Action resolved.';
 }
@@ -1240,6 +1283,7 @@ function resultText(game: GameState): string {
   if (!result) return 'Action resolved.';
   if (result.type === 'fieldGoal') return `Field goal ${result.good ? 'good' : 'missed'} for ${result.team}${rollText(undefined, result.roll)}.`;
   if (result.type === 'extraPoint') return `Extra point ${result.good ? 'good' : 'missed'} for ${result.team}${rollText(undefined, result.roll)}.`;
+  if (result.type === 'twoPoint') return `Two-point try ${result.good ? 'good' : 'failed'} for ${result.team}.`;
   if (result.type === 'kickoff') return `Kickoff by ${result.team}. ${capitalize(result.receivingTeam)} starts at ${coordLabel(result.at)}${rollText(undefined, result.roll)}.`;
   if (result.type === 'punt') return `Punt by ${result.team}. ${capitalize(result.receivingTeam)} starts at ${coordLabel(result.at)}${rollText(undefined, result.roll)}.`;
   if (result.type === 'incomplete') return `Incomplete pass${rollText(undefined, result.roll)}.`;
@@ -1332,7 +1376,16 @@ function phaseLabel(phase: GameState['phase']): string {
   if (phase === 'coinToss') return 'Coin Toss';
   if (phase === 'betweenDowns') return 'Between Downs';
   if (phase === 'kickoff') return 'Kickoff';
+  if (phase === 'kickPlacement') return 'Kick Placement';
+  if (phase === 'kickReturn') return 'Kick Return';
   return capitalize(phase);
+}
+
+function showsScrimmageMarkers(game: GameState): boolean {
+  return game.phase !== 'pregame' &&
+    game.phase !== 'kickoff' &&
+    game.phase !== 'kickPlacement' &&
+    game.phase !== 'kickReturn';
 }
 
 function markerYardLabel(game: GameState, column: number): string {
@@ -1358,17 +1411,13 @@ function chebyshevDistance(a: Coord, b: Coord): number {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 }
 
-function naturalRange(piece: Piece): number {
-  if (piece.role === 'qb' || piece.role === 'ol') return 1;
-  if (piece.role === 'fb') return 2;
-  if (piece.role === 'rb' || piece.role === 'te') return 3;
-  return 5;
-}
-
 function downDistanceLabel(game: GameState): string {
   if (game.phase === 'pregame') return 'Ready';
   if (game.phase === 'coinToss') return 'Coin Toss';
   if (game.phase === 'kickoff') return 'Kickoff';
+  if (game.phase === 'kickPlacement') return 'Place';
+  if (game.phase === 'kickReturn') return 'Return';
+  if (game.conversion) return '2PT Try';
   if (isGoalToGo(game)) return `${game.down} & Goal`;
   return `${game.down} & ${Math.max(1, Math.ceil(moveDistanceToFirstDown(game, ballCoord(game)) / 2) * 10)}`;
 }
@@ -1386,7 +1435,12 @@ function actionClearsSelection(action: Action): boolean {
     action.type === 'handoff' ||
     action.type === 'tackle' ||
     action.type === 'kick' ||
+    action.type === 'placeKick' ||
     action.type === 'recover';
+}
+
+function directionForUi(team: Team): 1 | -1 {
+  return team === 'home' ? 1 : -1;
 }
 
 function ordinalDown(down: GameState['down']): string {

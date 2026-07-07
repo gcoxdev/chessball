@@ -1,6 +1,6 @@
 export type Team = 'home' | 'away';
 export type Direction = 1 | -1;
-export type Phase = 'pregame' | 'coinToss' | 'kickoff' | 'formation' | 'live' | 'betweenDowns' | 'final';
+export type Phase = 'pregame' | 'coinToss' | 'kickoff' | 'kickPlacement' | 'kickReturn' | 'formation' | 'live' | 'betweenDowns' | 'final';
 export type FieldZone = 'leftEndZone' | 'field' | 'rightEndZone' | 'out';
 
 export type Coord = {
@@ -58,6 +58,7 @@ export type PlayResult =
   | { type: 'touchdown'; team: Team }
   | { type: 'fieldGoal'; team: Team; good: boolean; roll?: RollResult }
   | { type: 'extraPoint'; team: Team; good: boolean; roll?: RollResult }
+  | { type: 'twoPoint'; team: Team; good: boolean }
   | { type: 'kickoff'; team: Team; receivingTeam: Team; at: Coord; roll?: RollResult }
   | { type: 'punt'; team: Team; receivingTeam: Team; at: Coord; roll?: RollResult }
   | { type: 'safety'; team: Team }
@@ -78,6 +79,15 @@ export type CoinTossState = {
   winner?: Team;
   choice?: 'kick' | 'receive';
   result?: CoinFace;
+};
+
+export type PendingKick = {
+  kind: 'kickoff' | 'punt';
+  kickingTeam: Team;
+  receivingTeam: Team;
+  from: Coord;
+  distance: number;
+  roll: DiceRoll;
 };
 
 export type PlayState = {
@@ -106,6 +116,8 @@ export type GameState = {
   formation: FormationSelection;
   formationConfirmed: Record<FormationSide, boolean>;
   formationShiftsRemaining: Record<Team, number>;
+  conversion?: { team: Team };
+  pendingKick?: PendingKick;
   play: PlayState;
 };
 
@@ -148,18 +160,17 @@ export type KickAction = {
   roll?: DiceRoll;
 };
 
+export type PlaceKickAction = {
+  type: 'placeKick';
+  at: Coord;
+};
+
 export type TackleAction = {
   type: 'tackle';
   defenderId: string;
   targetId: string;
   strip?: boolean;
   roll?: DiceRoll;
-};
-
-export type BlockAction = {
-  type: 'block';
-  blockerId: string;
-  targetId: string;
 };
 
 export type RecoverAction = {
@@ -193,6 +204,11 @@ export type ChooseKickoffChoiceAction = {
   choice: 'kick' | 'receive';
 };
 
+export type StartTwoPointTryAction = {
+  type: 'startTwoPointTry';
+  team: Team;
+};
+
 export type Action =
   | MoveAction
   | PowerMoveAction
@@ -200,13 +216,14 @@ export type Action =
   | PassAction
   | HandoffAction
   | KickAction
+  | PlaceKickAction
   | TackleAction
-  | BlockAction
   | RecoverAction
   | SnapAction
   | ChooseFormationAction
   | ConfirmFormationAction
   | CoinTossAction
-  | ChooseKickoffChoiceAction;
+  | ChooseKickoffChoiceAction
+  | StartTwoPointTryAction;
 
 export type LegalAction = Action;

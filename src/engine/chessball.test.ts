@@ -378,6 +378,7 @@ describe('ball actions', () => {
 
     expect(next.play.result?.type).toBe('incomplete');
     expect(next.phase).toBe('betweenDowns');
+    expect(next.ball).toEqual({ kind: 'controlled', pieceId: 'home-qb' });
     expect(next.play.result?.type === 'incomplete' ? next.play.result.roll?.required : 0).toBe(8);
   });
 
@@ -549,6 +550,7 @@ describe('play resolution', () => {
       turn: 'away',
       pieces: state.pieces.map((item) => {
         if (item.id === 'home-rb') return { ...item, coord: { x: 6, y: 5 } };
+        if (item.id === 'home-ol3') return { ...item, coord: { x: 5, y: 3 } };
         if (item.id === 'away-rb') return { ...item, coord: { x: 4, y: 5 } };
         return item;
       }),
@@ -563,6 +565,61 @@ describe('play resolution', () => {
 
     expect(next.play.result?.type).toBe('tackle');
     expect(next.play.result?.type === 'tackle' ? next.play.result.roll?.required : 0).toBe(7);
+  });
+
+  it('prevents a coverage defender from tackling through opposing linemen', () => {
+    let state = liveGame();
+    state = {
+      ...state,
+      turn: 'away',
+      pieces: state.pieces.map((item) => {
+        if (item.id === 'home-qb') return { ...item, coord: { x: 4, y: 5 } };
+        if (item.id === 'home-ol3') return { ...item, coord: { x: 6, y: 5 } };
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 8, y: 5 } };
+        if (item.id !== 'home-qb' && item.id !== 'home-ol3' && item.id !== 'away-wr1') return { ...item, coord: { x: 18, y: item.coord.y } };
+        return item;
+      }),
+      ball: { kind: 'controlled', pieceId: 'home-qb' },
+    };
+
+    expect(generateLegalActions(state)).not.toContainEqual({ type: 'tackle', defenderId: 'away-wr1', targetId: 'home-qb' });
+    expect(() => applyAction(state, { type: 'tackle', defenderId: 'away-wr1', targetId: 'home-qb' })).toThrow('blocked');
+  });
+
+  it('makes power-role tackles through opposing linemen harder', () => {
+    let state = liveGame();
+    state = {
+      ...state,
+      turn: 'away',
+      pieces: state.pieces.map((item) => {
+        if (item.id === 'home-qb') return { ...item, coord: { x: 4, y: 5 } };
+        if (item.id === 'home-ol3') return { ...item, coord: { x: 5, y: 5 } };
+        if (item.id === 'away-rb') return { ...item, coord: { x: 6, y: 5 } };
+        if (item.id !== 'home-qb' && item.id !== 'home-ol3' && item.id !== 'away-rb') return { ...item, coord: { x: 18, y: item.coord.y } };
+        return item;
+      }),
+      ball: { kind: 'controlled', pieceId: 'home-qb' },
+    };
+
+    expect(generateLegalActions(state)).toContainEqual({ type: 'tackle', defenderId: 'away-rb', targetId: 'home-qb' });
+
+    const failed = applyAction(state, {
+      type: 'tackle',
+      defenderId: 'away-rb',
+      targetId: 'home-qb',
+      roll: { die1: 5, die2: 5 },
+    });
+    expect(failed.phase).toBe('live');
+    expect(failed.turn).toBe('home');
+
+    const succeeded = applyAction(state, {
+      type: 'tackle',
+      defenderId: 'away-rb',
+      targetId: 'home-qb',
+      roll: { die1: 5, die2: 6 },
+    });
+    expect(succeeded.play.result?.type).toBe('tackle');
+    expect(succeeded.play.result?.type === 'tackle' ? succeeded.play.result.roll?.required : 0).toBe(11);
   });
 
   it('keeps play live after a failed tackle roll', () => {
@@ -690,6 +747,88 @@ describe('play resolution', () => {
     expect(next.play.result).toMatchObject({ type: 'extraPoint', team: 'home', good: true });
   });
 
+  it('requires a conversion choice after a touchdown before kickoff', () => {
+    const touchdown = {
+      ...createGame(),
+      phase: 'betweenDowns' as const,
+      score: { home: 6, away: 0 },
+      play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
+    };
+
+    expect(() => startNextDown(touchdown)).toThrow('conversion');
+    expect(generateLegalActions(touchdown)).toContainEqual({ type: 'kick', kickerId: 'home-qb', kind: 'extraPoint' });
+    expect(generateLegalActions(touchdown)).toContainEqual({ type: 'startTwoPointTry', team: 'home' });
+  });
+
+  it('sets up a two-point try as a goal-line formation play', () => {
+    const touchdown = {
+      ...createGame(),
+      phase: 'betweenDowns' as const,
+      score: { home: 6, away: 0 },
+      play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
+    };
+
+    const next = applyAction(touchdown, { type: 'startTwoPointTry', team: 'home' });
+
+    expect(next.phase).toBe('formation');
+    expect(next.possession).toBe('home');
+    expect(next.conversion).toEqual({ team: 'home' });
+    expect(next.lineOfScrimmage).toBe(21);
+    expect(next.firstDownLine).toBe(21);
+    expect(piece(next, 'home-qb').coord.x).toBe(20);
+  });
+
+  it('awards two points when a two-point try reaches the end zone', () => {
+    const tryState = liveGame(applyAction({
+      ...createGame(),
+      phase: 'betweenDowns' as const,
+      score: { home: 6, away: 0 },
+      play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
+    }, { type: 'startTwoPointTry', team: 'home' }));
+    const ready = {
+      ...tryState,
+      pieces: tryState.pieces.map((item) => {
+        if (item.id === 'home-qb') return { ...item, coord: { x: 21, y: 5 } };
+        if (item.team === 'away') return { ...item, coord: { x: 18, y: item.coord.y } };
+        return item;
+      }),
+    };
+
+    const made = applyAction(ready, { type: 'move', pieceId: 'home-qb', to: { x: 22, y: 5 } });
+    const next = startNextDown(made);
+
+    expect(made.score.home).toBe(8);
+    expect(made.play.result).toMatchObject({ type: 'twoPoint', team: 'home', good: true });
+    expect(next.phase).toBe('kickoff');
+    expect(next.possession).toBe('home');
+  });
+
+  it('fails a two-point try when the offense is stopped', () => {
+    const tryState = liveGame(applyAction({
+      ...createGame(),
+      phase: 'betweenDowns' as const,
+      score: { home: 6, away: 0 },
+      play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
+    }, { type: 'startTwoPointTry', team: 'home' }));
+    const ready = {
+      ...tryState,
+      turn: 'away' as const,
+      pieces: tryState.pieces.map((item) => {
+        if (item.id === 'home-qb') return { ...item, coord: { x: 20, y: 5 } };
+        if (item.id === 'away-fb') return { ...item, coord: { x: 20, y: 6 } };
+        return item;
+      }),
+    };
+
+    const stopped = applyAction(ready, { type: 'tackle', defenderId: 'away-fb', targetId: 'home-qb', roll: { die1: 6, die2: 1 } });
+    const next = startNextDown(stopped);
+
+    expect(stopped.score.home).toBe(6);
+    expect(stopped.play.result).toMatchObject({ type: 'twoPoint', team: 'home', good: false });
+    expect(next.phase).toBe('kickoff');
+    expect(next.possession).toBe('home');
+  });
+
   it('sets up a kickoff by the scoring team after an extra point', () => {
     const touchdown = {
       ...createGame(),
@@ -731,7 +870,7 @@ describe('play resolution', () => {
     expect(next.score.home).toBe(3);
   });
 
-  it('resolves an opening kickoff into a deep receiving-team formation position', () => {
+  it('resolves an opening kickoff placement into a live return', () => {
     const state = createGame({
       phase: 'kickoff',
       possession: 'home',
@@ -739,19 +878,19 @@ describe('play resolution', () => {
       openingKickoffTeam: 'home',
     });
 
-    const next = applyAction(state, {
+    const kicked = applyAction(state, {
       type: 'kick',
       kickerId: 'home-qb',
       kind: 'kickoff',
       roll: { die1: 4, die2: 3 },
     });
+    const next = applyAction(kicked, { type: 'placeKick', at: { x: 11, y: 5 } });
 
-    expect(next.play.result).toMatchObject({ type: 'kickoff', team: 'home', receivingTeam: 'away' });
-    expect(next.phase).toBe('betweenDowns');
+    expect(next.play.result).toBeUndefined();
+    expect(next.phase).toBe('kickReturn');
     expect(next.possession).toBe('away');
-    expect(next.lineOfScrimmage).toBeGreaterThan(14);
-    expect(piece(next, 'away-ol3').coord.x).toBe(next.lineOfScrimmage);
-    expect(piece(next, 'away-qb').coord.x).toBe(next.lineOfScrimmage + 1);
+    expect(next.lineOfScrimmage).toBe(11);
+    expect(next.ball).toEqual({ kind: 'loose', coord: { x: 11, y: 5 } });
   });
 
   it('lands an away kickoff on the left side when home receives', () => {
@@ -762,22 +901,22 @@ describe('play resolution', () => {
       openingKickoffTeam: 'away',
     });
 
-    const next = applyAction(state, {
+    const kicked = applyAction(state, {
       type: 'kick',
       kickerId: 'away-qb',
       kind: 'kickoff',
       roll: { die1: 4, die2: 3 },
     });
+    const next = applyAction(kicked, { type: 'placeKick', at: { x: 0, y: 5 } });
 
-    expect(next.play.result).toMatchObject({ type: 'kickoff', team: 'away', receivingTeam: 'home' });
+    expect(next.phase).toBe('kickReturn');
     expect(next.possession).toBe('home');
     expect(next.direction).toBe(1);
-    expect(next.lineOfScrimmage).toBeLessThan(10);
-    expect(piece(next, 'home-ol3').coord.x).toBe(next.lineOfScrimmage);
-    expect(piece(next, 'home-qb').coord.x).toBe(next.lineOfScrimmage - 1);
+    expect(next.lineOfScrimmage).toBe(2);
+    expect(next.ball).toEqual({ kind: 'loose', coord: { x: 0, y: 5 } });
   });
 
-  it('keeps even a poor kickoff from landing short of midfield', () => {
+  it('makes a poor kickoff land on the exact short-distance column', () => {
     const next = applyAction(createGame({
       phase: 'kickoff',
       possession: 'home',
@@ -790,11 +929,12 @@ describe('play resolution', () => {
       roll: { die1: 1, die2: 1 },
     });
 
-    expect(next.lineOfScrimmage).toBeGreaterThanOrEqual(11);
-    expect(next.play.result?.type === 'kickoff' ? next.play.result.roll?.distance : undefined).toBe(11);
+    expect(next.pendingKick?.distance).toBe(2);
+    expect(generateLegalActions(next)).toContainEqual({ type: 'placeKick', at: { x: 6, y: 5 } });
+    expect(generateLegalActions(next)).not.toContainEqual({ type: 'placeKick', at: { x: 7, y: 5 } });
   });
 
-  it('keeps the kickoff landing spot when lining up the receiving team', () => {
+  it('keeps the return tackle spot when lining up the receiving team', () => {
     const kicked = applyAction(createGame({
       phase: 'kickoff',
       possession: 'home',
@@ -806,18 +946,196 @@ describe('play resolution', () => {
       kind: 'kickoff',
       roll: { die1: 4, die2: 3 },
     });
+    const returned = applyAction(kicked, { type: 'placeKick', at: { x: 11, y: 5 } });
+    const stopped = applyAction({
+      ...returned,
+      turn: 'home',
+      ball: { kind: 'controlled', pieceId: 'away-wr1' },
+      pieces: returned.pieces.map((item) => {
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 11, y: 5 } };
+        if (item.id === 'home-rb') return { ...item, coord: { x: 10, y: 5 } };
+        return item;
+      }),
+    }, { type: 'tackle', defenderId: 'home-rb', targetId: 'away-wr1', roll: { die1: 3, die2: 4 } });
 
-    const next = startNextDown(kicked);
+    const next = startNextDown(stopped);
 
     expect(next.phase).toBe('formation');
     expect(next.possession).toBe('away');
-    expect(next.lineOfScrimmage).toBe(kicked.lineOfScrimmage);
-    expect(piece(next, 'away-ol3').coord.x).toBe(kicked.lineOfScrimmage);
-    expect(piece(next, 'away-qb').coord.x).toBe(kicked.lineOfScrimmage + 1);
+    expect(next.lineOfScrimmage).toBe(11);
+    expect(piece(next, 'away-ol3').coord.x).toBe(11);
+    expect(piece(next, 'away-qb').coord.x).toBe(12);
   });
 
-  it('resolves a punt into a possession change at the kicked distance', () => {
-    let state = liveGame(createGame({ down: 4, lineOfScrimmage: 8, firstDownLine: 10 }));
+  it('rolls a kickoff into a placement choice instead of immediately starting the drive', () => {
+    const state = createGame({
+      phase: 'kickoff',
+      possession: 'home',
+      turn: 'home',
+    });
+
+    const kicked = applyAction(state, {
+      type: 'kick',
+      kickerId: 'home-qb',
+      kind: 'kickoff',
+      roll: { die1: 3, die2: 4 },
+    });
+
+    expect(kicked.phase).toBe('kickPlacement');
+    expect(kicked.pendingKick).toMatchObject({ kind: 'kickoff', kickingTeam: 'home', receivingTeam: 'away', distance: 7 });
+    expect(generateLegalActions(kicked)).toContainEqual({ type: 'placeKick', at: { x: 11, y: 5 } });
+    expect(generateLegalActions(kicked)).not.toContainEqual({ type: 'placeKick', at: { x: 10, y: 5 } });
+    expect(generateLegalActions(kicked)).not.toContainEqual({ type: 'placeKick', at: { x: 12, y: 5 } });
+  });
+
+  it('starts a kickoff return with the ball loose at the chosen landing square', () => {
+    const kicked = applyAction(createGame({
+      phase: 'kickoff',
+      possession: 'home',
+      turn: 'home',
+    }), {
+      type: 'kick',
+      kickerId: 'home-qb',
+      kind: 'kickoff',
+      roll: { die1: 3, die2: 4 },
+    });
+
+    const returned = applyAction(kicked, { type: 'placeKick', at: { x: 11, y: 5 } });
+
+    expect(returned.phase).toBe('kickReturn');
+    expect(returned.possession).toBe('away');
+    expect(returned.turn).toBe('away');
+    expect(returned.ball).toEqual({ kind: 'loose', coord: { x: 11, y: 5 } });
+    expect(piece(returned, 'away-wr1').coord).not.toEqual({ x: 11, y: 5 });
+  });
+
+  it('lets a receiving player collect a loose kickoff by moving onto the landing square', () => {
+    const base = liveGame();
+    const returned = {
+      ...base,
+      phase: 'kickReturn' as const,
+      possession: 'away' as const,
+      direction: -1 as const,
+      turn: 'away' as const,
+      ball: { kind: 'loose' as const, coord: { x: 11, y: 5 } },
+      pendingKick: { kind: 'kickoff' as const, kickingTeam: 'home' as const, receivingTeam: 'away' as const, from: { x: 4, y: 5 }, distance: 7, roll: { die1: 3, die2: 4 } },
+      pieces: base.pieces.map((item) => {
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 9, y: 5 } };
+        return { ...item, coord: { x: 0, y: item.coord.y } };
+      }),
+    };
+
+    const caught = applyAction(returned, { type: 'move', pieceId: 'away-wr1', to: { x: 11, y: 5 } });
+
+    expect(caught.phase).toBe('kickReturn');
+    expect(caught.ball).toEqual({ kind: 'controlled', pieceId: 'away-wr1' });
+    expect(caught.turn).toBe('home');
+  });
+
+  it('restricts return-team movement to two squares and coverage-team movement to three', () => {
+    const returned = {
+      ...liveGame(),
+      phase: 'kickReturn' as const,
+      possession: 'away' as const,
+      direction: -1 as const,
+      turn: 'away' as const,
+      ball: { kind: 'controlled' as const, pieceId: 'away-wr1' },
+      pendingKick: { kind: 'kickoff' as const, kickingTeam: 'home' as const, receivingTeam: 'away' as const, from: { x: 5, y: 5 }, distance: 16, roll: { die1: 3, die2: 4 } },
+      pieces: liveGame().pieces.map((item) => {
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 15, y: 5 } };
+        if (item.id === 'away-ol1') return { ...item, coord: { x: 10, y: 2 } };
+        if (item.id === 'home-wr1') return { ...item, coord: { x: 12, y: 2 } };
+        if (item.id === 'home-qb') return { ...item, coord: { x: 12, y: 8 } };
+        return { ...item, coord: { x: 0, y: item.coord.y } };
+      }),
+    };
+
+    expect(generateLegalActions(returned).some((action) => action.type === 'move' && action.pieceId === 'away-wr1' && action.to.x === 13 && action.to.y === 5)).toBe(true);
+    expect(generateLegalActions(returned).some((action) => action.type === 'move' && action.pieceId === 'away-wr1' && action.to.x === 12 && action.to.y === 5)).toBe(false);
+    expect(generateLegalActions(returned).some((action) => action.type === 'move' && action.pieceId === 'away-ol1' && action.to.x === 8 && action.to.y === 2)).toBe(true);
+    expect(generateLegalActions(returned).some((action) => action.type === 'move' && action.pieceId === 'away-ol1' && action.to.x === 7 && action.to.y === 2)).toBe(false);
+
+    const coverageTurn = { ...returned, turn: 'home' as const };
+    expect(generateLegalActions(coverageTurn).some((action) => action.type === 'move' && action.pieceId === 'home-wr1' && action.to.x === 15 && action.to.y === 2)).toBe(true);
+    expect(generateLegalActions(coverageTurn).some((action) => action.type === 'move' && action.pieceId === 'home-wr1' && action.to.x === 16 && action.to.y === 2)).toBe(false);
+    expect(generateLegalActions(coverageTurn).some((action) => action.type === 'move' && action.pieceId === 'home-qb' && action.to.x === 15 && action.to.y === 8)).toBe(true);
+    expect(generateLegalActions(coverageTurn).some((action) => action.type === 'move' && action.pieceId === 'home-qb' && action.to.x === 16 && action.to.y === 8)).toBe(false);
+  });
+
+  it('sets the next line of scrimmage where a kick return is tackled', () => {
+    const returned = {
+      ...liveGame(),
+      phase: 'kickReturn' as const,
+      possession: 'away' as const,
+      direction: -1 as const,
+      turn: 'home' as const,
+      ball: { kind: 'controlled' as const, pieceId: 'away-wr1' },
+      pendingKick: { kind: 'kickoff' as const, kickingTeam: 'home' as const, receivingTeam: 'away' as const, from: { x: 5, y: 5 }, distance: 16, roll: { die1: 3, die2: 4 } },
+      pieces: liveGame().pieces.map((item) => {
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 12, y: 5 } };
+        if (item.id === 'home-rb') return { ...item, coord: { x: 13, y: 5 } };
+        return { ...item, coord: { x: 0, y: item.coord.y } };
+      }),
+    };
+
+    const tackled = applyAction(returned, { type: 'tackle', defenderId: 'home-rb', targetId: 'away-wr1', roll: { die1: 3, die2: 4 } });
+    const next = startNextDown(tackled);
+
+    expect(tackled.phase).toBe('betweenDowns');
+    expect(tackled.play.result).toMatchObject({ type: 'tackle', at: { x: 12, y: 5 } });
+    expect(next.phase).toBe('formation');
+    expect(next.lineOfScrimmage).toBe(12);
+    expect(next.possession).toBe('away');
+  });
+
+  it('lets any coverage player tackle within the three-square kick return range', () => {
+    const returned = {
+      ...liveGame(),
+      phase: 'kickReturn' as const,
+      possession: 'away' as const,
+      direction: -1 as const,
+      turn: 'home' as const,
+      ball: { kind: 'controlled' as const, pieceId: 'away-wr1' },
+      pendingKick: { kind: 'kickoff' as const, kickingTeam: 'home' as const, receivingTeam: 'away' as const, from: { x: 4, y: 5 }, distance: 7, roll: { die1: 3, die2: 4 } },
+      pieces: liveGame().pieces.map((item) => {
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 12, y: 5 } };
+        if (item.id === 'home-ol1') return { ...item, coord: { x: 15, y: 5 } };
+        return { ...item, coord: { x: 0, y: item.coord.y } };
+      }),
+    };
+
+    expect(generateLegalActions(returned)).toContainEqual({ type: 'tackle', defenderId: 'home-ol1', targetId: 'away-wr1' });
+
+    const tackled = applyAction(returned, { type: 'tackle', defenderId: 'home-ol1', targetId: 'away-wr1', roll: { die1: 5, die2: 5 } });
+
+    expect(tackled.play.result).toMatchObject({ type: 'tackle', at: { x: 12, y: 5 } });
+  });
+
+  it('allows a double-six kick return tackle to force an immediate fumble turnover', () => {
+    const returned = {
+      ...liveGame(),
+      phase: 'kickReturn' as const,
+      possession: 'away' as const,
+      direction: -1 as const,
+      turn: 'home' as const,
+      ball: { kind: 'controlled' as const, pieceId: 'away-wr1' },
+      pendingKick: { kind: 'punt' as const, kickingTeam: 'home' as const, receivingTeam: 'away' as const, from: { x: 8, y: 5 }, distance: 10, roll: { die1: 3, die2: 4 } },
+      pieces: liveGame().pieces.map((item) => {
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 12, y: 5 } };
+        if (item.id === 'home-rb') return { ...item, coord: { x: 13, y: 5 } };
+        return { ...item, coord: { x: 0, y: item.coord.y } };
+      }),
+    };
+
+    const fumbled = applyAction(returned, { type: 'tackle', defenderId: 'home-rb', targetId: 'away-wr1', roll: { die1: 6, die2: 6 } });
+
+    expect(fumbled.play.result).toMatchObject({ type: 'fumble', at: { x: 12, y: 5 }, recoveredBy: 'home' });
+    expect(fumbled.possession).toBe('home');
+    expect(fumbled.ball.kind === 'controlled' ? fumbled.ball.pieceId : '').toBe('home-rb');
+  });
+
+  it('rolls a punt on any down into a placement choice', () => {
+    let state = liveGame(createGame({ down: 2, lineOfScrimmage: 8, firstDownLine: 10 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 8, y: 5 } } : item)),
@@ -830,10 +1148,10 @@ describe('play resolution', () => {
       roll: { die1: 4, die2: 3 },
     });
 
-    expect(next.play.result).toMatchObject({ type: 'punt', team: 'home', receivingTeam: 'away' });
-    expect(next.phase).toBe('betweenDowns');
-    expect(next.possession).toBe('away');
-    expect(next.lineOfScrimmage).toBeGreaterThan(8);
+    expect(next.play.result).toBeUndefined();
+    expect(next.phase).toBe('kickPlacement');
+    expect(next.pendingKick).toMatchObject({ kind: 'punt', kickingTeam: 'home', receivingTeam: 'away', distance: 7 });
+    expect(generateLegalActions(next)).toContainEqual({ type: 'placeKick', at: { x: 15, y: 5 } });
   });
 
   it('advances to the third quarter with the opposite halftime kickoff team', () => {
