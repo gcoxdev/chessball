@@ -8,4 +8,6 @@ declare module 'node:path' {
 
 declare const process: {
   cwd(): string;
+  argv: string[];
+  exit(code?: number): never;
 };

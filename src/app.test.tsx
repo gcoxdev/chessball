@@ -208,8 +208,8 @@ describe('Chessball UI interactions', () => {
 
     expect(within(screen.getByText('Down').closest('.down-card') as HTMLElement).getByText('Kickoff')).toBeInTheDocument();
     expect(screen.queryByText(/1 &/)).not.toBeInTheDocument();
-    expect(within(screen.getByTitle('14,5')).getByText('K')).toBeInTheDocument();
-    expect(screen.getByTitle('14,5')).not.toHaveClass('scrimmage-backward');
+    expect(within(screen.getByTitle('15,5')).getByText('K')).toBeInTheDocument();
+    expect(screen.getByTitle('15,5')).not.toHaveClass('scrimmage-backward');
     expect(screen.getByTitle('8,5')).not.toHaveClass('first-down-backward');
     expect(screen.queryByText(/Line of scrimmage/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Line to gain/)).not.toBeInTheDocument();

@@ -382,6 +382,21 @@ describe('ball actions', () => {
     expect(next.play.result?.type === 'incomplete' ? next.play.result.roll?.required : 0).toBe(8);
   });
 
+  it('does not generate illegal second forward passes', () => {
+    const base = liveGame();
+    const state = {
+      ...base,
+      forwardPassUsed: true,
+      pieces: base.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 5, y: 5 } } : item)),
+    };
+
+    const passes = generateLegalActions(state).filter((action): action is Extract<Action, { type: 'pass' }> => action.type === 'pass');
+
+    expect(passes.length).toBeGreaterThan(0);
+    expect(passes.some((action) => action.target.x > 5)).toBe(false);
+    expect(() => applyAction(state, { type: 'pass', passerId: 'home-qb', target: { x: 6, y: 5 } })).toThrow('Forward pass already used');
+  });
+
   it('keeps the original line of scrimmage after an incomplete backward pass', () => {
     let state = liveGame();
     state = {
@@ -517,14 +532,29 @@ describe('play resolution', () => {
     const homeReceives = applyAction(tossed, { type: 'chooseKickoffChoice', team: 'home', choice: 'receive' });
 
     expect(homeReceives.turn).toBe('away');
-    expect(piece(homeReceives, 'away-qb').coord).toEqual({ x: 14, y: 5 });
-    expect(homeReceives.pieces.filter((item) => item.team === 'away' && item.id !== 'away-qb').every((item) => item.coord.x === 13)).toBe(true);
+    expect(piece(homeReceives, 'away-qb').coord).toEqual({ x: 15, y: 5 });
+    expect(homeReceives.pieces.filter((item) => item.team === 'away' && item.id !== 'away-qb').every((item) => item.coord.x === 16)).toBe(true);
     expect(homeReceives.pieces.filter((item) => item.team === 'home').every((item) => item.coord.x <= 9)).toBe(true);
     expect(piece(homeReceives, 'home-ol3').coord).toEqual({ x: 9, y: 5 });
     expect(piece(homeReceives, 'home-qb').coord).toEqual({ x: 9, y: 4 });
     expect(piece(homeReceives, 'home-rb').coord).toEqual({ x: 9, y: 6 });
     expect(piece(homeReceives, 'home-wr1').coord).toEqual({ x: 5, y: 2 });
     expect(piece(homeReceives, 'home-wr2').coord).toEqual({ x: 5, y: 8 });
+  });
+
+  it('mirrors kickoff formations for home and away teams', () => {
+    const homeToss = applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
+    const awayToss = applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'tails' });
+    const homeKicks = applyAction(homeToss, { type: 'chooseKickoffChoice', team: 'home', choice: 'kick' });
+    const awayKicks = applyAction(awayToss, { type: 'chooseKickoffChoice', team: 'away', choice: 'kick' });
+    const mirrorX = (x: number) => homeKicks.board.width - 1 - x;
+
+    for (const homePiece of homeKicks.pieces) {
+      const mirroredTeam = homePiece.team === 'home' ? 'away' : 'home';
+      const mirroredPiece = piece(awayKicks, homePiece.id.replace(homePiece.team, mirroredTeam));
+
+      expect(mirroredPiece.coord).toEqual({ x: mirrorX(homePiece.coord.x), y: homePiece.coord.y });
+    }
   });
 
   it('ends a normal tackle at the carrier square', () => {

@@ -275,7 +275,10 @@ export function generateLegalActions(state: GameState): LegalAction[] {
       .map((item) => ({ type: 'handoff' as const, fromId: carrier.id, toId: item.id })));
     for (let x = 0; x < WIDTH; x += 1) {
       for (let y = 0; y < HEIGHT; y += 1) {
-        actions.push({ type: 'pass', passerId: carrier.id, target: { x, y } });
+        const target = { x, y };
+        if (canLegallyTargetPass(state, carrier, target)) {
+          actions.push({ type: 'pass', passerId: carrier.id, target });
+        }
       }
     }
     actions.push({ type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' });
@@ -298,6 +301,13 @@ export function generateLegalActions(state: GameState): LegalAction[] {
   }
 
   return actions;
+}
+
+function canLegallyTargetPass(state: GameState, passer: Piece, target: Coord): boolean {
+  const forward = state.direction === 1 ? target.x > passer.coord.x : target.x < passer.coord.x;
+  if (!forward) return true;
+  if (state.forwardPassUsed) return false;
+  return state.direction === 1 ? passer.coord.x <= state.lineOfScrimmage : passer.coord.x >= state.lineOfScrimmage;
 }
 
 export function applyAction(state: GameState, action: Action): GameState {
@@ -446,9 +456,9 @@ function kickoffFormationPieces(kickingTeam: Team): Piece[] {
 }
 
 function kickoffCoverageCoords(team: Team): Record<string, Coord> {
-  const kickerX = kickoffStandingColumn(team, 35);
-  const coverageX = clamp(kickerX - 1, FIELD_START, FIELD_END);
-  return {
+  const kickerX = ownYardLineColumn('home', 35) - 1;
+  const coverageX = kickerX - 1;
+  const homeCoords = {
     wr1: { x: coverageX, y: 0 },
     ol1: { x: coverageX, y: 1 },
     te: { x: coverageX, y: 2 },
@@ -461,12 +471,14 @@ function kickoffCoverageCoords(team: Team): Record<string, Coord> {
     ol5: { x: coverageX, y: 9 },
     wr2: { x: coverageX, y: 10 },
   };
+
+  return team === 'home' ? homeCoords : mirrorFormationCoords(homeCoords);
 }
 
 function kickoffReturnCoords(team: Team): Record<string, Coord> {
-  const setupX = clamp(kickoffStandingColumn(team, 35) + 1, FIELD_START, FIELD_END);
-  const deepX = ownYardLineColumn(team, 15);
-  return {
+  const setupX = ownYardLineColumn('home', 35);
+  const deepX = ownYardLineColumn('home', 15);
+  const homeCoords = {
     ol1: { x: setupX, y: 1 },
     ol2: { x: setupX, y: 3 },
     ol3: { x: setupX, y: 5 },
@@ -479,6 +491,8 @@ function kickoffReturnCoords(team: Team): Record<string, Coord> {
     wr1: { x: deepX, y: 2 },
     wr2: { x: deepX, y: 8 },
   };
+
+  return team === 'home' ? homeCoords : mirrorFormationCoords(homeCoords);
 }
 
 function ownYardLineColumn(team: Team, yardsFromOwnGoal: number): number {
@@ -488,11 +502,10 @@ function ownYardLineColumn(team: Team, yardsFromOwnGoal: number): number {
     : clamp(RIGHT_END_ZONE_START - columnsFromOwnGoal, FIELD_START, FIELD_END);
 }
 
-function kickoffStandingColumn(team: Team, yardsFromOwnGoal: number): number {
-  const boundaryColumn = ownYardLineColumn(team, yardsFromOwnGoal);
-  return team === 'home'
-    ? clamp(boundaryColumn - 1, FIELD_START, FIELD_END)
-    : clamp(boundaryColumn - 1, FIELD_START, FIELD_END);
+function mirrorFormationCoords(coords: Record<string, Coord>): Record<string, Coord> {
+  return Object.fromEntries(
+    Object.entries(coords).map(([key, coord]) => [key, { x: WIDTH - 1 - coord.x, y: coord.y }]),
+  );
 }
 
 function projectFormation(lineOfScrimmage: number, direction: Direction, formation: Formation): Record<string, Coord> {
