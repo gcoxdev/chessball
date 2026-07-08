@@ -65,6 +65,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const canSnap = legalActions.some((action) => action.type === 'snap');
   const progress = matchProgress(game);
   const selectedPiece = selectedPieceId ? game.pieces.find((piece) => piece.id === selectedPieceId) : undefined;
+  const boardGame = useMemo(() => boardDisplayGame(game), [game]);
+  const showBallMarker = !hideStoppedChangeOfPossessionBall(game);
   const formationsConfirmed = game.formationConfirmed.offense && game.formationConfirmed.defense;
   const showFormationPanel = game.phase === 'formation' && !formationsConfirmed;
   const showCommandPanel = game.phase === 'kickoff' || game.phase === 'kickPlacement' || game.phase === 'kickReturn' || game.phase === 'betweenDowns' || game.phase === 'live' || (game.phase === 'formation' && formationsConfirmed);
@@ -331,7 +333,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
         <ScoreCard label="Away" score={game.score.away} active={game.possession === 'away'} />
         <div className="down-card">
           <span>Down</span>
-          <strong>{downDistanceLabel(game)}</strong>
+          <strong className={downStatusClass(game)}>{downDistanceLabel(game)}</strong>
         </div>
         <div className="down-card">
           <span>Quarter</span>
@@ -372,7 +374,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                 onChoose={(formation) => chooseFormation('defense', formation)}
                 onConfirm={() => confirmFormation('defense')}
               />
-              <SelectionSummary selectedPiece={selectedPiece} game={game} />
+              <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
             </div>
           )}
 
@@ -414,7 +416,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                   <Flag size={17} /> Next
                 </button>
               </div>
-              <SelectionSummary selectedPiece={selectedPiece} game={game} />
+              <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
               <div className="action-list">
                 {legalActions
                   .filter((action) => selectedPiece && actionForPiece(action, selectedPiece.id))
@@ -422,7 +424,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                   .slice(0, 8)
                   .map((action, index) => (
                     <button key={`${action.type}-${index}`} type="button" onClick={() => runAction(action)}>
-                      <Zap size={15} /> {actionLabel(action)}
+                      <Zap size={15} /> {actionLabel(game, action)}
                     </button>
                   ))}
                 {selectedPiece && (game.phase === 'live' || game.phase === 'kickReturn') && tackleActions(game, selectedPiece, legalActions).map((action) => (
@@ -464,7 +466,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               Array.from({ length: game.board.width }).map((_, x) => {
                 const coord = { x, y };
                 const piece = pieceAt(game, coord);
-                const ballHere = sameCoord(ballCoord(game), coord);
+                const ballHere = showBallMarker && sameCoord(ballCoord(game), coord);
                 const legalMove = selectedPiece && legalActions.some((action) =>
                   (action.type === 'move' || action.type === 'shift') &&
                     action.pieceId === selectedPiece.id &&
@@ -489,10 +491,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     {yardMarker(game, coord)}
                     {piece && (
                       <span className={`piece ${piece.team} ${selectedPieceId === piece.id ? 'selected' : ''}`}>
-                        {activeRoleCode(game, piece)}
+                        {activeRoleCode(boardGame, piece)}
                       </span>
                     )}
-                    {ballHere && <span className="football-marker" aria-label={ballLabel(game)} />}
+                    {ballHere && <span className="football-marker" aria-label={ballLabel(boardGame)} />}
                   </button>
                 );
               }),
@@ -501,12 +503,15 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           <section className="utility-bar" aria-label="Game setup">
             <div className="utility-control-row">
               <div className="utility-actions">
-                <button type="button" onClick={reset}>
-                  <RotateCcw size={17} /> New Game
-                </button>
-                <button type="button" onClick={startGame} disabled={game.phase !== 'pregame' && game.phase !== 'final'}>
-                  <Play size={17} /> Start Game
-                </button>
+                {game.phase === 'pregame' ? (
+                  <button type="button" onClick={startGame}>
+                    <Play size={17} /> Start Game
+                  </button>
+                ) : (
+                  <button type="button" onClick={reset}>
+                    <RotateCcw size={17} /> New Game
+                  </button>
+                )}
                 <button type="button" onClick={() => setShowRules(true)}>
                   <BookOpen size={17} /> Rules
                 </button>
@@ -1225,12 +1230,17 @@ function recentMovingPieceIds(game: GameState): Set<string> {
     .map((action) => action.pieceId));
 }
 
-function actionLabel(action: Action): string {
+function actionLabel(game: GameState, action: Action): string {
   if (action.type === 'coinToss') return 'Flip coin';
   if (action.type === 'chooseKickoffChoice') return capitalize(action.choice);
   if (action.type === 'startTwoPointTry') return 'Two-point try';
   if (action.type === 'placeKick') return `Place kick at ${coordLabel(action.at)}`;
-  if (action.type === 'handoff') return `Handoff to ${action.toId.split('-')[1].toUpperCase()}`;
+  if (action.type === 'handoff') {
+    const target = game.pieces.find((piece) => piece.id === action.toId);
+    return target
+      ? `Handoff to ${target.team} ${activeRoleCode(game, target)} at ${coordLabel(target.coord)}`
+      : `Handoff to ${action.toId.split('-')[1].toUpperCase()}`;
+  }
   if (action.type === 'recover') return 'Recover ball';
   if (action.type === 'powerMove') return `Power move to ${coordLabel(action.to)}`;
   if (action.type === 'tackle') return `Tackle ${action.targetId.split('-')[1].toUpperCase()}`;
@@ -1467,6 +1477,30 @@ function downDistanceLabel(game: GameState): string {
   if (game.conversion) return '2PT Try';
   if (isGoalToGo(game)) return `${game.down} & Goal`;
   return `${game.down} & ${Math.max(1, Math.ceil(moveDistanceToFirstDown(game, ballCoord(game)) / 2) * 10)}`;
+}
+
+function downStatusClass(game: GameState): string | undefined {
+  return game.phase === 'kickReturn' || game.phase === 'coinToss' || game.phase === 'kickoff'
+    ? 'compact-status'
+    : undefined;
+}
+
+function boardDisplayGame(game: GameState): GameState {
+  const displayPossession = stoppedPreviousPossession(game);
+  return displayPossession ? { ...game, possession: displayPossession, direction: directionForUi(displayPossession) } : game;
+}
+
+function stoppedPreviousPossession(game: GameState): Team | undefined {
+  if (game.phase !== 'betweenDowns') return undefined;
+  const result = game.play.result;
+  if (!result) return undefined;
+  if (result.type === 'turnoverOnDowns') return otherTeamForUi(result.team);
+  if (result.type === 'fieldGoal' && !result.good) return result.team;
+  return undefined;
+}
+
+function hideStoppedChangeOfPossessionBall(game: GameState): boolean {
+  return stoppedPreviousPossession(game) !== undefined;
 }
 
 function isGoalToGo(game: GameState): boolean {

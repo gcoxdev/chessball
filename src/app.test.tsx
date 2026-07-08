@@ -1,13 +1,16 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App, chooseComputerAction } from './main';
 import { cleanup } from '@testing-library/react';
 import { applyAction, createGame, generateLegalActions } from './engine/rules';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  vi.restoreAllMocks();
+  cleanup();
+});
 
 const confirmBothFormations = () => {
   fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
@@ -65,6 +68,19 @@ describe('Chessball UI interactions', () => {
     expect(screen.queryByRole('dialog', { name: /coin toss/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /home computer/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /away human/i })).toBeEnabled();
+  });
+
+  it('shows Start Game before a match and New Game once a match is active', () => {
+    const { unmount } = render(<App />);
+
+    expect(screen.getByRole('button', { name: /start game/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /new game/i })).not.toBeInTheDocument();
+
+    unmount();
+    render(<App initialGame={createGame()} />);
+
+    expect(screen.getByRole('button', { name: /new game/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /start game/i })).not.toBeInTheDocument();
   });
 
   it('loads into an empty pre-game board until Start Game is pressed', () => {
@@ -270,8 +286,8 @@ describe('Chessball UI interactions', () => {
     const setup = screen.getByRole('region', { name: /game setup/i });
     expect(setup.querySelector('.utility-control-row')).toBeInTheDocument();
     expect(setup.querySelector('.utility-status-row')).toBeInTheDocument();
-    expect(within(setup).getByRole('button', { name: /new game/i })).toBeInTheDocument();
     expect(within(setup).getByRole('button', { name: /start game/i })).toBeInTheDocument();
+    expect(within(setup).queryByRole('button', { name: /new game/i })).not.toBeInTheDocument();
     expect(within(setup).getByRole('button', { name: /rules/i })).toBeInTheDocument();
     expect(within(setup).getByRole('button', { name: /home human/i })).toBeInTheDocument();
     expect(within(setup).getByRole('button', { name: /away computer/i })).toBeInTheDocument();
@@ -419,6 +435,26 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('button', { name: /punt/i })).toBeEnabled();
   });
 
+  it('identifies handoff targets by role and board coordinate', () => {
+    const base = createGame({ phase: 'live' });
+    const state = {
+      ...base,
+      pieces: base.pieces.map((piece) => {
+        if (piece.id === 'home-qb') return { ...piece, coord: { x: 4, y: 5 } };
+        if (piece.id === 'home-ol2') return { ...piece, coord: { x: 4, y: 4 } };
+        if (piece.id === 'home-ol3') return { ...piece, coord: { x: 5, y: 5 } };
+        return piece;
+      }),
+      ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
+    };
+    render(<App initialGame={state} />);
+
+    fireEvent.click(screen.getByTitle('4,5'));
+
+    expect(screen.getByRole('button', { name: /handoff to home ol at 4,4/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /handoff to home ol at 5,5/i })).toBeInTheDocument();
+  });
+
   it('requires an extra-point or two-point choice after touchdown', () => {
     render(<App initialGame={createGame({
       phase: 'betweenDowns',
@@ -459,6 +495,12 @@ describe('Chessball UI interactions', () => {
     expect(screen.queryByText('1 & 10')).not.toBeInTheDocument();
   });
 
+  it('uses compact down-card text for kick returns', () => {
+    render(<App initialGame={createGame({ phase: 'kickReturn', ball: { kind: 'loose', coord: { x: 10, y: 5 } } })} />);
+
+    expect(screen.getByText('Return')).toHaveClass('compact-status');
+  });
+
   it('clears the selected piece when an action changes turns', () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
@@ -482,6 +524,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('only enables passing for the selected ball carrier', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
     const ready = applyAction(
       applyAction(
         applyAction(createGame(), { type: 'confirmFormation', side: 'offense' }),
@@ -489,18 +532,26 @@ describe('Chessball UI interactions', () => {
       ),
       { type: 'snap' },
     );
-    render(<App initialGame={ready} initialPlayers={{ home: 'human', away: 'human' }} />);
+    const state = {
+      ...ready,
+      pieces: ready.pieces.map((piece) => {
+        if (piece.id === 'home-wr1') return { ...piece, coord: { x: 5, y: 4 } };
+        if (piece.id === 'home-ol2') return { ...piece, coord: { x: 3, y: 4 } };
+        return piece;
+      }),
+    };
+    render(<App initialGame={state} initialPlayers={{ home: 'human', away: 'human' }} />);
 
-    fireEvent.click(screen.getByTitle('4,1'));
+    fireEvent.click(screen.getByTitle('5,4'));
     expect(screen.getByRole('button', { name: /^pass$/i })).toBeDisabled();
 
     fireEvent.click(screen.getByTitle('4,5'));
     expect(screen.getByRole('button', { name: /^pass$/i })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: /^pass$/i }));
-    fireEvent.click(screen.getByTitle('4,1'));
+    fireEvent.click(screen.getByTitle('5,4'));
 
-    expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/completed pass: home hit WR at 4,1/i)).toBeInTheDocument();
+    expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/completed pass: home hit WR at 5,4/i)).toBeInTheDocument();
   });
 
   it('logs incomplete passes clearly in the event log', () => {
@@ -551,6 +602,36 @@ describe('Chessball UI interactions', () => {
     const ballSquare = screen.getByTitle('12,5');
 
     expect(within(ballSquare).getByLabelText('Ball: loose')).toHaveClass('football-marker');
+  });
+
+  it('keeps stopped turnover boards on the previous offensive role view without showing the next QB ball marker', () => {
+    const base = createGame();
+    render(<App initialGame={{
+      ...base,
+      phase: 'betweenDowns',
+      possession: 'away',
+      turn: 'away',
+      ball: { kind: 'controlled', pieceId: 'away-qb' },
+      play: { actions: [], result: { type: 'turnoverOnDowns', team: 'away' } },
+    }} />);
+
+    expect(within(screen.getByTitle('4,5')).getByText('QB')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ball: controlled by QB')).not.toBeInTheDocument();
+  });
+
+  it('does not show the next quarterback carrying the ball after a missed field goal before next down', () => {
+    const base = createGame();
+    render(<App initialGame={{
+      ...base,
+      phase: 'betweenDowns',
+      possession: 'away',
+      turn: 'away',
+      ball: { kind: 'controlled', pieceId: 'away-qb' },
+      play: { actions: [], result: { type: 'fieldGoal', team: 'home', good: false } },
+    }} />);
+
+    expect(within(screen.getByTitle('4,5')).getByText('QB')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ball: controlled by QB')).not.toBeInTheDocument();
   });
 
   it('shows the last 2d6 roll as dice on the screen', () => {
