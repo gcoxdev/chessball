@@ -133,6 +133,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
 
   const onSquareClick = (coord: Coord) => {
     if (isViewingHistory || players[controlTeam] === 'computer') return;
+    const piece = pieceAt(game, coord);
 
     if (game.phase === 'kickPlacement') {
       runAction({ type: 'placeKick', at: coord });
@@ -140,12 +141,20 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     }
 
     if (targetMode === 'pass' && selectedBallCarrier?.team === game.turn) {
-      runAction({ type: 'pass', passerId: selectedBallCarrier.id, target: coord });
-      setTargetMode(null);
+      const pass = piece && legalActions.find((action): action is Extract<Action, { type: 'pass' }> =>
+        action.type === 'pass' &&
+        action.passerId === selectedBallCarrier.id &&
+        action.receiverId === piece.id,
+      );
+      if (pass) {
+        runAction(pass);
+        setTargetMode(null);
+      } else {
+        setMessage('Choose an eligible receiver.');
+      }
       return;
     }
 
-    const piece = pieceAt(game, coord);
     if (piece) {
       if (piece.id === selectedPieceId) {
         setSelectedPieceId(null);
@@ -209,7 +218,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const startPass = () => {
     if (!selectedBallCarrier) return;
     setTargetMode('pass');
-    setMessage(`Choose a target for ${activeRoleCode(game, selectedBallCarrier)}.`);
+    setMessage(`Choose a receiver for ${activeRoleCode(game, selectedBallCarrier)}.`);
   };
   const chooseFormation = (side: FormationSide, formation: Formation) => {
     runAction({ type: 'chooseFormation', side, formationId: formation.id });
@@ -461,10 +470,15 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     action.pieceId === selectedPiece.id &&
                     sameCoord(action.to, coord),
                 );
+                const legalPassReceiver = selectedBallCarrier && targetMode === 'pass' && piece && legalActions.some((action) =>
+                  action.type === 'pass' &&
+                  action.passerId === selectedBallCarrier.id &&
+                  action.receiverId === piece.id,
+                );
                 const legalKickPlacement = game.phase === 'kickPlacement' && legalActions.some((action) => action.type === 'placeKick' && sameCoord(action.at, coord));
                 return (
                   <button
-                    className={squareClass(game, coord, piece, legalMove || legalKickPlacement, ballHere)}
+                    className={squareClass(game, coord, piece, legalMove || legalPassReceiver || legalKickPlacement, ballHere)}
                     key={`${x}-${y}`}
                     type="button"
                     role="gridcell"
@@ -625,10 +639,10 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
           <X size={18} />
         </button>
         <h2>Rules and How to Play</h2>
-        <p>A match starts with a coin toss and kickoff. Heads means home wins, tails means away wins. The winner chooses to kick or receive, then each quarter uses two drives per team.</p>
+        <p>A match starts with a coin toss and kickoff. Heads means home wins, tails means away wins. The winner chooses to kick or receive, then each quarter allows two completed drives per team.</p>
         <ul>
           <li>Kickoffs and punts roll 2d6 for distance. Each dice point is 5 yards, so each point moves the landing column 1 grid square. The kicking team chooses only the landing row on that exact column.</li>
-          <li>The ball lands loose. The receiving team must move a player onto the landing square to control it, then the return continues. During returns, every player uses the same square-radius movement: return team up to 2 squares, coverage team up to 3 squares.</li>
+          <li>If a kick lands in the end zone, it is a touchback to the receiving team's 25-yard line. Otherwise, the ball lands loose and the receiving team must move a player onto the landing square to control it. If the kicking team reaches an untouched loose kick first, the play is dead and the receiving team starts at that spot. During returns, every player uses the same square-radius movement: return team up to 2 squares, coverage team up to 3 squares.</li>
           <li>Each normal down starts with formations. Choose a preset, change it freely, then confirm each side before the snap.</li>
           <li>Offense acts first after the snap, then turns alternate one action at a time.</li>
           <li>Move, power move, pass, hand off, tackle, recover, punt, or attempt a field goal.</li>
@@ -638,15 +652,15 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
           <li>Movement: QB/FS moves 1 any direction; RB/MLB moves up to 3 orthogonal with one turn; FB/OLB moves up to 2 orthogonal; WR/CB moves up to 5 straight or diagonal; TE/SS moves up to 3 straight or diagonal; OL/DL moves 1 orthogonal.</li>
           <li>When the offense controls the ball, offensive movement is reduced by 1 square so the defense has a pursuit advantage.</li>
           <li>RB, FB, and line pieces can power move through occupied orthogonal lanes. Roll 2d6 against a high target; more contact makes it harder. Failed power moves stay put and lose the turn.</li>
-          <li>Forward passes must start behind the line and can be used once per down. A pass may be thrown through traffic; success is 2d6 against distance.</li>
-          <li>Snake eyes on a failed pass is an interception only when a defender is within one square of an eligible receiver at the target.</li>
+          <li>Forward passes must start behind the line and can be used once per down. Choose an eligible receiver, then roll 2d6 against the distance to that receiver. Passes may be thrown through traffic.</li>
+          <li>Snake eyes on a failed pass is an interception only when a defender is within one square of the intended receiver.</li>
           <li>Incomplete passes are dead balls. They stop the play at the previous line unless the failed forward pass creates a turnover on downs.</li>
           <li>Tackles need a clear approach lane within the defender's movement range. Friendly pieces do not block the lane; opposing pieces do.</li>
           <li>RB/MLB, FB/OLB, and OL/DL can power tackle through opposing blockers. Roll 2d6 against 8 plus distance plus blockers crossed. Clear tackles use 5 plus distance.</li>
           <li>Double sixes on a tackle creates an immediate strip turnover recovered by the tackling team.</li>
-          <li>Field goals roll 2d6 against distance to the goal line. After a touchdown, choose an extra point kick or a two-point try from the goal line.</li>
-          <li>Touchdowns, extra points, two-point tries, and field goals are followed by a kickoff from the scoring team. After a safety, the team that allowed the safety kicks to the scoring team. At halftime, the team that received the opening kickoff kicks to the other side.</li>
-          <li>Touchdowns, safeties, interceptions, turnovers on downs, punts, made or missed field goals, failed conversions, and stopped plays move the game into the next between-downs step.</li>
+          <li>Field goals roll 2d6 against distance to the goal line. Made field goals score and lead to a kickoff; missed field goals turn the ball over at the kick spot. After a touchdown, choose an extra point kick or a two-point try from the goal line.</li>
+          <li>Touchdowns, extra points, two-point tries, and made field goals are followed by a kickoff from the scoring team. After a safety, the team that allowed the safety kicks to the scoring team. At halftime, the team that received the opening kickoff kicks to the other side.</li>
+          <li>Scores, safeties, interceptions, turnovers on downs, punts, missed field goals, and failed conversions complete drives. Normal tackles and incomplete passes only advance the down.</li>
         </ul>
       </section>
     </div>
@@ -983,7 +997,7 @@ function tackleActions(_game: GameState, selected: Piece, legalActions: Action[]
   );
 }
 
-function chooseComputerAction(game: GameState, legalActions: Action[], seed: number, players: PlayerControl): Action | null {
+export function chooseComputerAction(game: GameState, legalActions: Action[], seed: number, players: PlayerControl): Action | null {
   if (game.phase === 'coinToss') {
     if (!game.coinToss.winner) return { type: 'coinToss' };
     return { type: 'chooseKickoffChoice', team: game.coinToss.winner, choice: 'receive' };
@@ -1003,6 +1017,13 @@ function chooseComputerAction(game: GameState, legalActions: Action[], seed: num
 
   const recovery = pickSeeded(legalActions.filter((action) => action.type === 'recover'), seed);
   if (recovery) return recovery;
+
+  if (ball.kind === 'loose') {
+    const pickupMove = pickSeeded(legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
+      action.type === 'move' && sameCoord(action.to, ball.coord),
+    ), seed);
+    if (pickupMove) return pickupMove;
+  }
 
   if (carrier?.team === game.turn) {
     if (game.phase === 'kickReturn') {
@@ -1107,22 +1128,16 @@ function compareOffensiveMoves(game: GameState, a: Coord, b: Coord): number {
 function chooseComputerPass(game: GameState, passer: Piece, seed: number): Extract<Action, { type: 'pass' }> | null {
   const receivers = game.pieces
     .filter((piece) => piece.team === passer.team && piece.id !== passer.id)
-    .filter((piece) => piece.role === 'wr' || piece.role === 'te')
+    .filter((piece) => piece.role !== 'ol')
     .sort((a, b) => receiverPriority(b) - receiverPriority(a));
 
   for (const receiver of rotate(receivers, seed)) {
-    const targets = [
-      { x: receiver.coord.x + game.direction, y: receiver.coord.y },
-      receiver.coord,
-    ];
-    for (const target of targets) {
-      const action = { type: 'pass' as const, passerId: passer.id, target };
-      try {
-        applyAction(game, action);
-        return action;
-      } catch {
-        continue;
-      }
+    const action = { type: 'pass' as const, passerId: passer.id, receiverId: receiver.id };
+    try {
+      applyAction(game, action);
+      return action;
+    } catch {
+      continue;
     }
   }
 
@@ -1243,6 +1258,7 @@ function describeAction(before: GameState, action: Action, after: GameState): st
   if (action.type === 'startTwoPointTry') return `Two-point try: ${action.team} lines up from the goal line.`;
   if (action.type === 'placeKick') {
     const pending = before.pendingKick;
+    if (after.play.result) return resultText(after);
     return `${pending?.kind === 'punt' ? 'Punt' : 'Kickoff'} placement: ${before.turn} placed the ball at ${coordLabel(action.at)}.`;
   }
   if (action.type === 'chooseFormation') {
@@ -1257,6 +1273,16 @@ function describeAction(before: GameState, action: Action, after: GameState): st
   }
   if (action.type === 'move') {
     const piece = before.pieces.find((item) => item.id === action.pieceId);
+    if (before.ball.kind === 'loose' && sameCoord(before.ball.coord, action.to) && after.ball.kind === 'controlled' && after.ball.pieceId === action.pieceId) {
+      return `Pickup: ${piece?.team ?? before.turn} ${piece ? activeRoleCode(before, piece) : action.pieceId} collected the ball at ${coordLabel(action.to)}.`;
+    }
+    if (after.play.result?.type === 'touchdown') {
+      return `Touchdown: ${piece?.team ?? before.turn} ${piece ? activeRoleCode(before, piece) : action.pieceId} scored at ${coordLabel(action.to)}.`;
+    }
+    if (after.play.result?.type === 'outOfBounds') {
+      return `Out of bounds: ${piece?.team ?? before.turn} ${piece ? activeRoleCode(before, piece) : action.pieceId} stepped out at ${coordLabel(action.to)}.`;
+    }
+    if (after.play.result?.type === 'kickTouched') return resultText(after);
     return `Move: ${piece?.team ?? before.turn} ${piece ? activeRoleCode(before, piece) : action.pieceId} moved to ${coordLabel(action.to)}.`;
   }
   if (action.type === 'powerMove') {
@@ -1265,35 +1291,56 @@ function describeAction(before: GameState, action: Action, after: GameState): st
     const succeeded = afterPiece ? sameCoord(afterPiece.coord, action.to) : false;
     return `${succeeded ? 'Power move' : 'Failed power move'}: ${beforePiece?.team ?? before.turn} ${beforePiece ? activeRoleCode(before, beforePiece) : action.pieceId} ${succeeded ? 'broke through to' : 'could not reach'} ${coordLabel(action.to)}${rollText(action.roll)}.`;
   }
-  if (action.type === 'pass') return `Pass: ${before.turn} targeted ${coordLabel(action.target)}${rollText(action.roll, resultRoll(after))}.`;
+  if (action.type === 'pass') {
+    const receiver = before.pieces.find((piece) => piece.id === action.receiverId);
+    const receiverLabel = receiver ? `${activeRoleCode(before, receiver)} at ${coordLabel(receiver.coord)}` : action.receiverId;
+    if (after.play.result?.type === 'incomplete') return `Incomplete pass: ${before.turn} targeted ${receiverLabel}${rollText(action.roll, after.play.result.roll)}.`;
+    if (after.play.result?.type === 'interception') return `Interception: ${before.turn} targeted ${receiverLabel}${rollText(action.roll, after.play.result.roll)}.`;
+    if (after.play.result?.type === 'touchdown') return `Touchdown pass: ${before.turn} completed to ${receiverLabel}${rollText(action.roll, resultRoll(after))}.`;
+    if (after.play.result?.type === 'turnoverOnDowns') return `Turnover on downs: ${before.turn}'s pass to ${receiverLabel} failed${rollText(action.roll, resultRoll(after))}.`;
+    if (after.ball.kind === 'controlled' && after.ball.pieceId === action.receiverId) {
+      return `Completed pass: ${before.turn} hit ${receiverLabel}${rollText(action.roll, resultRoll(after))}.`;
+    }
+    return `Pass: ${before.turn} targeted ${receiverLabel}${rollText(action.roll, resultRoll(after))}.`;
+  }
   if (action.type === 'handoff') return `Handoff: ${action.fromId} gave the ball to ${action.toId}.`;
   if (action.type === 'recover') return `Recovery: ${action.pieceId} recovered the ball.`;
   if (action.type === 'tackle') {
     if (after.play.result?.type === 'fumble') return `Tackle: ${action.defenderId} forced a fumble${rollText(action.roll, after.play.result.roll)}.`;
     if (after.play.result?.type === 'tackle') return `Tackle: ${action.defenderId} stopped ${action.targetId}${rollText(action.roll, after.play.result.roll)}.`;
     if (after.play.result?.type === 'safety') return `Tackle: ${action.defenderId} scored a safety${rollText(action.roll)}.`;
+    if (after.play.result?.type === 'turnoverOnDowns') return `Tackle: ${action.defenderId} stopped ${action.targetId}. ${resultText(after)}`;
     return `Missed tackle: ${action.defenderId} missed ${action.targetId}${rollText(action.roll)}.`;
   }
-  if (action.type === 'kick') return `Kick: ${action.kickerId} attempted ${kickKindLabel(action.kind)}${rollText(action.roll, resultRoll(after))}.`;
+  if (action.type === 'kick') {
+    if (after.play.result) return `Kick: ${action.kickerId} attempted ${kickKindLabel(action.kind)}${rollText(action.roll, resultRoll(after))}. ${resultText(after)}`;
+    return `Kick: ${action.kickerId} attempted ${kickKindLabel(action.kind)}${rollText(action.roll, resultRoll(after))}.`;
+  }
   return 'Action resolved.';
 }
 
 function resultText(game: GameState): string {
   const result = game.play.result;
   if (!result) return 'Action resolved.';
+  if (result.type === 'touchdown') return `Touchdown for ${result.team}.`;
   if (result.type === 'fieldGoal') return `Field goal ${result.good ? 'good' : 'missed'} for ${result.team}${rollText(undefined, result.roll)}.`;
   if (result.type === 'extraPoint') return `Extra point ${result.good ? 'good' : 'missed'} for ${result.team}${rollText(undefined, result.roll)}.`;
   if (result.type === 'twoPoint') return `Two-point try ${result.good ? 'good' : 'failed'} for ${result.team}.`;
   if (result.type === 'kickoff') return `Kickoff by ${result.team}. ${capitalize(result.receivingTeam)} starts at ${coordLabel(result.at)}${rollText(undefined, result.roll)}.`;
   if (result.type === 'punt') return `Punt by ${result.team}. ${capitalize(result.receivingTeam)} starts at ${coordLabel(result.at)}${rollText(undefined, result.roll)}.`;
+  if (result.type === 'touchback') return `Touchback. ${capitalize(result.team)} starts at ${coordLabel(result.at)}.`;
+  if (result.type === 'kickOutOfBounds') return `${capitalize(result.receivingTeam)} takes over after ${result.team}'s kick went out at ${coordLabel(result.at)}.`;
+  if (result.type === 'kickTouched') return `${capitalize(result.receivingTeam)} takes over where ${result.team} touched the kick at ${coordLabel(result.at)}.`;
   if (result.type === 'incomplete') return `Incomplete pass${rollText(undefined, result.roll)}.`;
   if (result.type === 'interception') return `Interception for ${result.team}${rollText(undefined, result.roll)}.`;
   if (result.type === 'tackle') return `Tackle at ${coordLabel(result.at)}${rollText(undefined, result.roll)}.`;
   if (result.type === 'fumble') return result.recoveredBy
     ? `Fumble recovered by ${result.recoveredBy}${rollText(undefined, result.roll)}.`
     : `Fumble at ${coordLabel(result.at)}.`;
+  if (result.type === 'turnoverOnDowns') return `Turnover on downs. ${capitalize(result.team)} takes over.`;
+  if (result.type === 'outOfBounds') return `Out of bounds at ${coordLabel(result.at)}.`;
   if ('team' in result) return `${result.type} for ${result.team}.`;
-  return result.type;
+  return 'Action resolved.';
 }
 
 function withDice(action: Action): Action {

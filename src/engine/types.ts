@@ -61,6 +61,9 @@ export type PlayResult =
   | { type: 'twoPoint'; team: Team; good: boolean }
   | { type: 'kickoff'; team: Team; receivingTeam: Team; at: Coord; roll?: RollResult }
   | { type: 'punt'; team: Team; receivingTeam: Team; at: Coord; roll?: RollResult }
+  | { type: 'touchback'; team: Team; at: Coord }
+  | { type: 'kickOutOfBounds'; team: Team; receivingTeam: Team; at: Coord }
+  | { type: 'kickTouched'; team: Team; receivingTeam: Team; at: Coord }
   | { type: 'safety'; team: Team }
   | { type: 'tackle'; at: Coord; roll?: RollResult }
   | { type: 'fumble'; at: Coord; recoveredBy?: Team; roll?: RollResult }
@@ -143,7 +146,7 @@ export type ShiftAction = {
 export type PassAction = {
   type: 'pass';
   passerId: string;
-  target: Coord;
+  receiverId: string;
   roll?: DiceRoll;
 };
 

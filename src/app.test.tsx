@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { App } from './main';
+import { App, chooseComputerAction } from './main';
 import { cleanup } from '@testing-library/react';
-import { applyAction, createGame } from './engine/rules';
+import { applyAction, createGame, generateLegalActions } from './engine/rules';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -339,6 +339,43 @@ describe('Chessball UI interactions', () => {
     expect(screen.queryByRole('button', { name: /nickel/i })).not.toBeInTheDocument();
   });
 
+  it('computer returner moves onto a reachable loose kickoff even after chasing it last turn', () => {
+    const base = createGame();
+    const returned = {
+      ...base,
+      phase: 'kickReturn' as const,
+      possession: 'away' as const,
+      direction: -1 as const,
+      turn: 'away' as const,
+      ball: { kind: 'loose' as const, coord: { x: 11, y: 5 } },
+      pendingKick: {
+        kind: 'kickoff' as const,
+        kickingTeam: 'home' as const,
+        receivingTeam: 'away' as const,
+        from: { x: 4, y: 5 },
+        distance: 7,
+        roll: { die1: 3, die2: 4 },
+      },
+      play: {
+        ...base.play,
+        actions: [
+          ...base.play.actions,
+          { type: 'move' as const, pieceId: 'away-wr1', to: { x: 9, y: 5 } },
+          { type: 'move' as const, pieceId: 'home-wr1', to: { x: 7, y: 5 } },
+        ],
+      },
+      pieces: base.pieces.map((item) => {
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 9, y: 5 } };
+        if (item.id === 'home-wr1') return { ...item, coord: { x: 7, y: 5 } };
+        return { ...item, coord: { x: 0, y: item.coord.y } };
+      }),
+    };
+
+    const action = chooseComputerAction(returned, generateLegalActions(returned), 4, { home: 'human', away: 'computer' });
+
+    expect(action).toEqual({ type: 'move', pieceId: 'away-wr1', to: { x: 11, y: 5 } });
+  });
+
   it('draws the line of scrimmage on the offense-facing edge of the formation', () => {
     render(<App initialGame={createGame()} />);
 
@@ -463,7 +500,29 @@ describe('Chessball UI interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: /^pass$/i }));
     fireEvent.click(screen.getByTitle('4,1'));
 
-    expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/pass: home targeted 4,1/i)).toBeInTheDocument();
+    expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/completed pass: home hit WR at 4,1/i)).toBeInTheDocument();
+  });
+
+  it('logs incomplete passes clearly in the event log', () => {
+    const base = createGame({ phase: 'live', formationConfirmed: { offense: true, defense: true } });
+    const longPass = {
+      ...base,
+      turn: 'home' as const,
+      ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
+      pieces: base.pieces.map((item) => {
+        if (item.id === 'home-qb') return { ...item, coord: { x: 4, y: 5 } };
+        if (item.id === 'home-wr1') return { ...item, coord: { x: 20, y: 1 } };
+        if (item.team === 'away') return { ...item, coord: { x: 22, y: item.coord.y } };
+        return item;
+      }),
+    };
+    render(<App initialGame={longPass} initialPlayers={{ home: 'human', away: 'human' }} />);
+
+    fireEvent.click(screen.getByTitle('4,5'));
+    fireEvent.click(screen.getByRole('button', { name: /^pass$/i }));
+    fireEvent.click(screen.getByTitle('20,1'));
+
+    expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/incomplete pass/i)).toBeInTheDocument();
   });
 
   it('opens a rules and how-to-play panel', () => {

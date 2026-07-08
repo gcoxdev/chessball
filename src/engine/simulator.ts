@@ -530,7 +530,13 @@ function chooseBoundedRandomAction(state: GameState, legalActions: Action[], rng
   }
 
   if (state.ball.kind === 'loose') {
-    const towardLooseBall = topMovesToward(legalActions, state, state.ball.coord, 8);
+    const looseCoord = state.ball.coord;
+    const pickupMoves = legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
+      action.type === 'move' && sameCoord(action.to, looseCoord),
+    );
+    if (pickupMoves.length > 0) return pickupMoves[randomInt(rng, pickupMoves.length)];
+
+    const towardLooseBall = topMovesToward(legalActions, state, looseCoord, 8);
     if (towardLooseBall.length > 0) return towardLooseBall[randomInt(rng, towardLooseBall.length)];
   }
 
@@ -582,6 +588,11 @@ function chooseHeuristicAction(state: GameState, legalActions: Action[], rng: Ra
 
   const looseBall = state.ball.kind === 'loose' ? state.ball.coord : undefined;
   if (looseBall) {
+    const pickup = legalActions.find((action): action is Extract<Action, { type: 'move' }> =>
+      action.type === 'move' && sameCoord(action.to, looseBall),
+    );
+    if (pickup) return pickup;
+
     const chase = bestMoveToward(legalActions, state, looseBall);
     if (chase) return chase;
   }
@@ -686,14 +697,12 @@ function chooseHeuristicPass(state: GameState, legalActions: Action[], carrier: 
 
 function topPasses(state: GameState, legalActions: Action[], carrier: Piece, limit: number): Array<Extract<Action, { type: 'pass' }>> {
   const passes = legalActions.filter((action): action is Extract<Action, { type: 'pass' }> => action.type === 'pass' && action.passerId === carrier.id);
-  const receivers = state.pieces.filter((piece) => piece.team === carrier.team && piece.id !== carrier.id && (piece.role === 'wr' || piece.role === 'te'));
-  const targets = receivers.flatMap((receiver) => [
-    receiver.coord,
-    { x: receiver.coord.x + state.direction, y: receiver.coord.y },
-  ]);
+  const receivers = new Map(state.pieces
+    .filter((piece) => piece.team === carrier.team && piece.id !== carrier.id && (piece.role === 'wr' || piece.role === 'te'))
+    .map((receiver) => [receiver.id, receiver]));
   return passes
-    .filter((pass) => targets.some((target) => sameCoord(target, pass.target)))
-    .sort((a, b) => progressScore(state, b.target) - progressScore(state, a.target))
+    .filter((pass) => receivers.has(pass.receiverId))
+    .sort((a, b) => progressScore(state, receivers.get(b.receiverId)?.coord ?? carrier.coord) - progressScore(state, receivers.get(a.receiverId)?.coord ?? carrier.coord))
     .slice(0, limit);
 }
 
@@ -795,7 +804,7 @@ function actionSummary(before: GameState, action: Action, after: GameState): str
   if (action.type === 'move' || action.type === 'powerMove' || action.type === 'shift') {
     return `${action.type} ${action.pieceId} -> ${coordLabel(action.to)} phase=${after.phase}${result}`;
   }
-  if (action.type === 'pass') return `pass ${action.passerId} -> ${coordLabel(action.target)} phase=${after.phase}${result}`;
+  if (action.type === 'pass') return `pass ${action.passerId} -> ${action.receiverId} phase=${after.phase}${result}`;
   if (action.type === 'tackle') return `tackle ${action.defenderId} -> ${action.targetId} phase=${after.phase}${result}`;
   if (action.type === 'kick') return `kick ${action.kind} by ${action.kickerId} phase=${after.phase}${result}`;
   if (action.type === 'placeKick') return `placeKick ${coordLabel(action.at)} phase=${after.phase}`;
