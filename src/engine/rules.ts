@@ -395,7 +395,7 @@ export function startNextDown(state: GameState): GameState {
   const direction = directionFor(nextPossession);
   const lineOfScrimmage = result?.type === 'kickoff'
     ? clamp(state.lineOfScrimmage, FIELD_START, FIELD_END)
-    : result?.type === 'touchback' || result?.type === 'kickOutOfBounds' || result?.type === 'kickTouched'
+    : result?.type === 'touchback' || result?.type === 'kickOutOfBounds' || result?.type === 'kickTouched' || result?.type === 'interception' || result?.type === 'turnoverOnDowns'
       ? clamp(state.lineOfScrimmage, FIELD_START, FIELD_END)
     : result?.type === 'fieldGoal' && !result.good
       ? clamp(state.lineOfScrimmage, FIELD_START, FIELD_END)
@@ -798,7 +798,7 @@ function passBall(state: GameState, action: Extract<Action, { type: 'pass' }>): 
     const interceptor = interceptionCandidate(state, receiver.coord);
     if (interceptor) {
       if (state.conversion) return failedTwoPoint(withPassUsed);
-      const lineOfScrimmage = lineInFrontOfBall({ ...withPassUsed, direction: directionFor(interceptor.team) }, target);
+      const lineOfScrimmage = lineInFrontOfBall({ ...withPassUsed, direction: directionFor(interceptor.team) }, interceptor.coord);
       const interceptedState = {
         ...withPassUsed,
         possession: interceptor.team,
@@ -807,7 +807,6 @@ function passBall(state: GameState, action: Extract<Action, { type: 'pass' }>): 
         down: 1 as const,
         lineOfScrimmage,
         firstDownLine: clamp(lineOfScrimmage + FIRST_DOWN_COLUMNS * directionFor(interceptor.team), FIELD_START, FIELD_END),
-        pieces: withPassUsed.pieces.map((piece) => (piece.id === interceptor.id ? { ...piece, coord: target } : piece)),
         ball: { kind: 'controlled' as const, pieceId: interceptor.id },
       };
       return endPlay(interceptedState, { type: 'interception', team: interceptor.team, roll: result });
@@ -817,14 +816,21 @@ function passBall(state: GameState, action: Extract<Action, { type: 'pass' }>): 
   if (result.total < result.required) {
     if (state.conversion) return failedTwoPoint(withPassUsed);
     if (state.down === 4) {
+      const nextPossession = otherTeam(state.possession);
+      const nextDirection = directionFor(nextPossession);
+      const lineOfScrimmage = clamp(state.lineOfScrimmage, FIELD_START, FIELD_END);
       return endPlay(
         {
           ...withPassUsed,
-          possession: otherTeam(state.possession),
-          direction: directionFor(otherTeam(state.possession)),
-          turn: otherTeam(state.possession),
+          possession: nextPossession,
+          direction: nextDirection,
+          turn: nextPossession,
+          down: 1 as const,
+          lineOfScrimmage,
+          firstDownLine: clamp(lineOfScrimmage + FIRST_DOWN_COLUMNS * nextDirection, FIELD_START, FIELD_END),
+          ball: { kind: 'controlled' as const, pieceId: `${nextPossession}-qb` },
         },
-        { type: 'turnoverOnDowns', team: otherTeam(state.possession) },
+        { type: 'turnoverOnDowns', team: nextPossession },
       );
     }
     return endPlay(
@@ -1032,20 +1038,20 @@ function tackle(state: GameState, action: Extract<Action, { type: 'tackle' }>): 
 
   if (result.total === 12) {
     if (state.conversion) return failedTwoPoint(withAction);
-    const lineOfScrimmage = lineInFrontOfBall({ ...withAction, direction: directionFor(defender.team) }, target.coord);
+    const recoveryCoord = defender.coord;
+    const lineOfScrimmage = lineInFrontOfBall({ ...withAction, direction: directionFor(defender.team) }, recoveryCoord);
     return endPlay(
       {
         ...withAction,
         possession: defender.team,
         direction: directionFor(defender.team),
         turn: defender.team,
-        down: 1,
+        down: 1 as const,
         lineOfScrimmage,
         firstDownLine: clamp(lineOfScrimmage + FIRST_DOWN_COLUMNS * directionFor(defender.team), FIELD_START, FIELD_END),
-        pieces: withAction.pieces.map((piece) => (piece.id === defender.id ? { ...piece, coord: target.coord } : piece)),
         ball: { kind: 'controlled', pieceId: defender.id },
       },
-      { type: 'fumble', at: target.coord, recoveredBy: defender.team, roll: result },
+      { type: 'fumble', at: recoveryCoord, recoveredBy: defender.team, roll: result },
     );
   }
 
@@ -1459,14 +1465,20 @@ function endPlayOrTurnover(state: GameState, result: PlayResult, ballAt: Coord):
     return endPlay({ ...state, down: 1, lineOfScrimmage, firstDownLine: clamp(lineOfScrimmage + FIRST_DOWN_COLUMNS * state.direction, FIELD_START, FIELD_END) }, result);
   }
   if (state.down === 4) {
+    const nextPossession = otherTeam(state.possession);
+    const nextDirection = directionFor(nextPossession);
     return endPlay(
       {
         ...state,
-        possession: otherTeam(state.possession),
-        direction: directionFor(otherTeam(state.possession)),
-        turn: otherTeam(state.possession),
+        possession: nextPossession,
+        direction: nextDirection,
+        turn: nextPossession,
+        down: 1 as const,
+        lineOfScrimmage,
+        firstDownLine: clamp(lineOfScrimmage + FIRST_DOWN_COLUMNS * nextDirection, FIELD_START, FIELD_END),
+        ball: { kind: 'controlled' as const, pieceId: `${nextPossession}-qb` },
       },
-      { type: 'turnoverOnDowns', team: otherTeam(state.possession) },
+      { type: 'turnoverOnDowns', team: nextPossession },
     );
   }
 

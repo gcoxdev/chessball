@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { simulateBatch, simulateGame } from './simulator';
+import { createGame } from './rules';
+import { simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
 
 describe('headless simulator', () => {
   it('produces repeatable game summaries from the same seed and policy', () => {
@@ -66,5 +67,17 @@ describe('headless simulator', () => {
 
     expect(result.status).toBe('completed');
     expect(result.anomalies).toEqual([]);
+  });
+
+  it('flags impossible possession and ball-owner turnover states', () => {
+    const invalid = createGame({
+      phase: 'betweenDowns',
+      possession: 'away',
+      turn: 'away',
+      ball: { kind: 'controlled', pieceId: 'home-qb' },
+      play: { actions: [], result: { type: 'turnoverOnDowns', team: 'away' } },
+    });
+
+    expect(validateGameStateInvariants(invalid)).toContain('Controlled ball belongs to home-qb, but possession is away');
   });
 });

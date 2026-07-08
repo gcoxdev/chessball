@@ -511,9 +511,10 @@ describe('ball actions', () => {
       roll: { die1: 6, die2: 6 },
     });
 
-    expect(next.play.result).toMatchObject({ type: 'fumble', recoveredBy: 'away', at: piece(next, 'home-rb').coord });
+    expect(next.play.result).toMatchObject({ type: 'fumble', recoveredBy: 'away', at: piece(next, 'away-fb').coord });
     expect(next.phase).toBe('betweenDowns');
     expect(next.possession).toBe('away');
+    expect(piece(next, 'away-fb').coord).not.toEqual(piece(next, 'home-rb').coord);
   });
 });
 
@@ -727,6 +728,8 @@ describe('play resolution', () => {
     expect(next.play.result?.type).toBe('fumble');
     expect(next.play.result?.type === 'fumble' ? next.play.result.recoveredBy : undefined).toBe('away');
     expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-rb');
+    expect(piece(next, 'away-rb').coord).toEqual({ x: 4, y: 5 });
+    expect(piece(next, 'home-rb').coord).toEqual({ x: 6, y: 5 });
     expect(next.phase).toBe('betweenDowns');
     expect(next.possession).toBe('away');
   });
@@ -1295,9 +1298,11 @@ describe('play resolution', () => {
 
     const fumbled = applyAction(returned, { type: 'tackle', defenderId: 'home-rb', targetId: 'away-wr1', roll: { die1: 6, die2: 6 } });
 
-    expect(fumbled.play.result).toMatchObject({ type: 'fumble', at: { x: 12, y: 5 }, recoveredBy: 'home' });
+    expect(fumbled.play.result).toMatchObject({ type: 'fumble', at: { x: 13, y: 5 }, recoveredBy: 'home' });
     expect(fumbled.possession).toBe('home');
     expect(fumbled.ball.kind === 'controlled' ? fumbled.ball.pieceId : '').toBe('home-rb');
+    expect(piece(fumbled, 'home-rb').coord).toEqual({ x: 13, y: 5 });
+    expect(piece(fumbled, 'away-wr1').coord).toEqual({ x: 12, y: 5 });
   });
 
   it('rolls a punt on any down into a placement choice', () => {
@@ -1492,9 +1497,34 @@ describe('game flow', () => {
     const stopped = applyAction(state, { type: 'pass', passerId: 'home-qb', receiverId: 'home-wr1', roll: { die1: 1, die2: 2 } });
     const next = startNextDown(stopped);
 
+    expect(stopped.possession).toBe('away');
+    expect(stopped.ball).toEqual({ kind: 'controlled', pieceId: 'away-qb' });
     expect(next.possession).toBe('away');
     expect(next.down).toBe(1);
+    expect(next.lineOfScrimmage).toBe(5);
     expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-qb');
+  });
+
+  it('spots a fourth-down tackle turnover where the carrier was stopped', () => {
+    let state = liveGame(createGame({ down: 4, lineOfScrimmage: 5, firstDownLine: 8 }));
+    state = {
+      ...state,
+      turn: 'away',
+      pieces: state.pieces.map((item) => {
+        if (item.id === 'home-rb') return { ...item, coord: { x: 7, y: 5 } };
+        if (item.id === 'away-fb') return { ...item, coord: { x: 7, y: 6 } };
+        return item;
+      }),
+      ball: { kind: 'controlled', pieceId: 'home-rb' },
+    };
+
+    const stopped = applyAction(state, { type: 'tackle', defenderId: 'away-fb', targetId: 'home-rb', roll: { die1: 5, die2: 5 } });
+    const next = startNextDown(stopped);
+
+    expect(stopped.play.result).toEqual({ type: 'turnoverOnDowns', team: 'away' });
+    expect(stopped.ball).toEqual({ kind: 'controlled', pieceId: 'away-qb' });
+    expect(next.possession).toBe('away');
+    expect(next.lineOfScrimmage).toBe(7);
   });
 
   it('starts a new possession at first down after an interception', () => {
@@ -1515,6 +1545,29 @@ describe('game flow', () => {
 
     expect(next.possession).toBe('away');
     expect(next.down).toBe(1);
+    expect(next.lineOfScrimmage).toBe(10);
     expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-qb');
+  });
+
+  it('spots interceptions at the defender square without overlapping the receiver', () => {
+    let state = liveGame();
+    state = {
+      ...state,
+      pieces: state.pieces.map((item) => {
+        if (item.id === 'home-wr1') return { ...item, coord: { x: 10, y: 5 } };
+        if (item.id === 'away-wr1') return { ...item, coord: { x: 9, y: 5 } };
+        if (item.team === 'home' && item.id !== 'home-qb' && item.id !== 'home-wr1') return { ...item, coord: { x: 3, y: item.coord.y } };
+        if (item.team === 'away' && item.id !== 'away-wr1') return { ...item, coord: { x: 18, y: item.coord.y } };
+        return item;
+      }),
+    };
+
+    const stopped = applyAction(state, { type: 'pass', passerId: 'home-qb', receiverId: 'home-wr1', roll: { die1: 1, die2: 1 } });
+    const next = startNextDown(stopped);
+
+    expect(piece(stopped, 'away-wr1').coord).toEqual({ x: 9, y: 5 });
+    expect(piece(stopped, 'home-wr1').coord).toEqual({ x: 10, y: 5 });
+    expect(stopped.ball).toEqual({ kind: 'controlled', pieceId: 'away-wr1' });
+    expect(next.lineOfScrimmage).toBe(9);
   });
 });

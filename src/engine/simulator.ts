@@ -15,7 +15,7 @@ export type SimulationPolicy = 'heuristic' | 'random';
 export type SimulationStatus = 'completed' | 'stalled' | 'crashed';
 
 export type SimulationAnomaly = {
-  type: 'maxActions' | 'repeatedState' | 'noAction' | 'exception';
+  type: 'maxActions' | 'repeatedState' | 'noAction' | 'exception' | 'invariant';
   message: string;
   actionIndex: number;
   phase: GameState['phase'];
@@ -162,6 +162,19 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
         if (state.phase === 'betweenDowns') {
           state = startNextDown(state);
           pushRecentAction(recentActions, `nextDown -> ${state.phase} ${state.possession} Q${state.quarter} D${state.down}`);
+          const invariantErrors = validateGameStateInvariants(state);
+          if (invariantErrors.length > 0) {
+            status = 'crashed';
+            anomalies.push({
+              type: 'invariant',
+              message: invariantErrors.join('; '),
+              actionIndex,
+              phase: state.phase,
+              signature: stateSignature(state),
+              recentActions: recentActions.slice(-25),
+            });
+            break;
+          }
           actionIndex += 1;
           continue;
         }
@@ -184,6 +197,19 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       pushRecentAction(recentActions, actionSummary(before, resolvedAction, state));
       const resultType = state.play.result?.type;
       if (resultType) increment(resultTypes, resultType);
+      const invariantErrors = validateGameStateInvariants(state);
+      if (invariantErrors.length > 0) {
+        status = 'crashed';
+        anomalies.push({
+          type: 'invariant',
+          message: invariantErrors.join('; '),
+          actionIndex,
+          phase: state.phase,
+          signature: stateSignature(state),
+          recentActions: recentActions.slice(-25),
+        });
+        break;
+      }
 
       actionIndex += 1;
     } catch (error) {
@@ -227,6 +253,72 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
     anomalies,
     finalState: state,
   };
+}
+
+export function validateGameStateInvariants(state: GameState): string[] {
+  const errors: string[] = [];
+  const ids = new Set<string>();
+  const occupied = new Set<string>();
+  const fieldStart = 2;
+  const fieldEnd = state.board.width - 3;
+  const expectedFirstDownLine = clamp(state.lineOfScrimmage + 2 * state.direction, fieldStart, fieldEnd);
+
+  for (const piece of state.pieces) {
+    if (ids.has(piece.id)) errors.push(`Duplicate piece id ${piece.id}`);
+    ids.add(piece.id);
+    if (!inBounds(state, piece.coord)) errors.push(`Piece ${piece.id} is out of bounds at ${piece.coord.x},${piece.coord.y}`);
+    const coordKey = `${piece.coord.x},${piece.coord.y}`;
+    if (occupied.has(coordKey)) errors.push(`Multiple pieces occupy ${coordKey}`);
+    occupied.add(coordKey);
+  }
+
+  const ball = state.ball;
+  if (ball.kind === 'controlled') {
+    const carrier = state.pieces.find((piece) => piece.id === ball.pieceId);
+    if (!carrier) {
+      errors.push(`Controlled ball references missing piece ${ball.pieceId}`);
+    } else if (carrier.team !== state.possession && state.phase !== 'coinToss' && state.phase !== 'pregame' && state.phase !== 'final') {
+      errors.push(`Controlled ball belongs to ${carrier.id}, but possession is ${state.possession}`);
+    }
+  } else if (!inBounds(state, ball.coord) && state.phase !== 'coinToss' && state.phase !== 'pregame' && state.phase !== 'final') {
+    errors.push(`Loose ball is out of bounds at ${ball.coord.x},${ball.coord.y}`);
+  }
+
+  if (state.phase === 'kickPlacement' && !state.pendingKick) errors.push('Kick placement phase is missing pending kick data');
+  if (state.phase === 'kickReturn') {
+    if (!state.pendingKick) {
+      errors.push('Kick return phase is missing pending kick data');
+    } else if (state.possession !== state.pendingKick.receivingTeam) {
+      errors.push(`Kick return possession is ${state.possession}, but receiving team is ${state.pendingKick.receivingTeam}`);
+    }
+  }
+
+  if (state.phase === 'formation' || state.phase === 'live' || state.phase === 'kickReturn' || state.phase === 'betweenDowns') {
+    if (state.lineOfScrimmage < fieldStart || state.lineOfScrimmage > fieldEnd) {
+      errors.push(`Line of scrimmage ${state.lineOfScrimmage} is outside the field`);
+    }
+    if (state.down === 1 && state.firstDownLine !== expectedFirstDownLine) {
+      errors.push(`First-down line ${state.firstDownLine} should be ${expectedFirstDownLine}`);
+    }
+  }
+
+  const result = state.play.result;
+  if (state.phase === 'betweenDowns' && result) {
+    if ((result.type === 'turnoverOnDowns' || result.type === 'interception') && state.possession !== result.team) {
+      errors.push(`${result.type} result team ${result.team} does not match possession ${state.possession}`);
+    }
+    if (result.type === 'touchback' && state.possession !== result.team) {
+      errors.push(`${result.type} result team ${result.team} does not match possession ${state.possession}`);
+    }
+    if (result.type === 'kickTouched' && state.possession !== result.receivingTeam) {
+      errors.push(`kickTouched receiving team ${result.receivingTeam} does not match possession ${state.possession}`);
+    }
+    if (result.type === 'kickOutOfBounds' && state.possession !== result.receivingTeam) {
+      errors.push(`kickOutOfBounds receiving team ${result.receivingTeam} does not match possession ${state.possession}`);
+    }
+  }
+
+  return errors;
 }
 
 export function simulateBatch(options: SimulateBatchOptions): SimulationBatchReport {
@@ -783,6 +875,14 @@ function randomInt(rng: Random, upperExclusive: number): number {
 
 function sameCoord(a: Coord, b: Coord): boolean {
   return a.x === b.x && a.y === b.y;
+}
+
+function inBounds(state: GameState, coord: Coord): boolean {
+  return coord.x >= 0 && coord.y >= 0 && coord.x < state.board.width && coord.y < state.board.height;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function actionForPiece(action: Action, pieceId: string): boolean {
