@@ -158,6 +158,10 @@ h1 {
   grid-template-columns: 1fr 1fr;
 }
 
+.history-controls {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .button-grid button,
 .action-list button,
 .formation-options button,
@@ -783,6 +787,19 @@ h1 {
   border: 2px solid var(--gold);
   border-radius: 50%;
   background: rgba(213, 166, 58, 0.16);
+}
+
+.square.power-legal::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 38%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 2px solid #d94b42;
+  border-radius: 50%;
+  background: rgba(217, 75, 66, 0.18);
 }
 
 .piece {

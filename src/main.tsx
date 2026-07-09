@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BookOpen, Flag, Goal, Play, RadioTower, RotateCcw, Shield, StepForward, X, Zap } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Play, RadioTower, RotateCcw, Shield, StepForward, X, Zap } from 'lucide-react';
 import {
   activeRoleCode,
   applyAction,
@@ -157,6 +157,18 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       return;
     }
 
+    if (piece && selectedPiece) {
+      const tackle = legalActions.find((action): action is Extract<Action, { type: 'tackle' }> =>
+        action.type === 'tackle' &&
+        action.defenderId === selectedPiece.id &&
+        action.targetId === piece.id,
+      );
+      if (tackle) {
+        runAction(tackle);
+        return;
+      }
+    }
+
     if (piece) {
       if (piece.id === selectedPieceId) {
         setSelectedPieceId(null);
@@ -176,6 +188,18 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       action.pieceId === selectedPiece.id &&
       sameCoord(action.to, coord),
     );
+
+    const powerMove = selectedPiece && legalActions.find((action): action is Extract<Action, { type: 'powerMove' }> =>
+      action.type === 'powerMove' &&
+      action.pieceId === selectedPiece.id &&
+      sameCoord(action.to, coord),
+    );
+
+    if (selectedPiece && targetMode === 'move' && powerMove) {
+      runAction(powerMove);
+      setTargetMode(null);
+      return;
+    }
 
     if (selectedPiece && targetMode === 'move' && isLegalMoveTarget) {
       runAction({ type: game.phase === 'formation' ? 'shift' : 'move', pieceId: selectedPiece.id, to: coord });
@@ -472,6 +496,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     action.pieceId === selectedPiece.id &&
                     sameCoord(action.to, coord),
                 );
+                const legalPowerMove = selectedPiece && legalActions.some((action) =>
+                  action.type === 'powerMove' &&
+                    action.pieceId === selectedPiece.id &&
+                    sameCoord(action.to, coord),
+                );
                 const legalPassReceiver = selectedBallCarrier && targetMode === 'pass' && piece && legalActions.some((action) =>
                   action.type === 'pass' &&
                   action.passerId === selectedBallCarrier.id &&
@@ -480,7 +509,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                 const legalKickPlacement = game.phase === 'kickPlacement' && legalActions.some((action) => action.type === 'placeKick' && sameCoord(action.at, coord));
                 return (
                   <button
-                    className={squareClass(game, coord, piece, legalMove || legalPassReceiver || legalKickPlacement, ballHere)}
+                    className={squareClass(game, coord, piece, legalMove || legalPassReceiver || legalKickPlacement, legalPowerMove, ballHere)}
                     key={`${x}-${y}`}
                     type="button"
                     role="gridcell"
@@ -735,11 +764,19 @@ function HistoryPanel({
         <h2>History</h2>
         {!isLatest && <span>Viewing history</span>}
       </div>
-      <div className="history-controls">
-        <button type="button" onClick={onFirst} disabled={historyIndex === 0}>First</button>
-        <button type="button" onClick={onBack} disabled={historyIndex === 0}>Back</button>
-        <button type="button" onClick={onForward} disabled={isLatest}>Forward</button>
-        <button type="button" onClick={onLatest} disabled={isLatest}>Latest</button>
+      <div className="history-controls" role="group" aria-label="History controls">
+        <button type="button" onClick={onFirst} disabled={historyIndex === 0} aria-label="First move" title="First move">
+          <ChevronsLeft size={16} aria-hidden="true" />
+        </button>
+        <button type="button" onClick={onBack} disabled={historyIndex === 0} aria-label="Previous move" title="Previous move">
+          <ChevronLeft size={16} aria-hidden="true" />
+        </button>
+        <button type="button" onClick={onForward} disabled={isLatest} aria-label="Next move" title="Next move">
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
+        <button type="button" onClick={onLatest} disabled={isLatest} aria-label="Latest move" title="Latest move">
+          <ChevronsRight size={16} aria-hidden="true" />
+        </button>
       </div>
       <p className="history-index">Move {historyIndex + 1} of {history.length}: {history[historyIndex]?.label}</p>
       <div className="event-log" role="log" aria-label="Event log">
@@ -971,7 +1008,7 @@ function otherTeamForUi(team: Team): Team {
   return team === 'home' ? 'away' : 'home';
 }
 
-function squareClass(game: GameState, coord: Coord, piece: Piece | undefined, legalMove: boolean | undefined, ballHere: boolean) {
+function squareClass(game: GameState, coord: Coord, piece: Piece | undefined, legalMove: boolean | undefined, legalPowerMove: boolean | undefined, ballHere: boolean) {
   const classes = ['square', fieldZone(coord)];
   if (showsScrimmageMarkers(game) && coord.x === game.lineOfScrimmage) classes.push('scrimmage', game.direction === 1 ? 'scrimmage-forward' : 'scrimmage-backward');
   if (showsScrimmageMarkers(game) && coord.x === game.firstDownLine) classes.push('first-down', game.direction === 1 ? 'first-down-forward' : 'first-down-backward');
@@ -981,7 +1018,8 @@ function squareClass(game: GameState, coord: Coord, piece: Piece | undefined, le
   if (coord.x === 0 && coord.y >= 4 && coord.y <= 6) classes.push('goal-post-left');
   if (coord.x === game.board.width - 1 && coord.y >= 4 && coord.y <= 6) classes.push('goal-post-right');
   if (piece) classes.push('occupied', piece.team);
-  if (legalMove) classes.push('legal');
+  if (legalPowerMove) classes.push('power-legal');
+  else if (legalMove) classes.push('legal');
   if (ballHere) classes.push('ball-square');
   if (isTouchdownSquare(coord, game.direction)) classes.push('target-zone');
   return classes.join(' ');

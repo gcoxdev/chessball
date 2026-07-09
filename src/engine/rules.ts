@@ -1382,6 +1382,7 @@ function legalPowerMovesForPiece(state: GameState, piece: Piece): Coord[] {
       if (!inBounds(coord)) break;
       const blocker = pieceAt(state, coord, piece.id);
       if (blocker) {
+        if (state.ball.kind === 'controlled' && blocker.id === state.ball.pieceId) break;
         if (blocker.team !== piece.team) contacted = true;
         continue;
       }

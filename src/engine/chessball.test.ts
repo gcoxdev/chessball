@@ -198,6 +198,24 @@ describe('piece movement', () => {
     expect(actions).toContainEqual({ type: 'powerMove', pieceId: 'home-rb', to: { x: 5, y: 5 } });
   });
 
+  it('does not allow power moves through the ball carrier', () => {
+    const state = {
+      ...liveGame(),
+      turn: 'home' as const,
+      ball: { kind: 'controlled' as const, pieceId: 'away-rb' },
+      pieces: liveGame().pieces.map((item) => {
+        if (item.id === 'home-rb') return { ...item, coord: { x: 3, y: 5 } };
+        if (item.id === 'away-rb') return { ...item, coord: { x: 4, y: 5 } };
+        if (item.id !== 'home-rb' && item.id !== 'away-rb') return { ...item, coord: { x: 18, y: item.coord.y } };
+        return item;
+      }),
+    };
+    const actions = generateLegalActions(state);
+
+    expect(actions).toContainEqual({ type: 'tackle', defenderId: 'home-rb', targetId: 'away-rb' });
+    expect(actions).not.toContainEqual({ type: 'powerMove', pieceId: 'home-rb', to: { x: 5, y: 5 } });
+  });
+
   it('treats moving through a friendly piece as a normal move, not a power move', () => {
     const afterHandoff = applyAction(liveGame(), { type: 'handoff', fromId: 'home-qb', toId: 'home-rb' });
     const state = {

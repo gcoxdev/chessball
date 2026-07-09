@@ -297,6 +297,20 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/\.utility-players\s*{\s*display: flex;/);
   });
 
+  it('renders history controls as one icon-only row with accessible labels', () => {
+    render(<App initialGame={createGame()} />);
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+    const controls = screen.getByRole('group', { name: /history controls/i });
+
+    expect(controls).toHaveClass('history-controls');
+    expect(cssText).toMatch(/\.history-controls\s*{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s);
+    for (const label of ['First move', 'Previous move', 'Next move', 'Latest move']) {
+      const button = within(controls).getByRole('button', { name: label });
+      expect(button.textContent?.trim()).toBe('');
+      expect(button).toHaveAttribute('title', label);
+    }
+  });
+
   it('lets a user change formation before confirming it', () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
@@ -455,6 +469,28 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('button', { name: /handoff to home ol at 5,5/i })).toBeInTheDocument();
   });
 
+  it('highlights legal power-move targets differently from normal moves', () => {
+    const afterHandoff = applyAction(createGame({ phase: 'live' }), { type: 'handoff', fromId: 'home-qb', toId: 'home-rb' });
+    const state = {
+      ...afterHandoff,
+      turn: 'home' as const,
+      pieces: afterHandoff.pieces.map((piece) => {
+        if (piece.id === 'home-qb') return { ...piece, coord: { x: 3, y: 4 } };
+        if (piece.id === 'home-ol3') return { ...piece, coord: { x: 5, y: 4 } };
+        if (piece.id === 'away-rb') return { ...piece, coord: { x: 4, y: 5 } };
+        if (piece.team === 'away') return { ...piece, coord: { x: 18, y: piece.coord.y } };
+        return piece;
+      }),
+      ball: { kind: 'controlled' as const, pieceId: 'home-rb' },
+    };
+    render(<App initialGame={state} initialPlayers={{ home: 'human', away: 'human' }} />);
+
+    fireEvent.click(screen.getByTitle('3,5'));
+
+    expect(screen.getByTitle('5,5')).toHaveClass('power-legal');
+    expect(screen.getByTitle('5,5')).not.toHaveClass('legal');
+  });
+
   it('requires an extra-point or two-point choice after touchdown', () => {
     render(<App initialGame={createGame({
       phase: 'betweenDowns',
@@ -524,7 +560,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('only enables passing for the selected ball carrier', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    vi.spyOn(Math, 'random').mockReturnValue(0.7);
     const ready = applyAction(
       applyAction(
         applyAction(createGame(), { type: 'confirmFormation', side: 'offense' }),
@@ -680,6 +716,26 @@ describe('Chessball UI interactions', () => {
     expect(screen.queryByRole('button', { name: /tackle/i })).not.toBeInTheDocument();
   });
 
+  it('tackles by clicking a legal ball carrier after selecting a defender', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.7);
+    const base = createGame({ phase: 'live', turn: 'away' });
+    const state = {
+      ...base,
+      ball: { kind: 'controlled' as const, pieceId: 'home-wr2' },
+      pieces: base.pieces.map((piece) => {
+        if (piece.id === 'home-wr2') return { ...piece, coord: { x: 8, y: 5 } };
+        if (piece.id === 'away-wr1') return { ...piece, coord: { x: 8, y: 6 } };
+        return piece;
+      }),
+    };
+    render(<App initialGame={state} initialPlayers={{ home: 'human', away: 'human' }} />);
+
+    fireEvent.click(screen.getByTitle('8,6'));
+    fireEvent.click(screen.getByTitle('8,5'));
+
+    expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/tackle: away-wr1 stopped home-wr2/i)).toBeInTheDocument();
+  });
+
   it('lets each team be set to human or computer', () => {
     render(<App />);
 
@@ -734,13 +790,13 @@ describe('Chessball UI interactions', () => {
 
     expect(within(screen.getByTitle('3,6')).getByLabelText('Ball: controlled by QB')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
 
     expect(screen.getAllByText(/viewing history/i).length).toBeGreaterThan(0);
     expect(within(screen.getByTitle('4,5')).getByLabelText('Ball: controlled by QB')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /snap/i })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: /^forward$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /next move/i }));
 
     expect(within(screen.getByTitle('3,6')).getByLabelText('Ball: controlled by QB')).toBeInTheDocument();
   });
