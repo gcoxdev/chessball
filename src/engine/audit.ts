@@ -27,8 +27,8 @@ export function pairedBootstrapInterval(
   }).sort((a, b) => a - b);
   const tail = (1 - confidence) / 2;
   return {
-    low: percentile(means, tail),
-    high: percentile(means, 1 - tail),
+    low: nearestRankQuantile(means, tail),
+    high: nearestRankQuantile(means, 1 - tail),
     mean: average(pairEffects), seed: options.seed, samples, confidence,
   };
 }
@@ -63,9 +63,14 @@ export type RunMatchedAuditOptions = {
 };
 
 type MirrorDisclosure = { mirror: 'A' | 'B'; seed: number; status: SimulationStatus; anomalies: SimulationAnomaly[] };
-type Cohort = { policy: SimulationPolicy; team: 'home' | 'away'; games: number; actionSelections: CountMap; actionOpportunities: CountMap };
+type OutcomeCohort = { games: number; wins: number; ties: number; losses: number; averageScoreDifferential: number | null };
+type TacticCohort = {
+  exploratory: true; policy: SimulationPolicy; team: 'home' | 'away'; selections: number; opportunities: number;
+  selected: OutcomeCohort; notSelected: OutcomeCohort; winRateDifference: number | null;
+};
 
 export type MatchedAuditReport = {
+  readonly matchup: { readonly primary: SimulationPolicy; readonly comparison: SimulationPolicy; readonly formationPlan: SimulationFormationPlan | null };
   requestedPairs: number; completedPairs: number; excludedPairs: number; attemptedGames: number;
   seedConvention: 'base-seed-plus-pair-index'; seedList: number[]; seedRange: { first: number; last: number };
   statusCounts: Record<SimulationStatus, number>;
@@ -73,12 +78,13 @@ export type MatchedAuditReport = {
   anomalies: Array<SimulationAnomaly & { pair: number; mirror: 'A' | 'B'; seed: number }>;
   symmetry: { pairEffects: number[]; scoreDeltaEffects: number[]; winShareInterval: BootstrapInterval | null; scoreDeltaInterval: BootstrapInterval | null; classification: 'actionable' | 'inconclusive' };
   skillGap: { pairEffects: number[]; scoreDeltaEffects: number[]; primaryWins: number; comparisonWins: number; ties: number; winShareInterval: BootstrapInterval | null; scoreDeltaInterval: BootstrapInterval | null; classification: ReturnType<typeof classifySkillGap> | null };
-  telemetry: { actionTypes: CountMap; actionOpportunities: CountMap; formationChoices: CountMap; driveOutcomes: CountMap; selectionRates: Record<string, number>; formationStratifiedOutcomes: Record<string, { games: number; wins: number; losses: number; ties: number }>; completion: { games: number; actions: number; averageActions: number | null }; tacticCohorts: Cohort[] };
+  telemetry: { actionTypes: CountMap; actionOpportunities: CountMap; formationChoices: CountMap; driveOutcomes: CountMap; selectionRates: Record<string, number>; formationStratifiedOutcomes: Record<string, { games: number; wins: number; losses: number; ties: number }>; completion: { games: number; actions: number; averageActions: number | null }; tacticCohorts: Record<string, TacticCohort> };
 };
 
 export function runMatchedAudit(options: RunMatchedAuditOptions): MatchedAuditReport {
   if (!Number.isInteger(options.pairs) || options.pairs <= 0) throw new Error('pairs must be a positive integer');
-  if (!Number.isInteger(options.seed)) throw new Error('seed must be a finite integer');
+  validateUint32(options.seed, 'seed');
+  if (options.seed + options.pairs - 1 > 0xffff_ffff) throw new Error('seed range must fit within uint32');
   const simulator = options.simulator ?? simulateGame;
   const bootstrap = options.bootstrap ?? { seed: options.seed };
   validateBootstrapOptions({ seed: bootstrap.seed, samples: bootstrap.samples ?? 10_000, confidence: bootstrap.confidence ?? .95 });
@@ -120,6 +126,7 @@ export function runMatchedAudit(options: RunMatchedAuditOptions): MatchedAuditRe
   const primaryScoreInterval = intervalOrNull(primaryScoreDeltas, bootstrap);
   const telemetry = aggregateTelemetry(games);
   return {
+    matchup: Object.freeze({ primary: options.primary, comparison: options.comparison, formationPlan: freezeFormationPlan(options.formationPlan) }),
     requestedPairs: options.pairs, completedPairs: games.length / 2, excludedPairs: excludedPairDetails.length, attemptedGames: options.pairs * 2,
     seedConvention: 'base-seed-plus-pair-index', seedList, seedRange: { first: seedList[0], last: seedList[seedList.length - 1] }, statusCounts,
     excludedPairDetails, anomalies,
@@ -131,7 +138,7 @@ export function runMatchedAudit(options: RunMatchedAuditOptions): MatchedAuditRe
 
 function aggregateTelemetry(games: Array<{ game: SimulatedGame; policyByTeam: Record<'home' | 'away', SimulationPolicy> }>): MatchedAuditReport['telemetry'] {
   const actionTypes = countMap(), actionOpportunities = countMap(), formationChoices = countMap(), driveOutcomes = countMap();
-  const cohorts = new Map<string, Cohort>();
+  const tacticAccumulators = new Map<string, TacticAccumulator>();
   const formationStratifiedOutcomes: MatchedAuditReport['telemetry']['formationStratifiedOutcomes'] = {};
   let actions = 0;
   for (const { game, policyByTeam } of games) {
@@ -140,11 +147,6 @@ function aggregateTelemetry(games: Array<{ game: SimulatedGame; policyByTeam: Re
     merge(formationChoices, game.summary.formationChoices); merge(driveOutcomes, game.summary.driveOutcomes);
     for (const team of ['home', 'away'] as const) {
       const key = `${policyByTeam[team]}:${team}`;
-      const cohort = cohorts.get(key) ?? { policy: policyByTeam[team], team, games: 0, actionSelections: countMap(), actionOpportunities: countMap() };
-      cohort.games++;
-      mergeMatching(cohort.actionSelections, game.summary.actionTypes, `team=${team}|policy=${policyByTeam[team]}|`);
-      mergeMatching(cohort.actionOpportunities, game.summary.actionOpportunities, `team=${team}|policy=${policyByTeam[team]}|`);
-      cohorts.set(key, cohort);
       const score = game.summary.finalScore;
       const result = outcome(score[team], score[team === 'home' ? 'away' : 'home']);
       const formationsUsed = new Set([...game.summary.formationSelections[team].offense, ...game.summary.formationSelections[team].defense]);
@@ -154,28 +156,60 @@ function aggregateTelemetry(games: Array<{ game: SimulatedGame; policyByTeam: Re
         formationStratifiedOutcomes[`${key}|formation=${formation}`] = stratum;
       }
     }
+    accumulateTacticCohorts(tacticAccumulators, game);
   }
   const selectionRates: Record<string, number> = {};
   for (const [key, opportunities] of Object.entries(actionOpportunities)) if (key !== 'total' && opportunities > 0) selectionRates[key] = (actionTypes[key] ?? 0) / opportunities;
-  return { actionTypes, actionOpportunities, formationChoices, driveOutcomes, selectionRates, formationStratifiedOutcomes, completion: { games: games.length, actions, averageActions: games.length ? actions / games.length : null }, tacticCohorts: [...cohorts.values()] };
+  const tacticCohorts: Record<string, TacticCohort> = {};
+  for (const [key, value] of tacticAccumulators) {
+    const selected = finishOutcome(value.selected), notSelected = finishOutcome(value.notSelected);
+    tacticCohorts[key] = { exploratory: true, policy: value.policy, team: value.team, selections: value.selections, opportunities: value.opportunities, selected, notSelected,
+      winRateDifference: selected.games && notSelected.games ? winShare(selected) - winShare(notSelected) : null };
+  }
+  return { actionTypes, actionOpportunities, formationChoices, driveOutcomes, selectionRates, formationStratifiedOutcomes, completion: { games: games.length, actions, averageActions: games.length ? actions / games.length : null }, tacticCohorts };
 }
 
 function intervalOrNull(values: number[], options: { seed: number; samples?: number; confidence?: number }): BootstrapInterval | null { return values.length ? pairedBootstrapInterval(values, options) : null; }
 function validateBootstrapOptions(options: { seed: number; samples: number; confidence: number }): void {
-  if (!Number.isInteger(options.seed)) throw new Error('bootstrap seed must be a finite integer');
+  validateUint32(options.seed, 'bootstrap seed');
   if (!Number.isInteger(options.samples) || options.samples <= 0) throw new Error('samples must be a positive integer');
   if (!Number.isFinite(options.confidence) || options.confidence <= 0 || options.confidence >= 1) throw new Error('confidence must be between zero and one');
 }
 function outcome(forScore: number, againstScore: number): number { return forScore > againstScore ? 1 : forScore < againstScore ? 0 : .5; }
 function average(values: number[]): number { return values.reduce((sum, value) => sum + value, 0) / values.length; }
-function percentile(sorted: number[], probability: number): number { return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(probability * sorted.length)))]; }
+/** Quantile of sorted observations using the clamped nearest-rank inverse ECDF. */
+export function nearestRankQuantile(sorted: number[], probability: number): number {
+  if (!sorted.length || !Number.isFinite(probability) || probability < 0 || probability > 1) throw new Error('invalid quantile input');
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(probability * sorted.length) - 1))];
+}
 function countMap(): CountMap { return { total: 0 }; }
 function merge(target: CountMap, source: CountMap): void { for (const [key, value] of Object.entries(source)) target[key] = (target[key] ?? 0) + value; }
-function mergeMatching(target: CountMap, source: CountMap, prefix: string): void {
-  for (const [key, value] of Object.entries(source)) if (key !== 'total' && key.startsWith(prefix)) {
-    target[key] = (target[key] ?? 0) + value;
-    target.total += value;
+type OutcomeAccumulator = { games: number; wins: number; ties: number; losses: number; scoreDifferential: number };
+type TacticAccumulator = { policy: SimulationPolicy; team: 'home' | 'away'; selections: number; opportunities: number; selected: OutcomeAccumulator; notSelected: OutcomeAccumulator };
+function emptyOutcome(): OutcomeAccumulator { return { games: 0, wins: 0, ties: 0, losses: 0, scoreDifferential: 0 }; }
+function accumulateTacticCohorts(target: Map<string, TacticAccumulator>, game: SimulatedGame): void {
+  for (const [key, opportunities] of Object.entries(game.summary.actionOpportunities)) {
+    if (key === 'total' || opportunities <= 0) continue;
+    const match = /^team=(home|away)\|policy=(heuristic|random)\|/.exec(key);
+    if (!match) continue;
+    const team = match[1] as 'home' | 'away', policy = match[2] as SimulationPolicy;
+    const accumulator = target.get(key) ?? { policy, team, selections: 0, opportunities: 0, selected: emptyOutcome(), notSelected: emptyOutcome() };
+    const selections = game.summary.actionTypes[key] ?? 0;
+    accumulator.selections += selections; accumulator.opportunities += opportunities;
+    const bucket = selections > 0 ? accumulator.selected : accumulator.notSelected;
+    const score = game.summary.finalScore, other = team === 'home' ? 'away' : 'home';
+    const differential = score[team] - score[other];
+    bucket.games++; bucket.scoreDifferential += differential;
+    differential > 0 ? bucket.wins++ : differential < 0 ? bucket.losses++ : bucket.ties++;
+    target.set(key, accumulator);
   }
+}
+function finishOutcome(value: OutcomeAccumulator): OutcomeCohort { return { games: value.games, wins: value.wins, ties: value.ties, losses: value.losses, averageScoreDifferential: value.games ? value.scoreDifferential / value.games : null }; }
+function winShare(value: OutcomeCohort): number { return (value.wins + .5 * value.ties) / value.games; }
+function validateUint32(seed: number, label: string): void { if (!Number.isInteger(seed) || seed < 0 || seed > 0xffff_ffff) throw new Error(`${label} must be a uint32 integer`); }
+function freezeFormationPlan(plan: SimulationFormationPlan | undefined): SimulationFormationPlan | null {
+  if (!plan) return null;
+  return Object.freeze({ home: Object.freeze({ ...plan.home }), away: Object.freeze({ ...plan.away }) });
 }
 function seededRandom(seed: number): () => number {
   let state = seed >>> 0;

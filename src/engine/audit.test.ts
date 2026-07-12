@@ -3,6 +3,7 @@ import {
   classifyPairedEffect,
   classifySkillGap,
   classifySymmetry,
+  nearestRankQuantile,
   pairedBootstrapInterval,
   runMatchedAudit,
 } from './audit';
@@ -54,6 +55,13 @@ describe('pairedBootstrapInterval', () => {
     expect([0, 5, 10]).toContain(interval.low);
     expect([0, 5, 10]).toContain(interval.high);
   });
+
+  it('uses the clamped nearest-rank inverse ECDF convention', () => {
+    expect(nearestRankQuantile([1, 2, 3, 4], 0)).toBe(1);
+    expect(nearestRankQuantile([1, 2, 3, 4], .25)).toBe(1);
+    expect(nearestRankQuantile([1, 2, 3, 4], .251)).toBe(2);
+    expect(nearestRankQuantile([1, 2, 3, 4], 1)).toBe(4);
+  });
 });
 
 describe('classifications', () => {
@@ -100,6 +108,7 @@ describe('runMatchedAudit', () => {
     expect(report.skillGap.pairEffects).toEqual([]);
     expect(report.telemetry.actionTypes.total).toBe(0);
     expect(report.excludedPairDetails[0].mirrors.map(m => m.status)).toEqual(['completed', 'stalled']);
+    expect(report.matchup).toEqual({ primary: 'heuristic', comparison: 'random', formationPlan: null });
   });
 
   it('orients outcomes to primary, scores ties as halves, and aggregates completed pairs', () => {
@@ -144,5 +153,53 @@ describe('runMatchedAudit', () => {
     });
     expect(report.telemetry.formationStratifiedOutcomes['heuristic:home|formation=x']).toEqual({ games: 1, wins: 1, losses: 0, ties: 0 });
     expect(report.telemetry.formationChoices.total).toBe(2);
+  });
+
+  it('builds exploratory selected-vs-not-selected cohorts once per completed game', () => {
+    const context = 'team=home|policy=heuristic|phase=live|down=1|field=midfield|action=pass';
+    let call = 0;
+    const report = runMatchedAudit({
+      pairs: 2, seed: 20, primary: 'heuristic', comparison: 'random', bootstrap: { seed: 4, samples: 100 },
+      simulator: o => {
+        const hasContext = call % 2 === 0;
+        const selectedGame = call === 0;
+        const result = game(o, selectedGame ? [10, 3] : [2, 5]);
+        result.summary.actionOpportunities = hasContext ? { total: 5, [context]: 5 } : { total: 0 };
+        result.summary.actionTypes = selectedGame ? { total: 3, [context]: 3 } : { total: 0 };
+        call++;
+        return result;
+      },
+    });
+    expect(report.telemetry.tacticCohorts[context]).toEqual({
+      exploratory: true, policy: 'heuristic', team: 'home', selections: 3, opportunities: 10,
+      selected: { games: 1, wins: 1, ties: 0, losses: 0, averageScoreDifferential: 7 },
+      notSelected: { games: 1, wins: 0, ties: 0, losses: 1, averageScoreDifferential: -3 },
+      winRateDifference: 1,
+    });
+  });
+
+  it('does not leak excluded games into tactic cohorts', () => {
+    const context = 'team=away|policy=random|phase=live|down=2|field=own|action=move';
+    let call = 0;
+    const report = runMatchedAudit({ pairs: 1, seed: 8, primary: 'heuristic', comparison: 'random', simulator: o => {
+      const result = game(o, [1, 0], call++ ? 'stalled' : 'completed');
+      result.summary.actionOpportunities = { total: 2, [context]: 2 };
+      result.summary.actionTypes = { total: 1, [context]: 1 };
+      return result;
+    }});
+    expect(report.telemetry.tacticCohorts).toEqual({});
+  });
+
+  it.each([
+    { seed: -1 }, { seed: 0x1_0000_0000 },
+    { seed: 0xffff_ffff, pairs: 2 },
+    { seed: 1, bootstrap: { seed: -1 } },
+    { seed: 1, bootstrap: { seed: 0x1_0000_0000 } },
+  ])('rejects seeds outside uint32 or overflowing the pair range %#', invalid => {
+    expect(() => runMatchedAudit({ pairs: 1, primary: 'heuristic', comparison: 'random', ...invalid })).toThrow();
+  });
+
+  it('accepts the maximum uint32 seed for one pair', () => {
+    expect(runMatchedAudit({ pairs: 1, seed: 0xffff_ffff, primary: 'heuristic', comparison: 'random', simulator: o => game(o, [0, 0]) }).seedList).toEqual([0xffff_ffff]);
   });
 });
