@@ -16,6 +16,7 @@ import {
   startNextDown,
 } from './engine/rules';
 import type { Action, CoinFace, Coord, DiceRoll, Formation, FormationSide, GameState, Piece, Team } from './engine/types';
+import { AccessibleBoard } from './ui/AccessibleBoard';
 import './styles.css';
 
 type TargetMode = 'move' | 'pass' | null;
@@ -485,50 +486,22 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               <span>{isViewingHistory ? `Viewing history ${historyIndex + 1}/${history.length}` : `${game.turn.toUpperCase()} to act`}</span>
             </div>
           </div>
-          <div className="field" role="grid">
-            {Array.from({ length: game.board.height }).flatMap((_, y) =>
-              Array.from({ length: game.board.width }).map((_, x) => {
-                const coord = { x, y };
-                const piece = pieceAt(game, coord);
-                const ballHere = showBallMarker && sameCoord(ballCoord(game), coord);
-                const legalMove = selectedPiece && legalActions.some((action) =>
-                  (action.type === 'move' || action.type === 'shift') &&
-                    action.pieceId === selectedPiece.id &&
-                    sameCoord(action.to, coord),
-                );
-                const legalPowerMove = selectedPiece && legalActions.some((action) =>
-                  action.type === 'powerMove' &&
-                    action.pieceId === selectedPiece.id &&
-                    sameCoord(action.to, coord),
-                );
-                const legalPassReceiver = selectedBallCarrier && targetMode === 'pass' && piece && legalActions.some((action) =>
-                  action.type === 'pass' &&
-                  action.passerId === selectedBallCarrier.id &&
-                  action.receiverId === piece.id,
-                );
-                const legalKickPlacement = game.phase === 'kickPlacement' && legalActions.some((action) => action.type === 'placeKick' && sameCoord(action.at, coord));
-                return (
-                  <button
-                    className={squareClass(game, coord, piece, legalMove || legalPassReceiver || legalKickPlacement, legalPowerMove, ballHere)}
-                    key={`${x}-${y}`}
-                    type="button"
-                    role="gridcell"
-                    onClick={() => onSquareClick(coord)}
-                    title={`${x},${y}`}
-                  >
-                    {yardTicks(game, coord)}
-                    {yardMarker(game, coord)}
-                    {piece && (
-                      <span className={`piece ${piece.team} ${selectedPieceId === piece.id ? 'selected' : ''}`}>
-                        {activeRoleCode(boardGame, piece)}
-                      </span>
-                    )}
-                    {ballHere && <span className="football-marker" aria-label={ballLabel(boardGame)} />}
-                  </button>
-                );
-              }),
-            )}
-          </div>
+          <AccessibleBoard
+            game={game}
+            displayGame={boardGame}
+            legalActions={legalActions}
+            selectedPiece={selectedPiece}
+            selectedBallCarrier={selectedBallCarrier}
+            targetMode={targetMode}
+            ballCoord={ballCoord(game)}
+            showBallMarker={showBallMarker}
+            readOnly={isViewingHistory}
+            onSquareClick={onSquareClick}
+            squareClass={(coord, piece, legal, power, ball) => squareClass(game, coord, piece, legal, power, ball)}
+            renderYardTicks={(coord) => yardTicks(game, coord)}
+            renderYardMarker={(coord) => yardMarker(game, coord)}
+            ballLabel={ballLabel(boardGame)}
+          />
           <section className="utility-bar" aria-label="Game setup">
             <div className="utility-control-row">
               <div className="utility-actions">

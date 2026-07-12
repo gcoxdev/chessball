@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App, chooseComputerAction } from './main';
@@ -18,6 +18,80 @@ const confirmBothFormations = () => {
 };
 
 describe('Chessball UI interactions', () => {
+  it('exposes the field as one labelled roving-tab-stop grid', () => {
+    render(<App initialGame={createGame()} />);
+
+    const grid = screen.getByRole('grid', { name: /chessball board/i });
+    const cells = within(grid).getAllByRole('gridcell');
+    expect(cells).toHaveLength(264);
+    expect(cells.filter((cell) => cell.tabIndex === 0)).toEqual([screen.getByTitle('4,5')]);
+    expect(cells.filter((cell) => cell.tabIndex === -1)).toHaveLength(263);
+  });
+
+  it('moves board focus with clamped arrow keys and preserves it across ordinary rerenders', () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    render(<App initialGame={createGame()} />);
+    const ballSquare = screen.getByTitle('4,5');
+    act(() => ballSquare.focus());
+
+    fireEvent.keyDown(ballSquare, { key: 'ArrowRight' });
+    expect(screen.getByTitle('5,5')).toHaveFocus();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
+    expect(screen.getByTitle('5,5')).toHaveAttribute('tabindex', '0');
+
+    const leftEdge = screen.getByTitle('0,5');
+    act(() => leftEdge.focus());
+    fireEvent.keyDown(leftEdge, { key: 'ArrowLeft' });
+    expect(leftEdge).toHaveFocus();
+  });
+
+  it('gives Enter and Space the same square behavior as pointer activation', () => {
+    render(<App initialGame={createGame()} />);
+
+    const receiver = screen.getByTitle('4,1');
+    fireEvent.keyDown(receiver, { key: 'Enter' });
+    expect(screen.getByText('WR selected.')).toBeInTheDocument();
+
+    const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    fireEvent(receiver, event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(screen.getByText('Selection cleared.')).toBeInTheDocument();
+  });
+
+  it('describes board occupants, ball, selection, and available square actions', () => {
+    render(<App initialGame={createGame()} />);
+
+    const qb = screen.getByTitle('4,5');
+    expect(qb).toHaveAccessibleName(/square 4, 5; home qb; controlled ball/i);
+    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
+    fireEvent.click(screen.getByTitle('4,1'));
+    expect(screen.getByTitle('4,1')).toHaveAccessibleName(/selected/i);
+    expect(screen.getByTitle('4,1')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getAllByRole('gridcell', { name: /legal move/i }).length).toBeGreaterThan(0);
+  });
+
+  it('keeps history board cells inspectable but prevents pointer and keyboard mutation', () => {
+    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    confirmBothFormations();
+    fireEvent.click(screen.getByRole('button', { name: /snap/i }));
+    fireEvent.click(screen.getByTitle('4,5'));
+    fireEvent.click(screen.getByTitle('3,6'));
+    fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
+
+    const historySquare = screen.getByTitle('4,5');
+    const historyIndex = screen.getByText(/move \d+ of \d+/i).textContent;
+    expect(historySquare).toHaveAccessibleName(/read-only history/i);
+    expect(historySquare).toHaveAttribute('aria-disabled', 'true');
+    expect(historySquare).toHaveAttribute('tabindex');
+
+    fireEvent.click(historySquare);
+    fireEvent.keyDown(historySquare, { key: 'Enter' });
+    fireEvent.keyDown(historySquare, { key: ' ' });
+    expect(screen.getByText(/move \d+ of \d+/i)).toHaveTextContent(historyIndex ?? '');
+  });
+
   it('selects a piece with one click before the snap without spending a formation shift', () => {
     render(<App initialGame={createGame()} />);
 
