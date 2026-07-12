@@ -1,0 +1,782 @@
+{
+  "schema": "chessball-formation-audit-v1",
+  "runner": "scripts/run-formation-audit.ts",
+  "commands": {
+    "screen": "npm exec vite-node scripts/run-formation-audit.ts -- --mode screen",
+    "followups": "npm exec vite-node scripts/run-formation-audit.ts -- --mode followups",
+    "all": "npm exec vite-node scripts/run-formation-audit.ts -- --mode all"
+  },
+  "policy": {
+    "primary": "heuristic",
+    "comparison": "heuristic"
+  },
+  "screen": [
+    {
+      "name": "screen-i-form-4-3-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10001,
+      "bootstrapSeed": 71,
+      "primaryPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10001,
+        "last": 10100
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 67114,
+      "primaryPlanEffect": {
+        "wins": 91,
+        "comparisonWins": 100,
+        "ties": 9,
+        "winShareInterval": {
+          "low": 0.4,
+          "high": 0.555,
+          "mean": 0.4775,
+          "seed": 71,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -2.09,
+          "high": 2.26,
+          "mean": 0.05,
+          "seed": 71,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 241902,
+        "averageActions": 1209.51
+      },
+      "driveOutcomes": {
+        "total": 2794,
+        "fieldGoalGood": 727,
+        "fieldGoalMissed": 750,
+        "touchdown": 668,
+        "twoPointFailed": 59,
+        "extraPointMissed": 74,
+        "extraPointGood": 499,
+        "twoPointGood": 15,
+        "interception": 2
+      }
+    },
+    {
+      "name": "screen-i-form-nickel-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10101,
+      "bootstrapSeed": 72,
+      "primaryPlan": {
+        "offense": "i-form",
+        "defense": "nickel"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10101,
+        "last": 10200
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 63763,
+      "primaryPlanEffect": {
+        "wins": 99,
+        "comparisonWins": 94,
+        "ties": 7,
+        "winShareInterval": {
+          "low": 0.435,
+          "high": 0.5925,
+          "mean": 0.5125,
+          "seed": 72,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -1.46,
+          "high": 2.495,
+          "mean": 0.485,
+          "seed": 72,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 247485,
+        "averageActions": 1237.425
+      },
+      "driveOutcomes": {
+        "total": 2877,
+        "fieldGoalGood": 740,
+        "fieldGoalMissed": 763,
+        "touchdown": 701,
+        "extraPointGood": 493,
+        "extraPointMissed": 101,
+        "twoPointFailed": 63,
+        "twoPointGood": 15,
+        "interception": 1
+      }
+    },
+    {
+      "name": "screen-i-form-goal-line-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10201,
+      "bootstrapSeed": 73,
+      "primaryPlan": {
+        "offense": "i-form",
+        "defense": "goal-line"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10201,
+        "last": 10300
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 70712,
+      "primaryPlanEffect": {
+        "wins": 159,
+        "comparisonWins": 33,
+        "ties": 8,
+        "winShareInterval": {
+          "low": 0.7525,
+          "high": 0.8725,
+          "mean": 0.815,
+          "seed": 73,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 7.355,
+          "high": 10.895,
+          "mean": 9.14,
+          "seed": 73,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 245854,
+        "averageActions": 1229.27
+      },
+      "driveOutcomes": {
+        "total": 2909,
+        "fieldGoalGood": 746,
+        "fieldGoalMissed": 813,
+        "touchdown": 662,
+        "extraPointGood": 462,
+        "twoPointFailed": 55,
+        "interception": 56,
+        "extraPointMissed": 102,
+        "safety": 2,
+        "twoPointGood": 11
+      }
+    },
+    {
+      "name": "screen-shotgun-4-3-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10301,
+      "bootstrapSeed": 74,
+      "primaryPlan": {
+        "offense": "shotgun",
+        "defense": "4-3"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10301,
+        "last": 10400
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 73395,
+      "primaryPlanEffect": {
+        "wins": 116,
+        "comparisonWins": 73,
+        "ties": 11,
+        "winShareInterval": {
+          "low": 0.53,
+          "high": 0.6825,
+          "mean": 0.6075,
+          "seed": 74,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 1.55,
+          "high": 6.145,
+          "mean": 3.845,
+          "seed": 74,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 260497,
+        "averageActions": 1302.485
+      },
+      "driveOutcomes": {
+        "total": 2850,
+        "fieldGoalMissed": 638,
+        "touchdown": 766,
+        "extraPointGood": 535,
+        "fieldGoalGood": 704,
+        "extraPointMissed": 109,
+        "twoPointFailed": 77,
+        "interception": 3,
+        "twoPointGood": 17,
+        "safety": 1
+      }
+    },
+    {
+      "name": "screen-shotgun-nickel-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10401,
+      "bootstrapSeed": 75,
+      "primaryPlan": {
+        "offense": "shotgun",
+        "defense": "nickel"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10401,
+        "last": 10500
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 66346,
+      "primaryPlanEffect": {
+        "wins": 129,
+        "comparisonWins": 66,
+        "ties": 5,
+        "winShareInterval": {
+          "low": 0.58,
+          "high": 0.7325,
+          "mean": 0.6575,
+          "seed": 75,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 2.73,
+          "high": 6.77,
+          "mean": 4.745,
+          "seed": 75,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 256880,
+        "averageActions": 1284.4
+      },
+      "driveOutcomes": {
+        "total": 2718,
+        "touchdown": 650,
+        "extraPointGood": 458,
+        "twoPointFailed": 67,
+        "fieldGoalGood": 711,
+        "fieldGoalMissed": 722,
+        "extraPointMissed": 97,
+        "twoPointGood": 11,
+        "safety": 2
+      }
+    },
+    {
+      "name": "screen-shotgun-goal-line-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10501,
+      "bootstrapSeed": 76,
+      "primaryPlan": {
+        "offense": "shotgun",
+        "defense": "goal-line"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10501,
+        "last": 10600
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 77000,
+      "primaryPlanEffect": {
+        "wins": 159,
+        "comparisonWins": 36,
+        "ties": 5,
+        "winShareInterval": {
+          "low": 0.74,
+          "high": 0.87,
+          "mean": 0.8075,
+          "seed": 76,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 8.92,
+          "high": 12.8,
+          "mean": 10.87,
+          "seed": 76,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 257150,
+        "averageActions": 1285.75
+      },
+      "driveOutcomes": {
+        "total": 2612,
+        "fieldGoalMissed": 633,
+        "interception": 47,
+        "touchdown": 626,
+        "extraPointMissed": 95,
+        "extraPointGood": 428,
+        "fieldGoalGood": 700,
+        "twoPointFailed": 64,
+        "twoPointGood": 14,
+        "safety": 5
+      }
+    },
+    {
+      "name": "screen-singleback-4-3-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10601,
+      "bootstrapSeed": 77,
+      "primaryPlan": {
+        "offense": "singleback",
+        "defense": "4-3"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10601,
+        "last": 10700
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 57299,
+      "primaryPlanEffect": {
+        "wins": 95,
+        "comparisonWins": 94,
+        "ties": 11,
+        "winShareInterval": {
+          "low": 0.4275,
+          "high": 0.5775,
+          "mean": 0.5025,
+          "seed": 77,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -1.515,
+          "high": 2.49,
+          "mean": 0.475,
+          "seed": 77,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 240215,
+        "averageActions": 1201.075
+      },
+      "driveOutcomes": {
+        "total": 2821,
+        "fieldGoalMissed": 750,
+        "touchdown": 675,
+        "extraPointGood": 485,
+        "fieldGoalGood": 742,
+        "extraPointMissed": 95,
+        "twoPointFailed": 61,
+        "twoPointGood": 10,
+        "interception": 3
+      }
+    },
+    {
+      "name": "screen-singleback-nickel-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10701,
+      "bootstrapSeed": 78,
+      "primaryPlan": {
+        "offense": "singleback",
+        "defense": "nickel"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10701,
+        "last": 10800
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 52685,
+      "primaryPlanEffect": {
+        "wins": 117,
+        "comparisonWins": 73,
+        "ties": 10,
+        "winShareInterval": {
+          "low": 0.54,
+          "high": 0.68,
+          "mean": 0.61,
+          "seed": 78,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 0.65,
+          "high": 4.92,
+          "mean": 2.78,
+          "seed": 78,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 246252,
+        "averageActions": 1231.26
+      },
+      "driveOutcomes": {
+        "total": 2818,
+        "touchdown": 668,
+        "extraPointGood": 473,
+        "extraPointMissed": 83,
+        "fieldGoalGood": 711,
+        "fieldGoalMissed": 786,
+        "twoPointFailed": 77,
+        "interception": 3,
+        "twoPointGood": 17
+      }
+    },
+    {
+      "name": "screen-singleback-goal-line-vs-i-form-4-3",
+      "pairs": 100,
+      "seed": 10801,
+      "bootstrapSeed": 79,
+      "primaryPlan": {
+        "offense": "singleback",
+        "defense": "goal-line"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 10801,
+        "last": 10900
+      },
+      "completedPairs": 100,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 200,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 46814,
+      "primaryPlanEffect": {
+        "wins": 151,
+        "comparisonWins": 43,
+        "ties": 6,
+        "winShareInterval": {
+          "low": 0.7075,
+          "high": 0.8275,
+          "mean": 0.77,
+          "seed": 79,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 5.665,
+          "high": 9.42,
+          "mean": 7.565,
+          "seed": 79,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 200,
+        "actions": 249598,
+        "averageActions": 1247.99
+      },
+      "driveOutcomes": {
+        "total": 2884,
+        "touchdown": 648,
+        "extraPointGood": 459,
+        "fieldGoalMissed": 774,
+        "fieldGoalGood": 772,
+        "twoPointFailed": 81,
+        "extraPointMissed": 81,
+        "interception": 62,
+        "safety": 2,
+        "twoPointGood": 5
+      }
+    }
+  ],
+  "followups": [
+    {
+      "name": "followup-goal-line-vs-4-3",
+      "pairs": 1000,
+      "seed": 20001,
+      "bootstrapSeed": 91,
+      "primaryPlan": {
+        "offense": "i-form",
+        "defense": "goal-line"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 20001,
+        "last": 21000
+      },
+      "completedPairs": 1000,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 2000,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 397672,
+      "primaryPlanEffect": {
+        "wins": 1478,
+        "comparisonWins": 460,
+        "ties": 62,
+        "winShareInterval": {
+          "low": 0.73325,
+          "high": 0.775,
+          "mean": 0.7545,
+          "seed": 91,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 7.7395,
+          "high": 9.074,
+          "mean": 8.4105,
+          "seed": 91,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 2000,
+        "actions": 2448186,
+        "averageActions": 1224.093
+      },
+      "driveOutcomes": {
+        "total": 28659,
+        "fieldGoalMissed": 7704,
+        "touchdown": 6295,
+        "twoPointGood": 90,
+        "fieldGoalGood": 7792,
+        "extraPointGood": 4379,
+        "twoPointFailed": 674,
+        "extraPointMissed": 934,
+        "interception": 780,
+        "safety": 11
+      }
+    },
+    {
+      "name": "followup-shotgun-vs-i-form",
+      "pairs": 1000,
+      "seed": 21001,
+      "bootstrapSeed": 92,
+      "primaryPlan": {
+        "offense": "shotgun",
+        "defense": "4-3"
+      },
+      "comparisonPlan": {
+        "offense": "i-form",
+        "defense": "4-3"
+      },
+      "maxActions": 5000,
+      "bootstrap": {
+        "samples": 10000,
+        "confidence": 0.95
+      },
+      "seedRange": {
+        "first": 21001,
+        "last": 22000
+      },
+      "completedPairs": 1000,
+      "excludedPairs": 0,
+      "statusCounts": {
+        "completed": 2000,
+        "stalled": 0,
+        "crashed": 0
+      },
+      "anomalyCount": 0,
+      "runtimeMs": 395288,
+      "primaryPlanEffect": {
+        "wins": 1217,
+        "comparisonWins": 706,
+        "ties": 77,
+        "winShareInterval": {
+          "low": 0.60375,
+          "high": 0.651,
+          "mean": 0.62775,
+          "seed": 92,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": 3.265,
+          "high": 4.653,
+          "mean": 3.9605,
+          "seed": 92,
+          "samples": 10000,
+          "confidence": 0.95
+        }
+      },
+      "completion": {
+        "games": 2000,
+        "actions": 2633763,
+        "averageActions": 1316.8815
+      },
+      "driveOutcomes": {
+        "total": 28317,
+        "fieldGoalGood": 7266,
+        "touchdown": 7034,
+        "extraPointMissed": 1029,
+        "extraPointGood": 4967,
+        "fieldGoalMissed": 7145,
+        "twoPointFailed": 705,
+        "twoPointGood": 127,
+        "interception": 31,
+        "safety": 13
+      }
+    }
+  ]
+}

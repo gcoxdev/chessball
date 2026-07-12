@@ -32,6 +32,17 @@ Seed ranges were respectively 1001–2000, 2001–3000, and 3001–4000. Bootstr
 
 Formation screening called `runMatchedAudit` directly. It compared all nine offense/defense plan combinations (offense: `i-form`, `shotgun`, `singleback`; defense: `4-3`, `nickel`, `goal-line`) against `{ offense: i-form, defense: 4-3 }`, using heuristic/heuristic, 100 pairs per matchup, sequential seed blocks 10001–10900, bootstrap seeds 71–79, 10,000 resamples, and maxActions 5,000. The two screened one-factor leads were then repeated at 1,000 pairs: goal-line defense at seeds 20001–21000/bootstrap 91 and shotgun offense at seeds 21001–22000/bootstrap 92.
 
+The exact executable formation definitions are committed in `scripts/run-formation-audit.ts`; they require no source edits between modes:
+
+```sh
+npm exec vite-node scripts/run-formation-audit.ts -- --mode screen
+npm exec vite-node scripts/run-formation-audit.ts -- --mode followups
+# or reproduce all eleven experiments in one compact JSON document
+npm exec vite-node scripts/run-formation-audit.ts -- --mode all
+```
+
+Compact preserved evidence is in `docs/audits/data/2026-07-11-formation-audit.json`. The full core action distributions and tactic screens are split by matchup in `docs/audits/data/2026-07-11-heuristic-vs-heuristic-screens.json`, `docs/audits/data/2026-07-11-random-vs-random-screens.json`, and `docs/audits/data/2026-07-11-heuristic-vs-random-screens.json`. Each artifact records its command, policy/team strata, seed range, max-actions limit, bootstrap seed/sample/confidence, and runtime.
+
 ## Completion integrity
 
 Every reported sample completed. Core: 3,000/3,000 pairs and 6,000/6,000 games. Formation screen: 900/900 pairs and 1,800/1,800 games. Formation follow-ups: 2,000/2,000 pairs and 4,000/4,000 games. Across these 11,800 games there were zero excluded pairs, stalls, crashes, or simulator anomalies. No attempts were silently substituted for pairs.
@@ -65,9 +76,11 @@ The controlled follow-ups confirmed two formation effects:
 
 Observation and statistical conclusion: under this fixed heuristic policy, goal-line defense and shotgun offense are materially stronger than their tested alternatives; 4-3 and i-form are strategically weak in these matchups. This is stronger than raw usage evidence and warrants design/state-level follow-up. It is not a confirmed dominant-tactic defect: fixed formations alter initial geometry, the screen did not enumerate legal counter-shifts or an adaptive counter-policy, and no focused legal state demonstrated lack of counterplay/tradeoff. No formation rule was tuned.
 
-Contextual selection screening found many rates at or above 80%, but nearly all were protocol/forced actions (`coinToss`, kickoff, recovery, `nextDown`, confirmation, and snap) and therefore not strategic tactic leads. The discretionary heuristic screen repeatedly selected the conversion kick roughly 80–89% depending on team/field/down context; the alternative two-point try remained available and was selected in the complement, so selection alone does not show missing counterplay. Selected-vs-not-selected exploratory cohorts produced several differences over ten percentage points (especially live-play pass/move/kick cohorts), but cohorts are game-level, sparse in the not-selected arm, and confounded by field position and game strength. They are leads only; no causal dominant-tactic claim is made.
+Contextual selection screening retained every threshold crossing in the three core artifacts: HH had 97 contexts at or above 80% and 44 cohorts with at least a ten-point absolute exploratory difference; RR had 78 and 44; HR had 170 and 53. Many high-rate contexts were protocol/forced actions (`coinToss`, kickoff, recovery, `nextDown`, confirmation, and snap), not strategic tactic leads. A representative discretionary HH key, `team=away|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=kick`, had 1,096 selections in 1,283 opportunities (85.425%). The alternative two-point try remained available in the complement, so selection alone does not show missing counterplay.
 
-Formation usage in unconstrained heuristic/heuristic play was broadly distributed across all six current IDs (the heuristic selector intentionally cycles with state and seeded tie-breaking). Therefore raw formation frequency would have concealed the fixed-plan effects above and was not used to declare dominance.
+Every cohort artifact entry preserves the exact key, policy/team stratum, selections, opportunities, rate, both outcome arms, win-share difference, and a sparse-data label when either arm has fewer than 30 games. For example, HH `team=away|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=startTwoPointTry` had 64/308 selections; selected games were 49-3-12 and not-selected games 145-4-74, an exploratory +12.987-point win-share difference with at least 30 games in each arm. Cohorts remain game-level and confounded by field position and game strength. They are leads only; no causal dominant-tactic claim is made.
+
+Formation usage in unconstrained heuristic/heuristic play was nearly uniform across all six current IDs. Of 188,988 offensive selections: i-form 63,011 (33.341%), shotgun 63,351 (33.521%), and singleback 62,626 (33.138%). Of 188,988 defensive selections: 4-3 62,889 (33.277%), nickel 63,224 (33.454%), and goal-line 62,875 (33.269%). RR and HR counts/rates are also preserved in their core artifacts. Thus raw usage would have concealed the fixed-plan effects above and was not used to declare dominance.
 
 ## Drive, scoring, and action observations
 
@@ -79,7 +92,7 @@ Formation usage in unconstrained heuristic/heuristic play was broadly distribute
 
 These patterns explain part of the skill gap: random play reaches far fewer touchdowns and successful field goals and many more turnovers on downs/safeties. They are descriptive policy outcomes, not targets for NFL calibration. The exceptionally low heuristic/heuristic turnover-on-downs count and frequent field-goal attempts are qualitative football-flow leads for Task 7, not proven transition defects.
 
-Top action totals were consistent with a board movement game. Heuristic/heuristic recorded 566,904 moves, 432,823 tackles, 103,763 power moves, 67,047 passes, 30,958 handoffs, and 126,091 kicks. Random/random recorded 434,757 moves, 338,667 tackles, 51,970 power moves, 125,264 passes, 106,449 handoffs, and 41,053 kicks. Formation selection/confirmation and between-down protocol actions account for much of the remaining action volume.
+Top action totals were consistent with a board movement game. Heuristic/heuristic recorded 566,904 moves from 209,768,010 opportunities (0.2703%), 432,823 tackles from 1,494,480 (28.961%), and 126,091 kicks from 795,853 (15.844%). Random/random recorded 434,757 moves from 114,374,467 (0.3801%), 338,667 tackles from 995,937 (34.005%), and 41,053 kicks from 1,035,714 (3.964%). Mixed HR recorded 472,076 moves from 158,272,994 (0.2983%), 391,532 tackles from 1,201,495 (32.587%), and 79,221 kicks from 1,060,446 (7.471%). Complete HH, RR, and HR distributions cover all 16 observed action types and include selected totals, opportunity totals, and rates in the three matchup artifacts cited under Reproducibility.
 
 ## Confirmed quantitative bugs and fixes
 
