@@ -201,13 +201,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
     try {
       const legalActions = generateLegalActions(state);
-      const opportunityCounts = new Map<Action['type'], number>();
-      for (const legalAction of legalActions) {
-        opportunityCounts.set(legalAction.type, (opportunityCounts.get(legalAction.type) ?? 0) + 1);
-      }
-      for (const [actionType, multiplicity] of opportunityCounts) {
-        incrementBy(actionOpportunities, actionContextKey(state, policies[state.turn], actionType), multiplicity);
-      }
+      for (const contextKey of actionOpportunityKeys(state, policies[state.turn], legalActions)) increment(actionOpportunities, contextKey);
       const action = chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex, options.opening, options.formationPlan);
 
       if (!action) {
@@ -644,6 +638,11 @@ export function actingTeamFieldBand(state: GameState, team: Team): FieldBand {
 function actionContextKey(state: GameState, policy: SimulationPolicy, actionType: Action['type'] | 'nextDown'): string {
   const team = state.turn;
   return `team=${team}|policy=${policy}|phase=${state.phase}|down=${state.down}|field=${actingTeamFieldBand(state, team)}|action=${actionType}`;
+}
+
+export function actionOpportunityKeys(state: GameState, policy: SimulationPolicy, legalActions: Action[]): string[] {
+  return [...new Set(legalActions.map((action) => action.type))]
+    .map((actionType) => actionContextKey(state, policy, actionType));
 }
 
 export function driveOutcomeKey(result: PlayResult | undefined): string | null {
@@ -1113,12 +1112,8 @@ function countMap(): CountMap {
 }
 
 function increment(counts: CountMap, key: string): void {
-  incrementBy(counts, key, 1);
-}
-
-function incrementBy(counts: CountMap, key: string, amount: number): void {
-  counts[key] = (counts[key] ?? 0) + amount;
-  counts.total += amount;
+  counts[key] = (counts[key] ?? 0) + 1;
+  counts.total += 1;
 }
 
 function mergeCounts(target: CountMap, source: CountMap): void {

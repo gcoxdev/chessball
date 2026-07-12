@@ -178,6 +178,27 @@ describe('runMatchedAudit', () => {
     });
   });
 
+  it('reports tactic selection rates from decision situations', () => {
+    const always = 'team=home|policy=heuristic|phase=live|down=1|field=midfield|action=move';
+    const half = 'team=home|policy=heuristic|phase=live|down=1|field=midfield|action=pass';
+    let call = 0;
+    const report = runMatchedAudit({
+      pairs: 1, seed: 21, primary: 'heuristic', comparison: 'random', bootstrap: { seed: 4, samples: 100 },
+      simulator: o => {
+        const result = game(o, [3, 0]);
+        result.summary.actionOpportunities = { total: 2, [always]: 1, [half]: 1 };
+        result.summary.actionTypes = call++ === 0
+          ? { total: 2, [always]: 1, [half]: 1 }
+          : { total: 1, [always]: 1 };
+        return result;
+      },
+    });
+
+    expect(report.telemetry.selectionRates[always]).toBe(1);
+    expect(report.telemetry.selectionRates[half]).toBe(.5);
+    expect(report.telemetry.tacticCohorts[half]).toEqual(expect.objectContaining({ selections: 1, opportunities: 2 }));
+  });
+
   it('does not leak excluded games into tactic cohorts', () => {
     const context = 'team=away|policy=random|phase=live|down=2|field=own|action=move';
     let call = 0;

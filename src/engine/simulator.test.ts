@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame } from './rules';
-import { actingTeamFieldBand, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
-import type { PlayResult } from './types';
+import { actionOpportunityKeys, actingTeamFieldBand, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
+import type { Action, PlayResult } from './types';
 import type { SimulationFormationPlan, SimulationOpening } from './simulator';
 
 describe('headless simulator', () => {
@@ -289,6 +289,31 @@ describe('headless simulator', () => {
     for (const key of Object.keys(result.summary.actionTypes).filter((key) => key !== 'total')) {
       expect(result.summary.actionOpportunities[key]).toBeGreaterThan(0);
     }
+  });
+
+  it('counts one move opportunity for a decision with ten legal destinations', () => {
+    const state = createGame({ phase: 'live', turn: 'home' });
+    const moves: Action[] = Array.from({ length: 10 }, (_, index) => ({
+      type: 'move', pieceId: 'home-rb', to: { x: index + 2, y: 4 },
+    }));
+
+    expect(actionOpportunityKeys(state, 'heuristic', moves)).toEqual([
+      expect.stringContaining('|action=move'),
+    ]);
+  });
+
+  it('accumulates one opportunity per repeated decision state', () => {
+    const state = createGame({ phase: 'live', turn: 'home' });
+    const moves: Action[] = Array.from({ length: 10 }, (_, index) => ({
+      type: 'move', pieceId: 'home-rb', to: { x: index + 2, y: 4 },
+    }));
+    const decisions = [
+      ...actionOpportunityKeys(state, 'heuristic', moves),
+      ...actionOpportunityKeys(state, 'heuristic', moves),
+    ];
+
+    expect(decisions).toHaveLength(2);
+    expect(decisions[0]).toBe(decisions[1]);
   });
 
   it('records a real drive-ending action transition exactly once', () => {
