@@ -17,6 +17,7 @@ import {
 } from './engine/rules';
 import type { Action, CoinFace, Coord, DiceRoll, Formation, FormationSide, GameState, Piece, Team } from './engine/types';
 import { AccessibleBoard } from './ui/AccessibleBoard';
+import { Modal } from './ui/Modal';
 import './styles.css';
 
 type TargetMode = 'move' | 'pass' | null;
@@ -57,6 +58,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const [showRules, setShowRules] = useState(false);
   const [showCoinToss, setShowCoinToss] = useState(false);
   const eventId = useRef(1);
+  const workspaceHeadingRef = useRef<HTMLHeadingElement>(null);
   const game = history[historyIndex]?.game ?? initialEntry.game;
   const isViewingHistory = historyIndex !== history.length - 1;
   const bothComputers = players.home === 'computer' && players.away === 'computer';
@@ -349,10 +351,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players]);
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" id="chessball-app">
       <section className="score-strip" aria-label="Game status">
         <div>
-          <h1>Chessball</h1>
+          <h1 ref={workspaceHeadingRef} tabIndex={-1}>Chessball</h1>
         </div>
         <ScoreCard label="Home" score={game.score.home} active={game.possession === 'home'} />
         <ScoreCard label="Away" score={game.score.away} active={game.possession === 'away'} />
@@ -555,10 +557,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           disabled={isViewingHistory || players[controlTeam] === 'computer'}
           onFlip={flipCoin}
           onChoose={chooseKickoffChoice}
+          fallbackFocus={workspaceHeadingRef}
         />
       )}
-      {showRules && <RulesDialog onClose={() => setShowRules(false)} />}
-      {game.phase === 'final' && <FinalResultModal game={game} progress={progress} onNewGame={reset} />}
+      {showRules && <RulesDialog fallbackFocus={workspaceHeadingRef} onClose={() => setShowRules(false)} />}
+      {game.phase === 'final' && <FinalResultModal game={game} progress={progress} fallbackFocus={workspaceHeadingRef} onNewGame={reset} />}
     </main>
   );
 }
@@ -568,17 +571,18 @@ function CoinTossDialog({
   disabled,
   onFlip,
   onChoose,
+  fallbackFocus,
 }: {
   game: GameState;
   disabled: boolean;
   onFlip: () => void;
   onChoose: (choice: 'kick' | 'receive') => void;
+  fallbackFocus: React.RefObject<HTMLElement | null>;
 }) {
   const winner = game.coinToss.winner;
 
   return (
-    <div className="rules-backdrop coin-toss-backdrop">
-      <section className="rules-dialog coin-toss-dialog" role="dialog" aria-modal="true" aria-label="Coin Toss">
+    <Modal label="Coin Toss" fallbackFocus={fallbackFocus} backdropClassName="coin-toss-backdrop" dialogClassName="coin-toss-dialog">
         <h2>Coin Toss</h2>
         <p>{winner ? `${capitalize(winner)} won the coin toss. Choose whether to kick or receive.` : 'Flip the coin to decide the opening coin toss.'}</p>
         <CoinFaceDisplay result={game.coinToss.result} />
@@ -593,8 +597,7 @@ function CoinTossDialog({
             <Shield size={17} /> Receive
           </button>
         </div>
-      </section>
-    </div>
+    </Modal>
   );
 }
 
@@ -615,16 +618,17 @@ function FinalResultModal({
   game,
   progress,
   onNewGame,
+  fallbackFocus,
 }: {
   game: GameState;
   progress: MatchProgress;
   onNewGame: () => void;
+  fallbackFocus: React.RefObject<HTMLElement | null>;
 }) {
   const result = finalResultLabel(game);
 
   return (
-    <div className="rules-backdrop final-backdrop">
-      <section className="rules-dialog final-dialog" role="dialog" aria-modal="true" aria-label="Final Result">
+    <Modal label="Final Result" fallbackFocus={fallbackFocus} backdropClassName="final-backdrop" dialogClassName="final-dialog">
         <h2>Final Result</h2>
         <p className="final-winner">{result}</p>
         <p className="final-score">Home {game.score.home} - Away {game.score.away}</p>
@@ -633,16 +637,15 @@ function FinalResultModal({
         <button type="button" onClick={onNewGame}>
           <RotateCcw size={17} /> New Game
         </button>
-      </section>
-    </div>
+    </Modal>
   );
 }
 
-function RulesDialog({ onClose }: { onClose: () => void }) {
+function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObject<HTMLElement | null>; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className="rules-backdrop">
-      <section className="rules-dialog" role="dialog" aria-modal="true" aria-label="Rules and How to Play">
-        <button className="rules-close" type="button" onClick={onClose} aria-label="Close rules">
+    <Modal label="Rules and How to Play" dismissible initialFocus={closeRef} fallbackFocus={fallbackFocus} onClose={onClose}>
+        <button ref={closeRef} className="rules-close" type="button" onClick={onClose} aria-label="Close rules">
           <X size={18} />
         </button>
         <h2>Rules and How to Play</h2>
@@ -669,8 +672,7 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
           <li>Touchdowns, extra points, two-point tries, and made field goals are followed by a kickoff from the scoring team. After a safety, the team that allowed the safety kicks to the scoring team. At halftime, the team that received the opening kickoff kicks to the other side.</li>
           <li>Scores, safeties, interceptions, turnovers on downs, punts, missed field goals, and failed conversions complete drives. Normal tackles and incomplete passes only advance the down.</li>
         </ul>
-      </section>
-    </div>
+    </Modal>
   );
 }
 

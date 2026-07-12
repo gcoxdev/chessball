@@ -398,6 +398,32 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText('Final: Drive 16 of 16')).toBeInTheDocument();
   });
 
+  it('keeps required coin toss and final result dialogs open on Escape and backdrop clicks', () => {
+    const { unmount } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    const coinDialog = screen.getByRole('dialog', { name: /coin toss/i });
+    fireEvent.keyDown(coinDialog, { key: 'Escape' });
+    fireEvent.click(coinDialog.parentElement as HTMLElement);
+    expect(screen.getByRole('dialog', { name: /coin toss/i })).toBeInTheDocument();
+
+    unmount();
+    render(<App initialGame={createGame({ phase: 'final' })} />);
+    const finalDialog = screen.getByRole('dialog', { name: /final result/i });
+    fireEvent.keyDown(finalDialog, { key: 'Escape' });
+    fireEvent.click(finalDialog.parentElement as HTMLElement);
+    expect(screen.getByRole('dialog', { name: /final result/i })).toBeInTheDocument();
+  });
+
+  it('focuses the stable workspace heading when a dialog trigger is no longer connected', () => {
+    render(<App initialGame={createGame({ phase: 'final' })} />);
+
+    fireEvent.click(within(screen.getByRole('dialog', { name: /final result/i })).getByRole('button', { name: /new game/i }));
+
+    const heading = screen.getByRole('heading', { name: 'Chessball' });
+    expect(heading).toHaveAttribute('tabindex', '-1');
+    expect(heading).toHaveFocus();
+  });
+
   it('lets users choose offensive and defensive formations before the snap', () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
@@ -767,6 +793,34 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText(/after a touchdown, choose an extra point kick or a two-point try/i)).toBeInTheDocument();
     expect(screen.getByText(/incomplete passes are dead balls/i)).toBeInTheDocument();
     expect(screen.queryByText(/block,/i)).not.toBeInTheDocument();
+  });
+
+  it('portals Rules outside the isolated app, locks scrolling, traps focus, and restores its trigger', () => {
+    document.body.style.overflow = 'clip';
+    render(<App initialGame={createGame()} />);
+    const trigger = screen.getByRole('button', { name: /rules/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog', { name: /rules and how to play/i });
+    const appRoot = document.getElementById('chessball-app');
+    const close = within(dialog).getByRole('button', { name: /close rules/i });
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
+    expect(appRoot).toHaveAttribute('inert');
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(close).toHaveFocus();
+
+    fireEvent.keyDown(close, { key: 'Tab' });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog', { name: /rules and how to play/i })).not.toBeInTheDocument();
+    expect(appRoot).not.toHaveAttribute('inert');
+    expect(document.body.style.overflow).toBe('clip');
+    expect(trigger).toHaveFocus();
+    document.body.style.overflow = '';
   });
 
   it('shows a football marker in the corner of the controlled ball square', () => {

@@ -892,6 +892,8 @@ h1 {
   place-items: center;
   padding: 24px;
   background: rgba(3, 8, 6, 0.72);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .rules-dialog {
@@ -899,6 +901,7 @@ h1 {
   width: min(680px, 100%);
   max-height: min(760px, 90vh);
   overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(244, 240, 222, 0.18);
   border-radius: 8px;
   background: #0d1913;
