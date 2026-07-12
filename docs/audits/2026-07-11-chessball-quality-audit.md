@@ -94,9 +94,9 @@ These patterns explain part of the skill gap: random play reaches far fewer touc
 
 Top action totals were consistent with a board movement game. Heuristic/heuristic recorded 566,904 moves from 209,768,010 opportunities (0.2703%), 432,823 tackles from 1,494,480 (28.961%), and 126,091 kicks from 795,853 (15.844%). Random/random recorded 434,757 moves from 114,374,467 (0.3801%), 338,667 tackles from 995,937 (34.005%), and 41,053 kicks from 1,035,714 (3.964%). Mixed HR recorded 472,076 moves from 158,272,994 (0.2983%), 391,532 tackles from 1,201,495 (32.587%), and 79,221 kicks from 1,060,446 (7.471%). Complete HH, RR, and HR distributions cover all 16 observed action types and include selected totals, opportunity totals, and rates in the three matchup artifacts cited under Reproducibility.
 
-## Confirmed quantitative bugs and fixes
+## Confirmed quantitative-phase bugs and fixes
 
-None. Seed reproducibility, completion integrity, and matched fair opportunity passed. The large formation effects are statistical/design-level leads and do not meet the required focused-state/counterplay/root-cause threshold for modifying `rules.ts`. Accordingly no engine or test source was changed, no failing rule regression was manufactured, and there is no rule-fix commit.
+Task 6 found none from its statistical screens. Seed reproducibility, completion integrity, and matched fair opportunity passed. The large formation effects are statistical/design-level leads and did not meet the required focused-state/counterplay/root-cause threshold for modifying `rules.ts`, so that quantitative phase made no rule or regression-test change. Task 7's later focused qualitative flow audit did confirm drive-ownership defects outside that statistical conclusion; Task 8 added failing ownership regressions and fixed them in `31deeb9` (`fix(rules): credit completed drives to prior offense`).
 
 ## Inconclusive and optional follow-ups
 
@@ -113,7 +113,7 @@ The standard is a recognizable, strategically legible football hybrid, not exact
 |---|---|---|---|---|
 | Coin toss and choice | `generateLegalActions` and `coinToss`/`chooseKickoffChoice` (`src/engine/rules.ts:220`, `src/engine/rules.ts:607`, `src/engine/rules.ts:621`): heads=home, tails=away; winner chooses kick/receive. | `src/engine/chessball.test.ts:540` “resolves the opening coin toss…”; `:555` “lets the coin toss winner choose…” | `src/main.tsx:608-620`; Rules `src/main.tsx:676` | Aligned and symmetric; computer/computer always chooses receive (`src/main.tsx:294-300`), a policy abstraction rather than a rule defect. |
 | Kick roll and placement | `kickoff` then `placeKick` (`src/engine/rules.ts:881`, `:904`); 2d6 total equals columns/5-yard units (`:1228`), row alone is chosen on the clamped landing column (`:1236-1247`). | `:986` opening placement; `:1009` away mirror; `:1032` short kick; `:1083` placement choice | Rules `src/main.tsx:678-679`; hint `:460` | Aligned, directional tests present. Clamping long kicks to the board edge is an abstraction. |
-| Touchback, out-of-bounds, touched kick, return | `placeKick` branches at `src/engine/rules.ts:910-953`; return pickup/touch at `:712-733`; return ranges/path rules at `:1101-1180`. Touchback is own 25 (`:1318`). | `:1125` touchbacks; `:1155` receiver pickup; `:1178` coverage touch; `:1203`, `:1233`, `:1252`, `:1278` return movement/path/spot/range | Rules `src/main.tsx:679` | Touchback and touched-kick mechanics align, but both have a **confirmed drive-accounting defect** below. `kickOutOfBounds` is unreachable through legal placement because x is clamped and y is enumerated in-bounds (`:1236-1247`): ambiguity/dead branch and coverage gap, not part of the confirmed counter defect. |
+| Touchback, out-of-bounds, touched kick, return | `placeKick` branches at `src/engine/rules.ts:910-953`; return pickup/touch at `:712-733`; return ranges/path rules at `:1101-1180`. Touchback is own 25 (`:1318`). | `:1125` touchbacks; `:1155` receiver pickup; `:1178` coverage touch; `:1203`, `:1233`, `:1252`, `:1278` return movement/path/spot/range; drive counters in `completed drive ownership` | Rules `src/main.tsx:679` | Mechanics align and the later-confirmed drive-accounting defects are **fixed**: kickoff resolution consumes no offensive drive, while punt resolution credits the punting offense. `kickOutOfBounds` remains unreachable through legal placement because x is clamped and y is enumerated in-bounds (`:1236-1247`): ambiguity/dead branch and coverage gap, not part of the fixed reachable counter defects. |
 | Possession and alternating turns | `snap` starts offense (`src/engine/rules.ts:643-652`); successful/failed actions generally call `alternateTurn`; turnovers explicitly set team/direction/turn. | `:1413` snap/alternation; interception `:1548`; kick-return turnover `:1301` | Rules `src/main.tsx:681-682` | Aligned. One-action alternation is a deliberate board-game abstraction. |
 | Formations, confirmation, shifts, snap | Choice/confirm `src/engine/rules.ts:563-598`; confirmed side receives two shifts, cannot cross LOS (`:682-698`); both sides required to snap (`:643-652`). | `:82`, `:100`, `:117`, `:129`, `:1431`; end-zone projection `:1397` | Rules `src/main.tsx:680`; controls `:380-410` | Ambiguity: rules say “change freely, then confirm” but omit the two post-confirmation shifts and how their destinations are judged. Quantitative screen found goal-line defense and shotgun materially stronger under the fixed policy (Formation section), a design risk, not a defect. |
 | Movement, power movement, blocking | Role movement and sliding at `src/engine/rules.ts:1101-1154`, power paths/targets at `:1373-1419`; contact target rises with contacts; offense range penalty while it controls ball. | `:153`, `:162`, `:175`, `:182`, `:201`, `:219`, `:236` | Rules `src/main.tsx:685-688` | Aligned abstraction. Board adjudication needs role/path reference cards; “square radius,” orthogonal turns, sliding, and power-contact counting are not fully defined in prose. |
@@ -135,25 +135,25 @@ Exact reproduced cases (all began with `drivesThisQuarter={home:0,away:0}`): hom
 
 Invariant: **a completed drive belongs to the offense whose possession/drive ended**; a kickoff completes no offensive drive. The following table preserves the pre-fix reproduction evidence. A read-only `vite-node` matrix began every case at `{home:0,away:0}`, mirrored home/away, called `startNextDown`, and recorded the changed counter. Results were symmetric, so `O` means prior offense and `N` the new/current possession team. Unless the punt rows say otherwise, `pendingKick` was already absent/cleared and provenance came only from `PlayResult`; the table explicitly calls out where that result lacked enough provenance. All reachable defect rows are now covered by the fixed ownership model and regressions described below.
 
-| Terminal path | Post-result possession / provenance | Actual changed entry | Correct entry | Status |
+| Terminal path | Pre-fix post-result possession / provenance | Pre-fix changed entry | Correct entry | Current status |
 |---|---|---|---|---|
-| Kickoff touchback | N; `pendingKick` cleared | N | none | Confirmed spurious completion; both directions. |
-| Kickoff coverage-first `kickTouched` | N; teams remain in result but kick kind is lost | N | none | Confirmed spurious completion; both directions. |
-| Punt touchback | N; `touchback` loses punt provenance | N | O | Confirmed miscredit; both directions traced from the terminal public state. |
-| Punt receiving pickup, ordinary tackle | N; pickup retains `pendingKick`, later tackle clears it and leaves only `tackle` | none | O (punting drive) | Confirmed missing completion; receiving tackle correctly remains non-terminal for N. |
+| Kickoff touchback | N; `pendingKick` cleared | N | none | Pre-fix confirmed spurious completion; fixed in Task 8. |
+| Kickoff coverage-first `kickTouched` | N; teams remain in result but kick kind is lost | N | none | Pre-fix confirmed spurious completion; fixed in Task 8. |
+| Punt touchback | N; `touchback` loses punt provenance | N | O | Pre-fix confirmed miscredit; fixed in Task 8. |
+| Punt receiving pickup, ordinary tackle | N; pickup retains `pendingKick`, later tackle clears it and leaves only `tackle` | none | O (punting drive) | Pre-fix confirmed missing completion; fixed in Task 8. |
 | Punt return `outOfBounds` | Legal moves never leave the board (`src/engine/rules.ts:735-736`, `:1101-1154`) | none | O if reachable | Unreachable/dead branch; no generalized defect claim. |
-| Punt coverage-first `kickTouched` | N; result loses punt kind | N | O | Confirmed miscredit; both directions. |
-| Interception | switches to N before `endPlay` (`src/engine/rules.ts:802-812`) | N | O | Confirmed miscredit; both directions. |
-| Turnover on downs | switches to N before `endPlay` (`src/engine/rules.ts:1468-1483`; incomplete path `:818-834`) | N | O | Confirmed miscredit; both directions. |
+| Punt coverage-first `kickTouched` | N; result loses punt kind | N | O | Pre-fix confirmed miscredit; fixed in Task 8. |
+| Interception | switches to N before `endPlay` (`src/engine/rules.ts:802-812`) | N | O | Pre-fix confirmed miscredit; fixed in Task 8. |
+| Turnover on downs | switches to N before `endPlay` (`src/engine/rules.ts:1468-1483`; incomplete path `:818-834`) | N | O | Pre-fix confirmed miscredit; fixed in Task 8. |
 | Made field goal | O stays current | O | O | Aligned; both directions. |
-| Missed field goal | switches to N before `endPlay` (`src/engine/rules.ts:981-993`) | N | O | Confirmed miscredit; both directions. |
+| Missed field goal | switches to N before `endPlay` (`src/engine/rules.ts:981-993`) | N | O | Pre-fix confirmed miscredit; fixed in Task 8. |
 | Safety | O remains possession; result names scoring defense | O | O | Aligned; both directions. |
 | Touchdown + extra point/two-point | O remains possession through conversion | O | O | Aligned; both directions; touchdown cannot advance before conversion (`src/engine/rules.ts:349`). |
-| Opponent-recovered double-six fumble | switches to N before `endPlay` (`src/engine/rules.ts:1039-1055`) | N | O | Confirmed miscredit; both directions. |
+| Opponent-recovered double-six fumble | switches to N before `endPlay` (`src/engine/rules.ts:1039-1055`) | N | O | Pre-fix confirmed miscredit; fixed in Task 8. |
 | Same-team recovered `fumble` | Engine never emits it: double-six always recovers to defender; generic `recover` emits `recovery` (`src/engine/rules.ts:1069-1098`) | none through legal flow | context-dependent | Unreachable as `fumble`; synthetic-state behavior is not treated as evidence. |
 | Normal tackle / incomplete | O stays current; neither result completes a drive | none | none | Aligned non-terminal behavior; both directions. |
 
-### Confirmed drive-accounting defects and root cause
+### Confirmed drive-accounting defects, root cause, and fix
 
 **Drive ownership was derived from mutable post-transition possession (fixed).** `completedDriveOwner(state, result)` now returns an explicit team: scoring/conversion results use their offense, safety/INT/downs derive the prior offense, missed field goals use the kicking team, and opponent-recovered fumbles derive the fumbling offense. `markDriveComplete(state, owner)` no longer reads current possession.
 
