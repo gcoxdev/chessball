@@ -32,6 +32,7 @@ describe('pairedBootstrapInterval', () => {
   it('is deterministic and includes zero for balanced pair effects', () => {
     const a = pairedBootstrapInterval([-1, 1, -1, 1], { seed: 7, samples: 2_000 });
     expect(a).toEqual(pairedBootstrapInterval([-1, 1, -1, 1], { seed: 7, samples: 2_000 }));
+    expect(a.confidence).toBe(.95);
     expect(a.low).toBeLessThanOrEqual(0);
     expect(a.high).toBeGreaterThanOrEqual(0);
   });
@@ -57,25 +58,25 @@ describe('pairedBootstrapInterval', () => {
 
 describe('classifications', () => {
   it('classifies crossing effects as inconclusive', () => {
-    expect(classifyPairedEffect({ low: -0.1, high: 0.2, mean: 0.05, seed: 1, samples: 10 })).toBe('inconclusive');
+    expect(classifyPairedEffect({ low: -0.1, high: 0.2, mean: 0.05, seed: 1, samples: 10, confidence: .95 })).toBe('inconclusive');
   });
 
   it('applies symmetry action thresholds', () => {
     expect(classifySymmetry(
-      { low: .51, high: .60, mean: .56, seed: 1, samples: 10 },
-      { low: -1, high: 2, mean: .2, seed: 1, samples: 10 },
+      { low: .51, high: .60, mean: .56, seed: 1, samples: 10, confidence: .95 },
+      { low: -1, high: 2, mean: .2, seed: 1, samples: 10, confidence: .95 },
     )).toBe('actionable');
     expect(classifySymmetry(
-      { low: .51, high: .53, mean: .52, seed: 1, samples: 10 },
-      { low: -1, high: 2, mean: .2, seed: 1, samples: 10 },
+      { low: .51, high: .53, mean: .52, seed: 1, samples: 10, confidence: .95 },
+      { low: -1, high: 2, mean: .2, seed: 1, samples: 10, confidence: .95 },
     )).toBe('inconclusive');
   });
 
   it('supports a nominated skill gap only above chance', () => {
-    const result = classifySkillGap({ low: .51, high: .8, mean: .65, seed: 1, samples: 10 });
+    const result = classifySkillGap({ low: .51, high: .8, mean: .65, seed: 1, samples: 10, confidence: .95 });
     expect(result.state).toBe('supported');
     expect(result.effect).toBeCloseTo(.15);
-    expect(classifySkillGap({ low: .4, high: .8, mean: .6, seed: 1, samples: 10 }).state).toBe('inconclusive');
+    expect(classifySkillGap({ low: .4, high: .8, mean: .6, seed: 1, samples: 10, confidence: .95 }).state).toBe('inconclusive');
   });
 });
 
@@ -117,5 +118,31 @@ describe('runMatchedAudit', () => {
   it('returns identical reports for identical inputs', () => {
     const options = { pairs: 1, seed: 2, primary: 'heuristic' as const, comparison: 'random' as const, bootstrap: { seed: 4, samples: 100 }, simulator: (o: SimulateGameOptions) => game(o, [2, 1]) };
     expect(runMatchedAudit(options)).toEqual(runMatchedAudit(options));
+  });
+
+  it.each([
+    { seed: Number.NaN },
+    { seed: Number.POSITIVE_INFINITY },
+    { seed: 1.5 },
+    { seed: 1, bootstrap: { seed: Number.NaN } },
+    { seed: 1, bootstrap: { seed: 2, samples: 0 } },
+    { seed: 1, bootstrap: { seed: 2, confidence: 1 } },
+  ])('rejects invalid seed/bootstrap options before simulation %#', invalid => {
+    let calls = 0;
+    expect(() => runMatchedAudit({ pairs: 1, primary: 'heuristic', comparison: 'random', simulator: o => { calls++; return game(o, [0, 0], 'stalled'); }, ...invalid })).toThrow();
+    expect(calls).toBe(0);
+  });
+
+  it('counts a repeated formation only once per game in outcome strata', () => {
+    const report = runMatchedAudit({
+      pairs: 1, seed: 3, primary: 'heuristic', comparison: 'random', bootstrap: { seed: 4, samples: 100 },
+      simulator: o => {
+        const result = game(o, [2, 1]);
+        result.summary.formationSelections.home.offense = ['x', 'x', 'x'];
+        return result;
+      },
+    });
+    expect(report.telemetry.formationStratifiedOutcomes['heuristic:home|formation=x']).toEqual({ games: 1, wins: 1, losses: 0, ties: 0 });
+    expect(report.telemetry.formationChoices.total).toBe(2);
   });
 });

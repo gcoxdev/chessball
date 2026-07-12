@@ -9,7 +9,7 @@ import {
   type SimulationStatus,
 } from './simulator';
 
-export type BootstrapInterval = { low: number; high: number; mean: number; seed: number; samples: number };
+export type BootstrapInterval = { low: number; high: number; mean: number; seed: number; samples: number; confidence: number };
 
 export function pairedBootstrapInterval(
   pairEffects: number[],
@@ -18,9 +18,7 @@ export function pairedBootstrapInterval(
   if (!pairEffects.length || pairEffects.some(value => !Number.isFinite(value))) throw new Error('pairEffects must contain finite values');
   const samples = options.samples ?? 10_000;
   const confidence = options.confidence ?? .95;
-  if (!Number.isInteger(samples) || samples <= 0) throw new Error('samples must be a positive integer');
-  if (!Number.isFinite(confidence) || confidence <= 0 || confidence >= 1) throw new Error('confidence must be between zero and one');
-  if (!Number.isFinite(options.seed)) throw new Error('seed must be finite');
+  validateBootstrapOptions({ seed: options.seed, samples, confidence });
   const random = seededRandom(options.seed);
   const means = Array.from({ length: samples }, () => {
     let sum = 0;
@@ -31,7 +29,7 @@ export function pairedBootstrapInterval(
   return {
     low: percentile(means, tail),
     high: percentile(means, 1 - tail),
-    mean: average(pairEffects), seed: options.seed, samples,
+    mean: average(pairEffects), seed: options.seed, samples, confidence,
   };
 }
 
@@ -80,8 +78,10 @@ export type MatchedAuditReport = {
 
 export function runMatchedAudit(options: RunMatchedAuditOptions): MatchedAuditReport {
   if (!Number.isInteger(options.pairs) || options.pairs <= 0) throw new Error('pairs must be a positive integer');
+  if (!Number.isInteger(options.seed)) throw new Error('seed must be a finite integer');
   const simulator = options.simulator ?? simulateGame;
   const bootstrap = options.bootstrap ?? { seed: options.seed };
+  validateBootstrapOptions({ seed: bootstrap.seed, samples: bootstrap.samples ?? 10_000, confidence: bootstrap.confidence ?? .95 });
   const seedList = Array.from({ length: options.pairs }, (_, index) => options.seed + index);
   const statusCounts = { completed: 0, stalled: 0, crashed: 0 };
   const excludedPairDetails: MatchedAuditReport['excludedPairDetails'] = [];
@@ -147,7 +147,8 @@ function aggregateTelemetry(games: Array<{ game: SimulatedGame; policyByTeam: Re
       cohorts.set(key, cohort);
       const score = game.summary.finalScore;
       const result = outcome(score[team], score[team === 'home' ? 'away' : 'home']);
-      for (const formation of [...game.summary.formationSelections[team].offense, ...game.summary.formationSelections[team].defense]) {
+      const formationsUsed = new Set([...game.summary.formationSelections[team].offense, ...game.summary.formationSelections[team].defense]);
+      for (const formation of formationsUsed) {
         const stratum = formationStratifiedOutcomes[`${key}|formation=${formation}`] ?? { games: 0, wins: 0, losses: 0, ties: 0 };
         stratum.games++; result === 1 ? stratum.wins++ : result === 0 ? stratum.losses++ : stratum.ties++;
         formationStratifiedOutcomes[`${key}|formation=${formation}`] = stratum;
@@ -160,6 +161,11 @@ function aggregateTelemetry(games: Array<{ game: SimulatedGame; policyByTeam: Re
 }
 
 function intervalOrNull(values: number[], options: { seed: number; samples?: number; confidence?: number }): BootstrapInterval | null { return values.length ? pairedBootstrapInterval(values, options) : null; }
+function validateBootstrapOptions(options: { seed: number; samples: number; confidence: number }): void {
+  if (!Number.isInteger(options.seed)) throw new Error('bootstrap seed must be a finite integer');
+  if (!Number.isInteger(options.samples) || options.samples <= 0) throw new Error('samples must be a positive integer');
+  if (!Number.isFinite(options.confidence) || options.confidence <= 0 || options.confidence >= 1) throw new Error('confidence must be between zero and one');
+}
 function outcome(forScore: number, againstScore: number): number { return forScore > againstScore ? 1 : forScore < againstScore ? 0 : .5; }
 function average(values: number[]): number { return values.reduce((sum, value) => sum + value, 0) / values.length; }
 function percentile(sorted: number[], probability: number): number { return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(probability * sorted.length)))]; }
