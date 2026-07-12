@@ -46,6 +46,10 @@ export type SimulationSummary = {
   finalScore: GameState['score'];
   quarter: GameState['quarter'];
   resultTypes: CountMap;
+  actionTypes: CountMap;
+  actionOpportunities: CountMap;
+  formationChoices: CountMap;
+  driveOutcomes: CountMap;
   openingWinner: Team | null;
   openingKicker: Team | null;
   openingReceiver: Team | null;
@@ -79,6 +83,10 @@ export type SimulationBatchReport = {
   byPolicy: Record<SimulationPolicy, BatchPolicySummary>;
   phases: CountMap;
   resultTypes: CountMap;
+  actionTypes: CountMap;
+  actionOpportunities: CountMap;
+  formationChoices: CountMap;
+  driveOutcomes: CountMap;
   anomalies: Array<SimulationAnomaly & { game: number; policy: SimulationPolicy; seed: number }>;
   scoreDifferential: {
     homeWins: number;
@@ -95,6 +103,7 @@ export type SimulationBatchReport = {
 };
 
 export type BalanceReport = {
+  games: number;
   homeWinRate: number;
   awayWinRate: number;
   tieRate: number;
@@ -113,7 +122,7 @@ export type BalanceBucket = {
   balance: BalanceReport;
 };
 
-type CountMap = Record<string, number> & { total: number };
+export type CountMap = Record<string, number> & { total: number };
 
 type BalanceAccumulator = {
   games: number;
@@ -156,6 +165,10 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
   const repeatLimit = options.repeatLimit ?? DEFAULT_REPEAT_LIMIT;
   const anomalies: SimulationAnomaly[] = [];
   const resultTypes = countMap();
+  const actionTypes = countMap();
+  const actionOpportunities = countMap();
+  const formationChoices = countMap();
+  const driveOutcomes = countMap();
   const signatures = new Map<string, number>();
   const recentActions: string[] = [];
   const formationSelections: SimulationFormationSelections = {
@@ -185,10 +198,15 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
     try {
       const legalActions = generateLegalActions(state);
+      for (const legalAction of legalActions) {
+        increment(actionOpportunities, actionContextKey(state, policies[state.turn], legalAction.type));
+      }
       const action = chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex, options.opening, options.formationPlan);
 
       if (!action) {
         if (state.phase === 'betweenDowns') {
+          const contextKey = actionContextKey(state, policies[state.turn], 'nextDown');
+          increment(actionOpportunities, contextKey);
           state = startNextDown(state);
           pushRecentAction(recentActions, `nextDown -> ${state.phase} ${state.possession} Q${state.quarter} D${state.down}`);
           const invariantErrors = validateGameStateInvariants(state);
@@ -204,6 +222,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
             });
             break;
           }
+          increment(actionTypes, contextKey);
           actionIndex += 1;
           continue;
         }
@@ -222,14 +241,20 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
       const resolvedAction = withRandomResolution(action, rng, options.opening);
       const before = state;
+      const selectedContextKey = actionContextKey(before, policies[before.turn], resolvedAction.type);
       if (resolvedAction.type === 'chooseFormation') {
         const team = resolvedAction.side === 'offense' ? before.possession : otherTeam(before.possession);
         formationSelections[team][resolvedAction.side].push(resolvedAction.formationId);
+        increment(formationChoices, `team=${team}|side=${resolvedAction.side}|quarter=${before.quarter}|formation=${resolvedAction.formationId}`);
       }
       state = applyAction(state, resolvedAction);
       pushRecentAction(recentActions, actionSummary(before, resolvedAction, state));
       const resultType = state.play.result?.type;
       if (resultType) increment(resultTypes, resultType);
+      if (state.play.result !== before.play.result) {
+        const outcome = driveOutcomeKey(state.play.result);
+        if (outcome) increment(driveOutcomes, outcome);
+      }
       const invariantErrors = validateGameStateInvariants(state);
       if (invariantErrors.length > 0) {
         status = 'crashed';
@@ -244,6 +269,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
         break;
       }
 
+      increment(actionTypes, selectedContextKey);
       actionIndex += 1;
     } catch (error) {
       status = 'crashed';
@@ -283,6 +309,10 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       finalScore: state.score,
       quarter: state.quarter,
       resultTypes,
+      actionTypes,
+      actionOpportunities,
+      formationChoices,
+      driveOutcomes,
       openingWinner: state.coinToss.winner ?? null,
       openingKicker: state.coinToss.choice ? state.openingKickoffTeam : null,
       openingReceiver: state.coinToss.choice ? otherTeam(state.openingKickoffTeam) : null,
@@ -398,6 +428,10 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
   const seed = options.seed ?? 1;
   const phases = countMap();
   const resultTypes = countMap();
+  const actionTypes = countMap();
+  const actionOpportunities = countMap();
+  const formationChoices = countMap();
+  const driveOutcomes = countMap();
   const byPolicy: Record<SimulationPolicy, BatchPolicySummary> = {
     heuristic: emptyPolicySummary(),
     random: emptyPolicySummary(),
@@ -442,6 +476,10 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
     actions += result.summary.actions;
     increment(phases, result.summary.finalPhase);
     mergeCounts(resultTypes, result.summary.resultTypes);
+    mergeCounts(actionTypes, result.summary.actionTypes);
+    mergeCounts(actionOpportunities, result.summary.actionOpportunities);
+    mergeCounts(formationChoices, result.summary.formationChoices);
+    mergeCounts(driveOutcomes, result.summary.driveOutcomes);
 
     const policySummary = byPolicy[policy];
     policySummary.games += 1;
@@ -450,6 +488,15 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
     if (result.status === 'completed') {
       completed += 1;
       policySummary.completed += 1;
+      homeScore += result.summary.finalScore.home;
+      awayScore += result.summary.finalScore.away;
+      if (result.summary.finalScore.home > result.summary.finalScore.away) homeWins += 1;
+      else if (result.summary.finalScore.away > result.summary.finalScore.home) awayWins += 1;
+      else ties += 1;
+      recordBalance(balanceByPolicy[policy], result.summary.finalScore);
+      recordBalance(balanceByOpeningKickoff[result.finalState.openingKickoffTeam], result.summary.finalScore);
+      recordBalance(balanceByOpeningReceiver[otherTeam(result.finalState.openingKickoffTeam)], result.summary.finalScore);
+      recordBalance(balanceByFinalDirection[result.finalState.direction === 1 ? 'right' : 'left'], result.summary.finalScore);
     } else if (result.status === 'crashed') {
       crashed += 1;
       policySummary.crashed += 1;
@@ -457,16 +504,6 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
       stalled += 1;
       policySummary.stalled += 1;
     }
-
-    homeScore += result.summary.finalScore.home;
-    awayScore += result.summary.finalScore.away;
-    if (result.summary.finalScore.home > result.summary.finalScore.away) homeWins += 1;
-    else if (result.summary.finalScore.away > result.summary.finalScore.home) awayWins += 1;
-    else ties += 1;
-    recordBalance(balanceByPolicy[policy], result.summary.finalScore);
-    recordBalance(balanceByOpeningKickoff[result.finalState.openingKickoffTeam], result.summary.finalScore);
-    recordBalance(balanceByOpeningReceiver[otherTeam(result.finalState.openingKickoffTeam)], result.summary.finalScore);
-    recordBalance(balanceByFinalDirection[result.finalState.direction === 1 ? 'right' : 'left'], result.summary.finalScore);
 
     for (const anomaly of result.anomalies) {
       anomalies.push({ ...anomaly, game, policy, seed: gameSeed });
@@ -483,21 +520,25 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
     byPolicy,
     phases,
     resultTypes,
+    actionTypes,
+    actionOpportunities,
+    formationChoices,
+    driveOutcomes,
     anomalies,
     scoreDifferential: {
       homeWins,
       awayWins,
       ties,
-      averageHomeScore: homeScore / games,
-      averageAwayScore: awayScore / games,
+      averageHomeScore: completed > 0 ? homeScore / completed : null as unknown as number,
+      averageAwayScore: completed > 0 ? awayScore / completed : null as unknown as number,
     },
     balance: balanceReport({
-      games,
+      games: completed,
       homeWins,
       awayWins,
       ties,
-      averageHomeScore: homeScore / games,
-      averageAwayScore: awayScore / games,
+      averageHomeScore: completed > 0 ? homeScore / completed : null as unknown as number,
+      averageAwayScore: completed > 0 ? awayScore / completed : null as unknown as number,
       winRateThreshold: options.balanceWinRateThreshold ?? 0.1,
       scoreThreshold: options.balanceScoreThreshold ?? 2,
     }),
@@ -521,9 +562,9 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
 }
 
 function toBalanceBucket(accumulator: BalanceAccumulator, options: SimulateBatchOptions): BalanceBucket {
-  const games = Math.max(1, accumulator.games);
-  const averageHomeScore = accumulator.homeScore / games;
-  const averageAwayScore = accumulator.awayScore / games;
+  const games = accumulator.games;
+  const averageHomeScore = games > 0 ? accumulator.homeScore / games : null as unknown as number;
+  const averageAwayScore = games > 0 ? accumulator.awayScore / games : null as unknown as number;
   return {
     games: accumulator.games,
     homeWins: accumulator.homeWins,
@@ -568,6 +609,39 @@ function otherTeam(team: Team): Team {
   return team === 'home' ? 'away' : 'home';
 }
 
+type FieldBand = 'own' | 'midfield' | 'opponent' | 'goal-to-go';
+
+/** Bins the line of scrimmage from the acting team's fixed attacking direction. */
+function actingTeamFieldBand(state: GameState, team: Team): FieldBand {
+  const fieldStart = 2;
+  const fieldEnd = state.board.width - 3;
+  const attackingRight = team === 'home';
+  const distanceToGoal = attackingRight ? fieldEnd - state.lineOfScrimmage : state.lineOfScrimmage - fieldStart;
+  if (distanceToGoal <= 2) return 'goal-to-go';
+  const progress = attackingRight
+    ? state.lineOfScrimmage - fieldStart
+    : fieldEnd - state.lineOfScrimmage;
+  const span = fieldEnd - fieldStart;
+  if (progress < span / 3) return 'own';
+  if (progress < span * 2 / 3) return 'midfield';
+  return 'opponent';
+}
+
+function actionContextKey(state: GameState, policy: SimulationPolicy, actionType: Action['type'] | 'nextDown'): string {
+  const team = state.turn;
+  return `team=${team}|policy=${policy}|phase=${state.phase}|down=${state.down}|field=${actingTeamFieldBand(state, team)}|action=${actionType}`;
+}
+
+export function driveOutcomeKey(result: PlayResult | undefined): string | null {
+  if (!result) return null;
+  if (result.type === 'fieldGoal') return result.good ? 'fieldGoalGood' : 'fieldGoalMissed';
+  if (result.type === 'extraPoint') return result.good ? 'extraPointGood' : 'extraPointMissed';
+  if (result.type === 'twoPoint') return result.good ? 'twoPointGood' : 'twoPointFailed';
+  if (result.type === 'touchdown' || result.type === 'punt' || result.type === 'safety' || result.type === 'interception') return result.type;
+  if (result.type === 'turnoverOnDowns') return 'turnoverOnDowns';
+  return null;
+}
+
 function balanceReport(input: {
   games: number;
   homeWins: number;
@@ -578,6 +652,10 @@ function balanceReport(input: {
   winRateThreshold: number;
   scoreThreshold: number;
 }): BalanceReport {
+  if (input.games === 0) {
+    const unavailable = null as unknown as number;
+    return { games: 0, homeWinRate: unavailable, awayWinRate: unavailable, tieRate: unavailable, winRateDelta: unavailable, averageScoreDelta: unavailable, warnings: [] };
+  }
   const homeWinRate = input.homeWins / input.games;
   const awayWinRate = input.awayWins / input.games;
   const tieRate = input.ties / input.games;
@@ -594,6 +672,7 @@ function balanceReport(input: {
   }
 
   return {
+    games: input.games,
     homeWinRate,
     awayWinRate,
     tieRate,

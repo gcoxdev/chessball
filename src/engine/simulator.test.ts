@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from './rules';
-import { simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
+import { driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
+import type { PlayResult } from './types';
 import type { SimulationFormationPlan, SimulationOpening } from './simulator';
 
 describe('headless simulator', () => {
@@ -267,6 +268,40 @@ describe('headless simulator', () => {
     expect(result.summary.policy).toBe('heuristic');
   });
 
+  it('records contextual action opportunities, selections, formations, and drive outcomes', () => {
+    const result = simulateGame({ seed: 42, policy: 'heuristic', maxActions: 5000 });
+
+    expect(result.summary.actionTypes.total).toBe(result.summary.actions);
+    expect(result.summary.formationChoices.total).toBeGreaterThan(0);
+    expect(result.summary.driveOutcomes.total).toBeLessThanOrEqual(result.summary.resultTypes.total);
+    expect(result.summary.actionOpportunities.total).toBeGreaterThanOrEqual(result.summary.actionTypes.total);
+  });
+
+  it('uses a stable bounded schema for action context keys', () => {
+    const result = simulateGame({ seed: 42, policy: 'heuristic', maxActions: 500 });
+    const keys = Object.keys(result.summary.actionOpportunities).filter((key) => key !== 'total');
+
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      expect(key).toMatch(/^team=(home|away)\|policy=(heuristic|random)\|phase=[A-Za-z]+\|down=[1-4]\|field=(own|midfield|opponent|goal-to-go)\|action=[A-Za-z]+$/);
+      expect(key).not.toMatch(/piece|coord|\bx=|\by=|\d+,\d+/i);
+    }
+  });
+
+  it('distinguishes successful and failed scoring drive outcomes', () => {
+    const result = (type: PlayResult['type'], good: boolean): PlayResult => {
+      if (type === 'fieldGoal' || type === 'extraPoint') return { type, team: 'home', good };
+      return { type: 'twoPoint', team: 'home', good };
+    };
+
+    expect(driveOutcomeKey(result('fieldGoal', true))).toBe('fieldGoalGood');
+    expect(driveOutcomeKey(result('fieldGoal', false))).toBe('fieldGoalMissed');
+    expect(driveOutcomeKey(result('extraPoint', true))).toBe('extraPointGood');
+    expect(driveOutcomeKey(result('extraPoint', false))).toBe('extraPointMissed');
+    expect(driveOutcomeKey(result('twoPoint', true))).toBe('twoPointGood');
+    expect(driveOutcomeKey(result('twoPoint', false))).toBe('twoPointFailed');
+  });
+
   it('normalizes a legacy random policy for both teams repeatably', () => {
     const first = simulateGame({ seed: 42, policy: 'random', maxActions: 400 });
     const second = simulateGame({ seed: 42, policy: 'random', maxActions: 400 });
@@ -295,21 +330,43 @@ describe('headless simulator', () => {
     expect(report.games).toBe(12);
     expect(report.byPolicy.heuristic.games).toBe(6);
     expect(report.byPolicy.random.games).toBe(6);
-    expect(report.balanceByPolicy.heuristic.games).toBe(6);
-    expect(report.balanceByPolicy.random.games).toBe(6);
+    expect(report.balanceByPolicy.heuristic.games).toBe(report.byPolicy.heuristic.completed);
+    expect(report.balanceByPolicy.random.games).toBe(report.byPolicy.random.completed);
     expect(report.completed + report.stalled + report.crashed).toBe(12);
     expect(report.resultTypes.total).toBeGreaterThan(0);
-    expect(report.balance.homeWinRate + report.balance.awayWinRate + report.balance.tieRate).toBeCloseTo(1);
+    expect(report.actionTypes.total).toBeGreaterThan(0);
+    expect(report.actionOpportunities.total).toBeGreaterThanOrEqual(report.actionTypes.total);
+    expect(report.formationChoices.total).toBeGreaterThan(0);
+    expect(report.driveOutcomes.total).toBeLessThanOrEqual(report.resultTypes.total);
+    if (report.completed > 0) {
+      expect(report.balance.homeWinRate + report.balance.awayWinRate + report.balance.tieRate).toBeCloseTo(1);
+    } else {
+      expect(report.balance.homeWinRate).toBeNull();
+    }
     expect(report.balance.warnings).toEqual(expect.any(Array));
   });
 
   it('breaks balance down by kickoff, receiving, and direction factors', () => {
     const report = simulateBatch({ games: 24, seed: 9, maxActionsPerGame: 1000 });
 
-    expect(report.balanceByOpeningKickoff.home.games + report.balanceByOpeningKickoff.away.games).toBe(24);
-    expect(report.balanceByOpeningReceiver.home.games + report.balanceByOpeningReceiver.away.games).toBe(24);
-    expect(report.balanceByFinalDirection.left.games + report.balanceByFinalDirection.right.games).toBe(24);
+    expect(report.balanceByOpeningKickoff.home.games + report.balanceByOpeningKickoff.away.games).toBe(report.completed);
+    expect(report.balanceByOpeningReceiver.home.games + report.balanceByOpeningReceiver.away.games).toBe(report.completed);
+    expect(report.balanceByFinalDirection.left.games + report.balanceByFinalDirection.right.games).toBe(report.completed);
     expect(report.balanceByOpeningKickoff.home.balance.warnings).toEqual(expect.any(Array));
+  });
+
+  it('excludes incomplete games from headline and balance estimates', () => {
+    const report = simulateBatch({ games: 4, seed: 7, maxActionsPerGame: 1 });
+
+    expect(report.completed).toBe(0);
+    expect(report.stalled).toBe(4);
+    expect(report.scoreDifferential.homeWins + report.scoreDifferential.awayWins + report.scoreDifferential.ties).toBe(0);
+    expect(report.scoreDifferential.averageHomeScore).toBeNull();
+    expect(report.scoreDifferential.averageAwayScore).toBeNull();
+    expect(report.balance.games).toBe(0);
+    expect(report.balance.homeWinRate).toBeNull();
+    expect(report.balanceByPolicy.heuristic.games).toBe(0);
+    expect(report.byPolicy.heuristic.games).toBe(2);
   });
 
   it('flags home-away imbalance when score or win thresholds are exceeded', () => {
