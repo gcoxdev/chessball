@@ -6,7 +6,7 @@ Preserve Chessball's approachable hybrid of chess and American football while en
 
 ## Status
 
-done
+in-progress
 
 ## Subgoals
 
@@ -36,3 +36,4 @@ done
 - 2026-07-11: Added physical-board viability as a design constraint and UI quality as an analysis-only branch.
 - 2026-07-12: Approved implementation plan entered subagent-driven execution.
 - 2026-07-12: Completed the post-fix audit: 3,000 core matched pairs plus 2,900 formation pairs all completed; focused/full tests and build were refreshed. All five audit branches are done, with optional implementation work deferred.
+- 2026-07-12: Reopened UI quality for confirmed accessibility and mobile remediation.

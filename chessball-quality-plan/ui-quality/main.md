@@ -2,7 +2,7 @@
 
 ## Main Goal
 
-Analyze whether the current interface makes the board, legal choices, game state, rules, and action feedback clear and accessible without changing the UI during this audit.
+Make the current interface keyboard-accessible, screen-reader understandable, touch-friendly, and safer without redesigning the game's visual identity or changing gameplay.
 
 ## Parent Context
 
@@ -10,26 +10,31 @@ Analyze whether the current interface makes the board, legal choices, game state
 
 ## Status
 
-done
+in-progress
 
 ## Planning Depth
 
-Leaf: ready for analysis.
+Branch confirmed for implementation.
 
 ## Subgoals
 
-None.
+- Accessible board interaction
+- Modal and navigation accessibility
+- Responsive layout and action safety
 
 ## Links
 
 - [Root goal](../main.md)
+- [Accessible board interaction](accessible-board/main.md)
+- [Modal and navigation accessibility](modal-navigation/main.md)
+- [Responsive layout and action safety](responsive-safety/main.md)
 
-## Remaining Nonblocking Recommendations
+## Open Questions
 
-- Implement the documented P1 accessible-grid and modal-focus fixes in a separate UI-scoped change.
-- Follow with live-announcement, focus-visible, touch-target, and responsive-board improvements.
+None at design level; implementation findings must remain within the approved scope.
 
 ## Activity Log
 
 - 2026-07-11: Confirmed an analysis-only UI review.
 - 2026-07-12: Completed static and rendered desktop/mobile analysis. Findings and prioritized remedies are documented; implementation was intentionally deferred to preserve the audit's read-only UI scope.
+- 2026-07-12: Confirmed implementation of the audit's P1/P2 accessibility and mobile findings.
