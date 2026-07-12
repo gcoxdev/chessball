@@ -202,4 +202,31 @@ describe('runMatchedAudit', () => {
   it('accepts the maximum uint32 seed for one pair', () => {
     expect(runMatchedAudit({ pairs: 1, seed: 0xffff_ffff, primary: 'heuristic', comparison: 'random', simulator: o => game(o, [0, 0]) }).seedList).toEqual([0xffff_ffff]);
   });
+
+  it('exposes formation-plan matchup metadata as deeply readonly', () => {
+    const report = runMatchedAudit({ pairs: 1, seed: 1, primary: 'heuristic', comparison: 'random', formationPlan: { home: { offense: 'a', defense: 'b' }, away: { offense: 'c', defense: 'd' } }, simulator: o => game(o, [0, 0]) });
+    if (false) {
+      // @ts-expect-error matchup formation metadata is deeply readonly
+      report.matchup.formationPlan!.home.offense = 'changed';
+    }
+    expect(Object.isFrozen(report.matchup.formationPlan?.home)).toBe(true);
+  });
+
+  it('orients away-team tactic ties and score differentials to away', () => {
+    const context = 'team=away|policy=random|phase=live|down=3|field=opponent|action=pass';
+    let call = 0;
+    const report = runMatchedAudit({ pairs: 2, seed: 30, primary: 'heuristic', comparison: 'random', simulator: o => {
+      const mirrorA = call % 2 === 0;
+      const result = game(o, call === 0 ? [4, 4] : [7, 2]);
+      result.summary.actionOpportunities = mirrorA ? { total: 2, [context]: 2 } : { total: 0 };
+      result.summary.actionTypes = call === 0 ? { total: 1, [context]: 1 } : { total: 0 };
+      call++;
+      return result;
+    }});
+    expect(report.telemetry.tacticCohorts[context]).toEqual(expect.objectContaining({
+      selected: { games: 1, wins: 0, ties: 1, losses: 0, averageScoreDifferential: 0 },
+      notSelected: { games: 1, wins: 0, ties: 0, losses: 1, averageScoreDifferential: -5 },
+      winRateDifference: .5,
+    }));
+  });
 });

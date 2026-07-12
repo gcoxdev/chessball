@@ -10,6 +10,7 @@ import {
 } from './simulator';
 
 export type BootstrapInterval = { low: number; high: number; mean: number; seed: number; samples: number; confidence: number };
+export type ReadonlySimulationFormationPlan = Readonly<Record<'home' | 'away', Readonly<{ offense: string; defense: string }>>>;
 
 export function pairedBootstrapInterval(
   pairEffects: number[],
@@ -70,7 +71,7 @@ type TacticCohort = {
 };
 
 export type MatchedAuditReport = {
-  readonly matchup: { readonly primary: SimulationPolicy; readonly comparison: SimulationPolicy; readonly formationPlan: SimulationFormationPlan | null };
+  readonly matchup: { readonly primary: SimulationPolicy; readonly comparison: SimulationPolicy; readonly formationPlan: ReadonlySimulationFormationPlan | null };
   requestedPairs: number; completedPairs: number; excludedPairs: number; attemptedGames: number;
   seedConvention: 'base-seed-plus-pair-index'; seedList: number[]; seedRange: { first: number; last: number };
   statusCounts: Record<SimulationStatus, number>;
@@ -207,7 +208,7 @@ function accumulateTacticCohorts(target: Map<string, TacticAccumulator>, game: S
 function finishOutcome(value: OutcomeAccumulator): OutcomeCohort { return { games: value.games, wins: value.wins, ties: value.ties, losses: value.losses, averageScoreDifferential: value.games ? value.scoreDifferential / value.games : null }; }
 function winShare(value: OutcomeCohort): number { return (value.wins + .5 * value.ties) / value.games; }
 function validateUint32(seed: number, label: string): void { if (!Number.isInteger(seed) || seed < 0 || seed > 0xffff_ffff) throw new Error(`${label} must be a uint32 integer`); }
-function freezeFormationPlan(plan: SimulationFormationPlan | undefined): SimulationFormationPlan | null {
+function freezeFormationPlan(plan: SimulationFormationPlan | undefined): ReadonlySimulationFormationPlan | null {
   if (!plan) return null;
   return Object.freeze({ home: Object.freeze({ ...plan.home }), away: Object.freeze({ ...plan.away }) });
 }
