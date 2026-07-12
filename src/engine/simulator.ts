@@ -21,6 +21,10 @@ export type SimulationFormationPlan = Record<Team, {
   offense: string;
   defense: string;
 }>;
+export type SimulationFormationSelections = Record<Team, {
+  offense: string[];
+  defense: string[];
+}>;
 export type SimulationStatus = 'completed' | 'stalled' | 'crashed';
 
 export type SimulationAnomaly = {
@@ -42,10 +46,12 @@ export type SimulationSummary = {
   finalScore: GameState['score'];
   quarter: GameState['quarter'];
   resultTypes: CountMap;
-  openingWinner: Team;
-  openingKicker: Team;
-  openingReceiver: Team;
+  openingWinner: Team | null;
+  openingKicker: Team | null;
+  openingReceiver: Team | null;
   attackDirections: Record<Team, 'left' | 'right'>;
+  formationPlan: SimulationFormationPlan | null;
+  formationSelections: SimulationFormationSelections;
 };
 
 export type SimulatedGame = {
@@ -152,6 +158,10 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
   const resultTypes = countMap();
   const signatures = new Map<string, number>();
   const recentActions: string[] = [];
+  const formationSelections: SimulationFormationSelections = {
+    home: { offense: [], defense: [] },
+    away: { offense: [], defense: [] },
+  };
   let state = createGame({ phase: 'coinToss', ball: { kind: 'loose', coord: { x: -1, y: -1 } } });
   let status: SimulationStatus = 'completed';
   let actionIndex = 0;
@@ -212,6 +222,10 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
       const resolvedAction = withRandomResolution(action, rng, options.opening);
       const before = state;
+      if (resolvedAction.type === 'chooseFormation') {
+        const team = resolvedAction.side === 'offense' ? before.possession : otherTeam(before.possession);
+        formationSelections[team][resolvedAction.side].push(resolvedAction.formationId);
+      }
       state = applyAction(state, resolvedAction);
       pushRecentAction(recentActions, actionSummary(before, resolvedAction, state));
       const resultType = state.play.result?.type;
@@ -269,10 +283,12 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       finalScore: state.score,
       quarter: state.quarter,
       resultTypes,
-      openingWinner: state.coinToss.winner ?? 'home',
-      openingKicker: state.openingKickoffTeam,
-      openingReceiver: otherTeam(state.openingKickoffTeam),
+      openingWinner: state.coinToss.winner ?? null,
+      openingKicker: state.coinToss.choice ? state.openingKickoffTeam : null,
+      openingReceiver: state.coinToss.choice ? otherTeam(state.openingKickoffTeam) : null,
       attackDirections: { home: 'right', away: 'left' },
+      formationPlan: options.formationPlan ?? null,
+      formationSelections,
     },
     anomalies,
     finalState: state,
@@ -659,7 +675,11 @@ function chooseFormationProtocolAction(
       if (formationPlan) {
         const actingTeam = side === 'offense' ? state.possession : otherTeam(state.possession);
         const plannedId = formationPlan[actingTeam][side];
-        return sideChoices.find((action) => action.formationId === plannedId) ?? sideChoices[0];
+        const plannedAction = sideChoices.find((action) => action.formationId === plannedId);
+        if (!plannedAction) {
+          throw new Error(`Planned ${side} formation ${plannedId} for ${actingTeam} is not currently legal`);
+        }
+        return plannedAction;
       }
       if (policy === 'random') return sideChoices[randomInt(rng, sideChoices.length)];
       const formations = side === 'offense' ? offensiveFormations : defensiveFormations;

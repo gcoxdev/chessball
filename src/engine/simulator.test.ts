@@ -36,15 +36,50 @@ describe('headless simulator', () => {
     expect(awayReceives.summary.attackDirections).toEqual({ home: 'right', away: 'left' });
   });
 
+  it('reports unresolved opening metadata truthfully when the action budget ends early', () => {
+    const beforeToss = simulateGame({
+      seed: 77,
+      opening: { coinWinner: 'away', choice: 'kick' },
+      maxActions: 0,
+    });
+    const afterToss = simulateGame({
+      seed: 77,
+      opening: { coinWinner: 'away', choice: 'kick' },
+      maxActions: 1,
+    });
+    const afterChoice = simulateGame({
+      seed: 77,
+      opening: { coinWinner: 'away', choice: 'kick' },
+      maxActions: 2,
+    });
+
+    expect(beforeToss.summary).toMatchObject({
+      openingWinner: null,
+      openingKicker: null,
+      openingReceiver: null,
+    });
+    expect(afterToss.summary).toMatchObject({
+      openingWinner: 'away',
+      openingKicker: null,
+      openingReceiver: null,
+    });
+    expect(afterChoice.summary).toMatchObject({
+      openingWinner: 'away',
+      openingKicker: 'away',
+      openingReceiver: 'home',
+    });
+  });
+
   it('selects planned formations for the possessing offense and opposing defense', () => {
+    const formationPlan = {
+      home: { offense: 'i-form', defense: '4-3' },
+      away: { offense: 'shotgun', defense: 'nickel' },
+    };
     const result = simulateGame({
       seed: 12,
       policy: 'heuristic',
       opening: { coinWinner: 'home', choice: 'receive' },
-      formationPlan: {
-        home: { offense: 'i-form', defense: '4-3' },
-        away: { offense: 'shotgun', defense: 'nickel' },
-      },
+      formationPlan,
       maxActions: 14,
     });
 
@@ -55,6 +90,12 @@ describe('headless simulator', () => {
     expect(result.finalState.play.actions).toContainEqual(
       expect.objectContaining({ type: 'chooseFormation', side: 'defense', formationId: 'nickel' }),
     );
+    expect(result.summary.formationSelections).toEqual({
+      home: { offense: ['i-form'], defense: [] },
+      away: { offense: [], defense: ['nickel'] },
+    });
+    expect(result.summary.formationPlan).toEqual(formationPlan);
+    expect(simulateGame({ seed: 12, formationPlan, maxActions: 0 }).summary.formationPlan).toEqual(formationPlan);
   });
 
   it('swaps planned offense and defense teams when away has possession', () => {
@@ -76,6 +117,28 @@ describe('headless simulator', () => {
     expect(result.finalState.play.actions).toContainEqual(
       expect.objectContaining({ type: 'chooseFormation', side: 'defense', formationId: '4-3' }),
     );
+  });
+
+  it('applies fixed formation plans across repeated phases and possession transitions', () => {
+    const result = simulateGame({
+      seed: 12,
+      policy: 'heuristic',
+      opening: { coinWinner: 'home', choice: 'receive' },
+      formationPlan: {
+        home: { offense: 'i-form', defense: '4-3' },
+        away: { offense: 'shotgun', defense: 'nickel' },
+      },
+      maxActions: 500,
+    });
+
+    expect(result.summary.formationSelections.home.offense.length).toBeGreaterThan(1);
+    expect(result.summary.formationSelections.home.defense.length).toBeGreaterThan(1);
+    expect(result.summary.formationSelections.away.offense.length).toBeGreaterThan(1);
+    expect(result.summary.formationSelections.away.defense.length).toBeGreaterThan(1);
+    expect(new Set(result.summary.formationSelections.home.offense)).toEqual(new Set(['i-form']));
+    expect(new Set(result.summary.formationSelections.home.defense)).toEqual(new Set(['4-3']));
+    expect(new Set(result.summary.formationSelections.away.offense)).toEqual(new Set(['shotgun']));
+    expect(new Set(result.summary.formationSelections.away.defense)).toEqual(new Set(['nickel']));
   });
 
   it('rejects unsupported opening values at runtime', () => {
