@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { MatchedAuditReport, RunMatchedAuditOptions } from './engine/audit';
 import type { SimulationBatchReport } from './engine/simulator';
-import { exitCodeForAuditReport, exitCodeForBatchReport, isMainModule, parseArgs, runCli } from './simulate';
+import { exitCodeForAuditReport, exitCodeForBatchReport, parseArgs, runCli } from './simulate';
 
 describe('parseArgs', () => {
   it.each([
@@ -11,6 +11,14 @@ describe('parseArgs', () => {
     ['--repeat-limit', '0'],
   ])('rejects invalid numeric option %s %s', (flag, value) => {
     expect(() => parseArgs([flag, value])).toThrow(flag);
+  });
+
+  it.each([
+    '--games', '--pairs', '--seed', '--max-actions', '--repeat-limit',
+    '--balance-win-threshold', '--balance-score-threshold',
+  ])('rejects empty or whitespace-only numeric values for %s', flag => {
+    const prefix = flag === '--pairs' ? ['--audit'] : [];
+    expect(() => parseArgs([...prefix, flag, '   '])).toThrow(flag);
   });
 
   it.each([
@@ -102,6 +110,12 @@ describe('runCli', () => {
     expect(lines.join('\n')).toContain('Audit failed: bootstrap failed');
   });
 
+  it('emits valid JSON only when audit evidence generation throws in JSON mode', () => {
+    const lines: string[] = [];
+    expect(runCli(['--audit', '--json'], { simulateBatch: vi.fn(), runMatchedAudit: () => { throw new Error('bootstrap failed'); }, write: line => lines.push(line) })).toBe(1);
+    expect(JSON.parse(lines.join('\n'))).toEqual({ error: 'bootstrap failed' });
+  });
+
   it('serializes explicit audit evidence as JSON', () => {
     const lines: string[] = [];
     runCli(['--audit', '--json'], { simulateBatch: vi.fn(), runMatchedAudit: () => auditReport(), write: line => lines.push(line) });
@@ -109,13 +123,6 @@ describe('runCli', () => {
     expect(output).toMatchObject({ requestedPairs: 2, completedPairs: 2, excludedPairs: 0, attemptedGames: 4 });
     expect(output.statusCounts).toEqual({ completed: 4, stalled: 0, crashed: 0 });
   });
-});
-
-it('recognizes only the actual ESM entry module', () => {
-  expect(isMainModule('file:///tmp/simulate.ts', '/tmp/simulate.ts')).toBe(true);
-  expect(isMainModule('file:///tmp/simulate.ts?direct=1', '/tmp/simulate.ts')).toBe(true);
-  expect(isMainModule('file:///tmp/src/simulate.ts', '/tmp/node_modules/.bin/vite-node')).toBe(true);
-  expect(isMainModule('file:///tmp/simulate.ts', '/tmp/vitest.mjs')).toBe(false);
 });
 
 function batchReport(overrides: Partial<SimulationBatchReport> = {}): SimulationBatchReport {

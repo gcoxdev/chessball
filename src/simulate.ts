@@ -77,6 +77,7 @@ const knownValueFlags = new Set([
 ]);
 
 function numericValue(flag: string, value: string): number {
+  if (value.trim() === '') throw new Error(`${flag} requires a numeric value; received an empty value`);
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) throw new Error(`${flag} requires a finite numeric value; received ${JSON.stringify(value)}`);
   return parsed;
@@ -153,7 +154,8 @@ export function runCli(args: string[], dependencies: Partial<CliDependencies> = 
     deps.write(options.json ? JSON.stringify(report, null, 2) : formatAuditReport(report));
     return exitCodeForAuditReport(report);
   } catch (error) {
-    deps.write(`Audit failed: ${error instanceof Error ? error.message : String(error)}`);
+    const message = error instanceof Error ? error.message : String(error);
+    deps.write(options.json ? JSON.stringify({ error: message }) : `Audit failed: ${message}`);
     return 1;
   }
 }
@@ -216,25 +218,3 @@ function formatCounts(counts: Record<string, number>): string {
 
 function formatMetric(value: number | null, digits: number): string { return value === null ? 'n/a' : value.toFixed(digits); }
 function formatPercent(value: number | null): string { return value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`; }
-
-export function isMainModule(moduleUrl: string, argvEntry: string | undefined): boolean {
-  if (!argvEntry) return false;
-  try {
-    const modulePath = new URL(moduleUrl).pathname;
-    const entryPath = new URL(argvEntry, 'file://').pathname;
-    return modulePath === entryPath || (entryPath.endsWith('/vite-node') && modulePath.endsWith('/src/simulate.ts'));
-  } catch { return false; }
-}
-
-if (isMainModule(import.meta.url, process.argv[1])) {
-  try {
-    setProcessExitCode(runCli(process.argv.slice(2)));
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    setProcessExitCode(1);
-  }
-}
-
-function setProcessExitCode(code: number): void {
-  (process as typeof process & { exitCode?: number }).exitCode = code;
-}

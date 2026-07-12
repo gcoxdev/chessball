@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "test": "vitest run",
-    "simulate": "vite-node src/simulate.ts",
+    "simulate": "vite-node src/simulate-cli.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
