@@ -18,7 +18,7 @@ Required smoke command (run twice):
 npm run simulate -- --audit --pairs 20 --seed 1 --home-policy heuristic --away-policy random --max-actions 5000 --json
 ```
 
-The two fresh post-fix stdout files were byte-equivalent (`cmp` success), 605,635 bytes each including npm's command banner. After parsing from the first JSON object, each completed 20/20 pairs (40/40 games), with no exclusion, stall, or crash. The smaller output than the historical pre-fix smoke is expected: corrected drive ownership changes game duration and telemetry.
+After the opportunity-instrumentation fix, the two fresh stdout files were byte-equivalent (`cmp` success), 601,527 bytes each including npm's command banner. After parsing from the first JSON object, each completed 20/20 pairs (40/40 games), with no exclusion, stall, or crash, and reported 59,150 action-type decision opportunities.
 
 Core commands:
 
@@ -41,7 +41,9 @@ npm exec vite-node scripts/run-formation-audit.ts -- --mode followups
 npm exec vite-node scripts/run-formation-audit.ts -- --mode all > docs/audits/data/2026-07-11-formation-audit.json
 ```
 
-Compact preserved evidence is in `docs/audits/data/2026-07-11-formation-audit.json`. `--mode all` emits that canonical schema directly and deterministically; runtime and timestamps are intentionally excluded from canonical comparison. The full core action distributions and tactic screens are split by matchup in `docs/audits/data/2026-07-11-heuristic-vs-heuristic-screens.json`, `docs/audits/data/2026-07-11-random-vs-random-screens.json`, and `docs/audits/data/2026-07-11-heuristic-vs-random-screens.json`. Each core artifact records its post-fix evidence phase, command, policy/team strata, seed range, max-actions limit, and bootstrap seed/sample/confidence; machine/load-dependent runtime is omitted.
+Compact preserved evidence is in `docs/audits/data/2026-07-11-formation-audit.json`. `--mode all` emits that canonical schema directly and deterministically; runtime and timestamps are intentionally excluded from canonical comparison. The full core action distributions and tactic screens are split by matchup in `docs/audits/data/2026-07-11-heuristic-vs-heuristic-screens.json`, `docs/audits/data/2026-07-11-random-vs-random-screens.json`, and `docs/audits/data/2026-07-11-heuristic-vs-random-screens.json`. Each core artifact records that it follows both the drive-ownership and opportunity-instrumentation fixes, its command, policy/team strata, seed range, max-actions limit, opportunity unit, and bootstrap configuration; machine/load-dependent runtime is omitted.
+
+For all action-selection rates, an **opportunity** is one decision situation in which that action type is legal. Multiple concrete destinations/actions of the same type in a single legal-action list count once, so the denominator measures decisions rather than board branching factor. Selections remain the chosen action-type count. Tactic cohorts are game-level selected-versus-not-selected comparisons and remain exploratory rather than causal.
 
 ## Completion integrity (post-fix)
 
@@ -76,9 +78,9 @@ The formation effects were replicated in controlled one-factor follow-ups:
 
 Observation and statistical conclusion: under this fixed heuristic policy, goal-line defense and shotgun offense are materially stronger than their tested alternatives; 4-3 and i-form are strategically weak in these matchups. This is stronger than raw usage evidence and warrants design/state-level follow-up. It is not a confirmed dominant-tactic defect: fixed formations alter initial geometry, the screen did not enumerate legal counter-shifts or an adaptive counter-policy, and no focused legal state demonstrated lack of counterplay/tradeoff. No formation rule was tuned.
 
-Contextual selection screening retained every post-fix threshold crossing in the three core artifacts: HH had 95 contexts at or above 80% and 36 cohorts with at least a ten-point absolute exploratory difference; RR had 79 and 33; HR had 172 and 66. Many high-rate contexts were protocol/forced actions (`coinToss`, kickoff, recovery, `nextDown`, confirmation, and snap), not strategic tactic leads. These are refreshed hypothesis-generating screens only; no threshold crossing received a focused state-level reproduction showing absent counterplay, so no formation or tactic rule was tuned.
+Contextual selection screening retained every threshold crossing after correcting the opportunity unit: HH had 163 contexts at or above 80% and 36 cohorts with at least a ten-point absolute exploratory difference; RR had 133 and 33; HR had 292 and 66. The higher high-selection counts are a denominator correction, not changed gameplay: concrete destinations no longer multiply an action type's opportunity count. Many high-rate contexts are protocol/forced or single-type situations (`coinToss`, kickoff, tackle, recovery, `nextDown`, placement, and snap), not discretionary strategic tactic leads. These are refreshed hypothesis-generating screens only; no threshold crossing received a focused state-level reproduction showing absent counterplay, so no formation or tactic rule was tuned.
 
-Every cohort artifact entry preserves the exact key, policy/team stratum, selections, opportunities, rate, both outcome arms, win-share difference, and a sparse-data label when either arm has fewer than 30 games. For example, HH `team=away|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=startTwoPointTry` had 64/308 selections; selected games were 49-3-12 and not-selected games 145-4-74, an exploratory +12.987-point win-share difference with at least 30 games in each arm. Cohorts remain game-level and confounded by field position and game strength. They are leads only; no causal dominant-tactic claim is made.
+Every cohort artifact entry preserves the exact key, policy/team stratum, selections, decision opportunities, rate, both outcome arms, win-share difference, and a sparse-data label when either arm has fewer than 30 games. For example, HH `team=away|policy=heuristic|phase=live|down=1|field=opponent|action=move` had 1,891 selections in 13,812 decision opportunities (13.691%); selected games were 468-191-320 and not-selected games 287-209-343, an exploratory +10.896-point win-share difference with at least 30 games in each arm. Cohorts remain game-level and confounded by field position and game strength. They are leads only; no causal dominant-tactic claim is made.
 
 Formation usage in unconstrained post-fix heuristic/heuristic play remained nearly uniform across all six current IDs. Of 55,056 offensive selections: i-form 18,562 (33.714%), shotgun 18,206 (33.068%), and singleback 18,288 (33.217%). Of 55,056 defensive selections: 4-3 18,272 (33.188%), nickel 18,327 (33.288%), and goal-line 18,457 (33.524%). RR and HR counts/rates are preserved in their refreshed core artifacts. Thus raw usage would have concealed the fixed-plan effects above and was not used to declare dominance.
 
@@ -92,7 +94,7 @@ Formation usage in unconstrained post-fix heuristic/heuristic play remained near
 
 These patterns explain part of the skill gap: random play reaches far fewer touchdowns and successful field goals and many more turnovers on downs/safeties. They are descriptive policy outcomes, not targets for NFL calibration. The exceptionally low heuristic/heuristic turnover-on-downs count and frequent field-goal attempts are qualitative football-flow leads for Task 7, not proven transition defects.
 
-Top action totals remained consistent with a board movement game. Heuristic/heuristic recorded 180,762 moves from 67,414,284 opportunities (0.2681%) and 131,450 tackles from 449,476 (29.245%). Random/random recorded 294,893 moves from 78,418,641 (0.3760%) and 226,062 tackles from 666,309 (33.928%). Mixed HR recorded 207,140 moves from 70,335,237 (0.2945%) and 168,176 tackles from 516,240 (32.577%). Complete refreshed HH, RR, and HR distributions cover every observed action type and include selected totals, opportunity totals, rates, formation usage, records, intervals, terminal outcomes, and threshold screens in the three artifacts cited under Reproducibility.
+With decision situations as the denominator, HH recorded 790,085 selections across 1,830,190 action-type opportunities: move 180,762/404,770 (44.658%), tackle 131,450/131,450 (100%), kick 39,488/121,898 (32.394%), and pass 19,466/112,810 (17.256%). RR recorded 1,520,406 selections across 4,214,763 opportunities: move 294,893/733,071 (40.227%), tackle 226,062/226,062 (100%), kick 28,484/347,873 (8.188%), and pass 83,315/340,163 (24.493%). Mixed HR recorded 1,118,889 selections across 2,928,207 opportunities: move 207,140/543,841 (38.088%), tackle 168,176/168,176 (100%), kick 34,684/228,442 (15.183%), and pass 50,143/219,304 (22.865%). A 100% tackle rate means that when the contextual legal-action set exposed the tackle action type, the policy selected some tackle; it does not mean one concrete target dominated. Complete refreshed distributions cover every observed action type and retain exact contextual screens in the three artifacts.
 
 ## Confirmed quantitative-phase bugs and fixes
 
@@ -241,12 +243,12 @@ Static review covered `src/main.tsx` and `src/styles.css` against the current Ve
 
 ## Final post-fix verification
 
-- Focused command: 4 test files passed, 219/219 tests passed, zero failures.
-- Full command: 7 test files passed, 288/288 tests passed, zero failures.
+- Focused command: 4 test files passed, 222/222 tests passed, zero failures.
+- Full command: 7 test files passed, 291/291 tests passed, zero failures.
 - Production build: TypeScript exited successfully; Vite 6.4.3 transformed 1,579 modules and emitted the production bundle successfully.
 - Formation runner: explicit strict no-emit TypeScript check exited successfully; focused runner tests passed 1 file and 5/5 tests.
-- Reproducibility: two documented 20-pair smoke outputs were byte-equivalent at 605,635 bytes each and disclosed 20/20 completed pairs, 40/40 completed games, zero exclusions/stalls/crashes.
-- Artifact integrity: all seven tracked JSON files parsed; core aggregate reconstruction exactly matched 790,085/1,520,406/1,118,889 actions, 110,112/250,474/176,686 formation choices, and 7,742/17,421/15,223 recorded terminal/conversion outcomes for HH/RR/HR. Formation schema `chessball-formation-audit-v2` contained exactly nine screens and two follow-ups, all complete.
+- Reproducibility: two documented 20-pair smoke outputs were byte-equivalent at 601,527 bytes each and disclosed 20/20 completed pairs, 40/40 completed games, zero exclusions/stalls/crashes and 59,150 decision opportunities.
+- Artifact integrity: all seven tracked JSON files parsed; core reconstruction exactly matched 790,085/1,520,406/1,118,889 actions, 1,830,190/4,214,763/2,928,207 decision opportunities, 110,112/250,474/176,686 formation choices, and 7,742/17,421/15,223 recorded terminal/conversion outcomes for HH/RR/HR. Formation schema `chessball-formation-audit-v2` remained intact with exactly nine screens and two follow-ups, all complete.
 
 ## Dependency/project-health note
 
