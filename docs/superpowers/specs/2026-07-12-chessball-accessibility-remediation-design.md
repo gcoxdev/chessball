@@ -17,8 +17,8 @@ Implement the high-confidence P1/P2 UI findings from the Chessball quality audit
 
 ### Modal and Navigation Accessibility
 
-- Introduce one reusable modal-focus behavior shared by Rules, coin toss, final result, and New Game confirmation.
-- On open: remember the triggering element, set initial focus, trap Tab/Shift+Tab, mark the application background inert, and contain modal scrolling.
+- Introduce one reusable portal-based modal shared by Rules, coin toss, final result, and New Game confirmation. Render modal content through `createPortal` into `document.body`, outside the application root, so the application root can safely become inert without disabling the dialog.
+- On open: remember the triggering element, set initial focus, trap Tab/Shift+Tab, mark the application root inert, and contain modal scrolling.
 - On close: restore focus to the trigger when it still exists. Escape closes dismissible Rules and New Game confirmation dialogs; coin toss and final result remain required flow gates.
 - Add a visible-on-focus skip link to the main game workspace.
 - Add semantic headings/labels for the game workspace, board, controls, and event/history regions without visually redesigning the page.
@@ -27,9 +27,9 @@ Implement the high-confidence P1/P2 UI findings from the Chessball quality audit
 ### Responsive Layout and Action Safety
 
 - Preserve the desktop board layout and complete board information.
-- On narrow screens, keep the board scrollable while improving entry/positioning and keeping status/actions discoverable near the visible play area. Do not replace the board with a reduced game mode.
+- At 390×844, keep the board in a viewport-width horizontal scroll container with no page-level horizontal overflow. Preserve the board container's manual scroll position across ordinary renders. When roving keyboard focus moves to an off-screen square, scroll only enough to reveal that square using nearest block/inline alignment; pointer activation and unrelated state updates must not recenter the board. Do not make status/actions sticky, reposition major panels, or replace the board with a reduced game mode in this pass.
 - Increase primary interactive controls toward a 44px robust touch-target heuristic, add `touch-action: manipulation`, and choose an intentional tap-highlight treatment.
-- Add confirmation before New Game destroys an active match/history. Pregame reset/start behavior remains direct.
+- Add confirmation when the utility-bar New Game action would abandon an in-progress match (`phase` is neither `pregame` nor `final`) or nontrivial navigable history. Pregame reset/start remains direct. The final-result dialog's explicit New Game action remains direct because the match is complete and the dialog itself is the required end-of-match decision; do not stack a confirmation dialog on the final dialog.
 - Expose history mode visibly and programmatically as read-only; board cells may remain navigable for inspection but must not appear actionable.
 - Retain useful focus after responsive scrolling and dialog interactions.
 
@@ -38,7 +38,7 @@ Implement the high-confidence P1/P2 UI findings from the Chessball quality audit
 The current `main.tsx` is large, so implementation should extract only focused units required by this work:
 
 - `AccessibleBoard` or equivalent: roving focus, keyboard movement, square naming/state, and board semantics.
-- `Modal` or a focused modal hook/component: focus lifecycle, trap, inert background, dismissal policy, and restoration.
+- `Modal` or a focused modal hook/component: body-level portal, focus lifecycle, trap, inert application root, dismissal policy, and restoration.
 - Small pure helpers for accessible square descriptions and focus-coordinate movement.
 - Existing game orchestration, action resolution, computer policy, and descriptive copy remain in `main.tsx` unless a direct accessibility dependency requires moving them.
 
@@ -58,7 +58,7 @@ Do not introduce a component framework or new runtime dependency for these behav
 - Focus falls back deterministically if the focused square disappears from a rendered board state.
 - History viewing remains non-mutating for pointer and keyboard activation.
 - Required flow-gate dialogs cannot be dismissed through Escape or backdrop interaction.
-- If a remembered trigger is removed, focus returns to the workspace heading or another stable control.
+- If a remembered trigger is removed, focus returns to the workspace heading through a stable ref. The heading must be programmatically focusable with `tabIndex={-1}` without entering normal Tab order.
 - New Game confirmation is bypassed only when no active match/history would be lost.
 
 ## Styling
@@ -80,10 +80,12 @@ Use strict test-driven development for each behavior:
 - Modal initial focus, Tab trap, Shift+Tab trap, Escape policy, inert background, scroll containment, and restoration.
 - Skip link/landmark/headings and status-announcement behavior without log duplication.
 - Active-match New Game confirmation, cancellation, confirmation, and direct pregame reset behavior.
+- Direct final-result New Game behavior without a nested confirmation.
 - Visible/read-only history semantics and non-color indicators.
 - CSS/static checks for focus visibility, touch action, touch targets, and modal containment.
 - Full existing test suite and production build.
 - Rendered Chromium verification at 1440×900 and 390×844 with keyboard and pointer interaction.
+- At 390×844, verify no page-level horizontal overflow, preserved manual board scroll, and nearest-only scrolling when arrow navigation moves focus off-screen.
 
 ## Deliverables
 
