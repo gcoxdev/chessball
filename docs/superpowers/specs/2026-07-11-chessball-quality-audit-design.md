@@ -66,6 +66,21 @@ Useful report dimensions include:
 
 Simulation length is diagnostic information, not by itself a defect.
 
+## Evidence Standards
+
+Simulation-derived conclusions must report completed sample size, incomplete-game rate, tested policies, and seed range. The initial audit should target at least 1,000 completed mirrored pairs for home/away claims, increasing the sample if the result remains near a decision boundary.
+
+A starting-condition asymmetry is actionable only when both conditions hold:
+
+- The paired 95% confidence interval excludes no advantage.
+- The absolute practical effect is at least 5 percentage points in win rate or 1 point per game in average score.
+
+A skill-gap conclusion requires the stronger policy to exceed a 50% non-tie win share against the weaker policy with a 95% confidence interval whose lower bound is above 50%. The audit should report the effect size rather than assume a particular desirable gap. Initial policy definitions must be documented from their observable decision rules before comparison; `random` is the weakest baseline, and the existing heuristic policy is only called stronger if the matchup evidence supports that label.
+
+A potentially dominant tactic is a screening result, not an automatic rules defect. Flag tactics chosen in at least 80% of materially different legal situations or associated with at least a 10-percentage-point win-rate advantage after controlling for policy and starting side. Authorize a rule change only after a focused state-level reproduction shows the tactic lacks a meaningful counter or trade-off.
+
+If the target sample completes with an effect below the practical threshold, record no actionable imbalance. If a confidence interval still crosses a decision boundary, report the result as inconclusive rather than continuing without limit. These statistical standards apply to simulation-derived claims, not qualitative UI or physical-table findings.
+
 ## Rule-Change Threshold
 
 A gameplay mechanic may change only when the audit demonstrates at least one of:
@@ -82,7 +97,7 @@ Each confirmed defect requires a minimal reproduction and a failing automated re
 1. Establish reproducible baseline tests and simulation reports.
 2. Trace each major rule flow through engine state, tests, UI wording, and simulator behavior.
 3. Add the minimum evaluation instrumentation needed for matched fairness, skill-gap, tactic, and drive analysis.
-4. Run samples large enough to distinguish consistent effects from small-sample noise; report the sample size and incomplete-game rate with every conclusion.
+4. Run the samples and apply the decision rules in Evidence Standards; report the sample size and incomplete-game rate with every simulation-derived conclusion.
 5. Reproduce suspected defects independently of aggregate statistics.
 6. For confirmed engine defects, use test-driven fixes and rerun focused tests, the complete suite, the production build, and relevant simulations.
 7. Perform the UI and physical-board audits without changing UI behavior.
@@ -102,6 +117,7 @@ Each confirmed defect requires a minimal reproduction and a failing automated re
 - Run `npm test` and `npm run build` after implementation.
 - Run larger seeded audit batches and preserve the command, sample size, thresholds, and result summary in the final report.
 - Separate statistical observations from proven rule defects and from subjective design recommendations.
+- Record tested viewport sizes, keyboard and pointer inputs, and accessibility-check methods in the UI audit.
 
 ## Deliverables
 
