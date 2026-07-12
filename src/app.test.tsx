@@ -6,6 +6,7 @@ import { cleanup } from '@testing-library/react';
 import { applyAction, createGame, generateLegalActions } from './engine/rules';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { AccessibleBoard } from './ui/AccessibleBoard';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -28,6 +29,37 @@ describe('Chessball UI interactions', () => {
     expect(cells.filter((cell) => cell.tabIndex === -1)).toHaveLength(263);
   });
 
+  it('prioritizes a selected piece when the board initially chooses its tab stop', () => {
+    const game = createGame();
+    const selectedPiece = game.pieces.find((piece) => piece.id === 'home-wr1');
+    render(
+      <AccessibleBoard
+        game={game}
+        displayGame={game}
+        legalActions={[]}
+        selectedPiece={selectedPiece}
+        targetMode={null}
+        ballCoord={{ x: 4, y: 5 }}
+        showBallMarker
+        readOnly={false}
+        onSquareClick={vi.fn()}
+        squareClass={() => 'square'}
+        renderYardTicks={() => null}
+        renderYardMarker={() => null}
+        ballLabel="Ball"
+      />,
+    );
+
+    expect(screen.getByTitle('4,1')).toHaveAttribute('tabindex', '0');
+    expect(screen.getByTitle('4,5')).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('falls back to the first square when neither a selection nor visible ball exists', () => {
+    render(<App />);
+
+    expect(screen.getByTitle('0,0')).toHaveAttribute('tabindex', '0');
+  });
+
   it('moves board focus with clamped arrow keys and preserves it across ordinary rerenders', () => {
     Element.prototype.scrollIntoView = vi.fn();
     render(<App initialGame={createGame()} />);
@@ -37,14 +69,29 @@ describe('Chessball UI interactions', () => {
     fireEvent.keyDown(ballSquare, { key: 'ArrowRight' });
     expect(screen.getByTitle('5,5')).toHaveFocus();
     expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    vi.mocked(Element.prototype.scrollIntoView).mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     expect(screen.getByTitle('5,5')).toHaveAttribute('tabindex', '0');
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTitle('6,5'));
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
 
     const leftEdge = screen.getByTitle('0,5');
     act(() => leftEdge.focus());
     fireEvent.keyDown(leftEdge, { key: 'ArrowLeft' });
     expect(leftEdge).toHaveFocus();
+
+    const topEdge = screen.getByTitle('5,0');
+    act(() => topEdge.focus());
+    fireEvent.keyDown(topEdge, { key: 'ArrowUp' });
+    expect(topEdge).toHaveFocus();
+    const bottomEdge = screen.getByTitle('5,10');
+    act(() => bottomEdge.focus());
+    fireEvent.keyDown(bottomEdge, { key: 'ArrowDown' });
+    expect(bottomEdge).toHaveFocus();
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
   });
 
   it('gives Enter and Space the same square behavior as pointer activation', () => {
@@ -435,6 +482,7 @@ describe('Chessball UI interactions', () => {
 
     const legalLanding = container.querySelector('.square.legal');
     expect(legalLanding).toBeInTheDocument();
+    expect(legalLanding).toHaveAccessibleName(/kick placement/i);
     fireEvent.click(legalLanding as HTMLElement);
 
     await waitFor(() => {
@@ -563,6 +611,7 @@ describe('Chessball UI interactions', () => {
 
     expect(screen.getByTitle('5,5')).toHaveClass('power-legal');
     expect(screen.getByTitle('5,5')).not.toHaveClass('legal');
+    expect(screen.getByTitle('5,5')).toHaveAccessibleName(/power move/i);
   });
 
   it('requires an extra-point or two-point choice after touchdown', () => {
@@ -659,6 +708,7 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('button', { name: /^pass$/i })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: /^pass$/i }));
+    expect(screen.getByTitle('5,4')).toHaveAccessibleName(/pass target/i);
     fireEvent.click(screen.getByTitle('5,4'));
 
     expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/completed pass: home hit WR at 5,4/i)).toBeInTheDocument();
@@ -771,6 +821,8 @@ describe('Chessball UI interactions', () => {
 
     expect(screen.getAllByRole('button', { name: /tackle home wr at 8,5/i })).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /tackle wr2/i })).not.toBeInTheDocument();
+    expect(screen.getByTitle('8,5')).toHaveAccessibleName(/tackle target/i);
+    expect(screen.getByTitle('8,5')).not.toHaveClass('legal');
   });
 
   it('does not show tackle commands when selecting the ball carrier target', () => {

@@ -94,7 +94,7 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
             action.type === 'placeKick' && sameCoord(action.at, coord),
           );
           const selected = piece?.id === props.selectedPiece?.id;
-          const legal = legalMove || passTarget || tackleTarget || kickPlacement;
+          const legal = legalMove || passTarget || kickPlacement;
           const name = describeBoardSquare({
             coord,
             occupant: piece ? { team: piece.team, activeRole: activeRoleCode(props.displayGame, piece) } : undefined,
