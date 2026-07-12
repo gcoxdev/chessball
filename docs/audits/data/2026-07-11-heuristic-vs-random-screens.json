@@ -1,6 +1,7 @@
 {
-  "schema": "chessball-quantitative-screen-v1",
+  "schema": "chessball-quantitative-screen-v2",
   "notes": [
+    "Post-drive-ownership-fix evidence; do not combine with pre-fix artifacts.",
     "Action totals aggregate contextual telemetry by terminal action type.",
     "Formation rates use all corresponding side selections as denominator.",
     "Exact policy/team/context keys retained; cohorts are observational, not causal."
@@ -8,6 +9,7 @@
   "name": "heuristic-vs-random",
   "command": "npm run simulate -- --audit --pairs 1000 --seed 3001 --home-policy heuristic --away-policy random --max-actions 5000 --json",
   "provenance": {
+    "evidencePhase": "post-drive-ownership-fix",
     "pairs": 1000,
     "seed": 3001,
     "seedRange": {
@@ -23,8 +25,7 @@
       "seed": 3001,
       "samples": 10000,
       "confidence": 0.95
-    },
-    "runtimeSeconds": 566
+    }
   },
   "completion": {
     "completedPairs": 1000,
@@ -33,47 +34,71 @@
       "completed": 2000,
       "stalled": 0,
       "crashed": 0
-    }
+    },
+    "attemptedGames": 2000,
+    "anomalyCount": 0
   },
   "intervals": {
     "homeWinShare": {
-      "low": 0.48725,
-      "high": 0.50425,
-      "mean": 0.49575,
+      "low": 0.49375,
+      "high": 0.51225,
+      "mean": 0.503,
       "seed": 3001,
       "samples": 10000,
       "confidence": 0.95
     },
     "homeScoreDelta": {
-      "low": -0.203,
-      "high": 0.481,
-      "mean": 0.141,
+      "low": -0.047,
+      "high": 0.2535,
+      "mean": 0.1035,
       "seed": 3001,
       "samples": 10000,
       "confidence": 0.95
     },
     "primaryWinShare": {
-      "low": 0.92975,
-      "high": 0.9515,
-      "mean": 0.94075,
+      "low": 0.8355,
+      "high": 0.869,
+      "mean": 0.8525,
       "seed": 3001,
       "samples": 10000,
       "confidence": 0.95
     },
     "primaryScoreDelta": {
-      "low": 13.978,
-      "high": 15.0515,
-      "mean": 14.511,
+      "low": 5.1965,
+      "high": 5.8395,
+      "mean": 5.5195,
       "seed": 3001,
       "samples": 10000,
       "confidence": 0.95
     }
   },
+  "records": {
+    "primaryWins": 1584,
+    "comparisonWins": 174,
+    "ties": 242
+  },
+  "aggregate": {
+    "actions": 1118889,
+    "averageActions": 559.4445,
+    "driveOutcomes": {
+      "total": 15223,
+      "fieldGoalMissed": 7517,
+      "fieldGoalGood": 2585,
+      "interception": 240,
+      "turnoverOnDowns": 1981,
+      "touchdown": 1311,
+      "extraPointGood": 810,
+      "safety": 327,
+      "extraPointMissed": 167,
+      "twoPointFailed": 260,
+      "twoPointGood": 25
+    }
+  },
   "actionDistribution": {
     "chooseFormation": {
-      "selected": 420874,
-      "opportunities": 3794130,
-      "selectionRate": 0.11092766984789662
+      "selected": 176686,
+      "opportunities": 1592901,
+      "selectionRate": 0.11092089213328386
     },
     "chooseKickoffChoice": {
       "selected": 2000,
@@ -86,867 +111,111 @@
       "selectionRate": 1
     },
     "confirmFormation": {
-      "selected": 422266,
-      "opportunities": 1264710,
-      "selectionRate": 0.3338836571229768
+      "selected": 177292,
+      "opportunities": 530967,
+      "selectionRate": 0.33390399026681505
     },
     "handoff": {
-      "selected": 92411,
-      "opportunities": 1348792,
-      "selectionRate": 0.0685138998451948
+      "selected": 39019,
+      "opportunities": 566414,
+      "selectionRate": 0.06888777466658663
     },
     "kick": {
-      "selected": 79221,
-      "opportunities": 1060446,
-      "selectionRate": 0.07470535982030202
+      "selected": 34684,
+      "opportunities": 447975,
+      "selectionRate": 0.07742396339081421
     },
     "move": {
-      "selected": 472076,
-      "opportunities": 158272994,
-      "selectionRate": 0.0029826692985917736
+      "selected": 207140,
+      "opportunities": 70335237,
+      "selectionRate": 0.0029450387719600632
     },
     "nextDown": {
-      "selected": 224489,
-      "opportunities": 224489,
+      "selected": 95910,
+      "opportunities": 95910,
       "selectionRate": 1
     },
     "pass": {
-      "selected": 118841,
-      "opportunities": 2605784,
-      "selectionRate": 0.04560661973517375
+      "selected": 50143,
+      "opportunities": 1097190,
+      "selectionRate": 0.04570129148096501
     },
     "placeKick": {
-      "selected": 51974,
-      "opportunities": 571714,
+      "selected": 23605,
+      "opportunities": 259655,
       "selectionRate": 0.09090909090909091
     },
     "powerMove": {
-      "selected": 119764,
-      "opportunities": 2834949,
-      "selectionRate": 0.042245557151116296
+      "selected": 50637,
+      "opportunities": 1194938,
+      "selectionRate": 0.042376257178196694
     },
     "recover": {
-      "selected": 5152,
-      "opportunities": 5152,
+      "selected": 2617,
+      "opportunities": 2617,
       "selectionRate": 1
     },
     "shift": {
       "selected": 0,
-      "opportunities": 19172755,
+      "opportunities": 8053303,
       "selectionRate": 0
     },
     "snap": {
-      "selected": 211133,
-      "opportunities": 211133,
+      "selected": 88646,
+      "opportunities": 88646,
       "selectionRate": 1
     },
     "startTwoPointTry": {
-      "selected": 738,
-      "opportunities": 3110,
-      "selectionRate": 0.23729903536977492
+      "selected": 334,
+      "opportunities": 1311,
+      "selectionRate": 0.2547673531655225
     },
     "tackle": {
-      "selected": 391532,
-      "opportunities": 1201495,
-      "selectionRate": 0.3258706861035626
+      "selected": 168176,
+      "opportunities": 516240,
+      "selectionRate": 0.3257709592437626
     }
   },
   "formationUsage": {
-    "i-form": {
-      "side": "offense",
-      "count": 70143,
-      "sideTotal": 210437,
-      "rate": 0.33332066129055254
-    },
-    "shotgun": {
-      "side": "offense",
-      "count": 70180,
-      "sideTotal": 210437,
-      "rate": 0.33349648588413633
-    },
-    "singleback": {
-      "side": "offense",
-      "count": 70114,
-      "sideTotal": 210437,
-      "rate": 0.3331828528253111
-    },
     "4-3": {
       "side": "defense",
-      "count": 69701,
-      "sideTotal": 210437,
-      "rate": 0.3312202701996322
-    },
-    "nickel": {
-      "side": "defense",
-      "count": 70132,
-      "sideTotal": 210437,
-      "rate": 0.33326838911408163
+      "count": 29009,
+      "sideTotal": 88343,
+      "rate": 0.32836783899120475
     },
     "goal-line": {
       "side": "defense",
-      "count": 70604,
-      "sideTotal": 210437,
-      "rate": 0.33551134068628613
+      "count": 29807,
+      "sideTotal": 88343,
+      "rate": 0.33740081274124717
+    },
+    "i-form": {
+      "side": "offense",
+      "count": 29514,
+      "sideTotal": 88343,
+      "rate": 0.3340841945598406
+    },
+    "nickel": {
+      "side": "defense",
+      "count": 29527,
+      "sideTotal": 88343,
+      "rate": 0.3342313482675481
+    },
+    "shotgun": {
+      "side": "offense",
+      "count": 29452,
+      "sideTotal": 88343,
+      "rate": 0.3333823845692358
+    },
+    "singleback": {
+      "side": "offense",
+      "count": 29377,
+      "sideTotal": 88343,
+      "rate": 0.3325334208709236
     }
   },
   "thresholdScreens": {
     "highSelection": [
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
-        "selections": 233,
-        "opportunities": 272,
-        "rate": 0.8566176470588235,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
-        "selections": 3996,
-        "opportunities": 3996,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=kick",
-        "selections": 285,
-        "opportunities": 335,
-        "rate": 0.8507462686567164,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=nextDown",
-        "selections": 13886,
-        "opportunities": 13886,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=kick",
-        "selections": 235,
-        "opportunities": 288,
-        "rate": 0.8159722222222222,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=nextDown",
-        "selections": 8577,
-        "opportunities": 8577,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=own|action=kick",
-        "selections": 82,
-        "opportunities": 102,
-        "rate": 0.803921568627451,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=own|action=nextDown",
-        "selections": 4224,
-        "opportunities": 4224,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
-        "selections": 2341,
-        "opportunities": 2341,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=kick",
-        "selections": 35,
-        "opportunities": 43,
-        "rate": 0.813953488372093,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=nextDown",
-        "selections": 6971,
-        "opportunities": 6971,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=kick",
-        "selections": 49,
-        "opportunities": 53,
-        "rate": 0.9245283018867925,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=nextDown",
-        "selections": 6235,
-        "opportunities": 6235,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=own|action=nextDown",
-        "selections": 1542,
-        "opportunities": 1542,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
-        "selections": 1459,
-        "opportunities": 1459,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=midfield|action=kick",
-        "selections": 8,
-        "opportunities": 8,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=midfield|action=nextDown",
-        "selections": 4675,
-        "opportunities": 4675,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=opponent|action=nextDown",
-        "selections": 4107,
-        "opportunities": 4107,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=own|action=nextDown",
-        "selections": 945,
-        "opportunities": 945,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
-        "selections": 1272,
-        "opportunities": 1272,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=midfield|action=nextDown",
-        "selections": 3620,
-        "opportunities": 3620,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=opponent|action=nextDown",
-        "selections": 3534,
-        "opportunities": 3534,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=own|action=nextDown",
-        "selections": 752,
-        "opportunities": 752,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=1|field=goal-to-go|action=snap",
-        "selections": 3551,
-        "opportunities": 3551,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=1|field=midfield|action=snap",
-        "selections": 10564,
-        "opportunities": 10564,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=1|field=opponent|action=snap",
-        "selections": 7477,
-        "opportunities": 7477,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=1|field=own|action=snap",
-        "selections": 2770,
-        "opportunities": 2770,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=2|field=goal-to-go|action=snap",
-        "selections": 731,
-        "opportunities": 731,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=2|field=midfield|action=snap",
-        "selections": 2690,
-        "opportunities": 2690,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=2|field=opponent|action=snap",
-        "selections": 1873,
-        "opportunities": 1873,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=2|field=own|action=snap",
-        "selections": 742,
-        "opportunities": 742,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=3|field=goal-to-go|action=snap",
-        "selections": 172,
-        "opportunities": 172,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=3|field=midfield|action=snap",
-        "selections": 601,
-        "opportunities": 601,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=3|field=opponent|action=snap",
-        "selections": 422,
-        "opportunities": 422,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=3|field=own|action=snap",
-        "selections": 174,
-        "opportunities": 174,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=4|field=goal-to-go|action=snap",
-        "selections": 39,
-        "opportunities": 39,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=4|field=midfield|action=snap",
-        "selections": 136,
-        "opportunities": 136,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=4|field=opponent|action=snap",
-        "selections": 117,
-        "opportunities": 117,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=4|field=own|action=snap",
-        "selections": 40,
-        "opportunities": 40,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=kickoff|down=1|field=own|action=kick",
-        "selections": 5104,
-        "opportunities": 5104,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=goal-to-go|action=recover",
-        "selections": 17,
-        "opportunities": 17,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=midfield|action=recover",
-        "selections": 572,
-        "opportunities": 572,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=opponent|action=recover",
-        "selections": 159,
-        "opportunities": 159,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=own|action=recover",
-        "selections": 169,
-        "opportunities": 169,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
-        "selections": 189,
-        "opportunities": 189,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=midfield|action=nextDown",
-        "selections": 6506,
-        "opportunities": 6506,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=opponent|action=nextDown",
-        "selections": 986,
-        "opportunities": 986,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=own|action=nextDown",
-        "selections": 10971,
-        "opportunities": 10971,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
-        "selections": 199,
-        "opportunities": 199,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=midfield|action=nextDown",
-        "selections": 4569,
-        "opportunities": 4569,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=opponent|action=nextDown",
-        "selections": 1056,
-        "opportunities": 1056,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=own|action=nextDown",
-        "selections": 4322,
-        "opportunities": 4322,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
-        "selections": 130,
-        "opportunities": 130,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=midfield|action=nextDown",
-        "selections": 3567,
-        "opportunities": 3567,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=opponent|action=nextDown",
-        "selections": 742,
-        "opportunities": 742,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=own|action=nextDown",
-        "selections": 3887,
-        "opportunities": 3887,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
-        "selections": 102,
-        "opportunities": 102,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=midfield|action=nextDown",
-        "selections": 3179,
-        "opportunities": 3179,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=opponent|action=nextDown",
-        "selections": 708,
-        "opportunities": 708,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=own|action=nextDown",
-        "selections": 3397,
-        "opportunities": 3397,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=1|field=goal-to-go|action=snap",
-        "selections": 591,
-        "opportunities": 591,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=1|field=midfield|action=snap",
-        "selections": 8876,
-        "opportunities": 8876,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=1|field=opponent|action=snap",
-        "selections": 1941,
-        "opportunities": 1941,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=1|field=own|action=snap",
-        "selections": 8450,
-        "opportunities": 8450,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=2|field=goal-to-go|action=snap",
-        "selections": 291,
-        "opportunities": 291,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=2|field=midfield|action=snap",
-        "selections": 8761,
-        "opportunities": 8761,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=2|field=opponent|action=snap",
-        "selections": 1701,
-        "opportunities": 1701,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=2|field=own|action=snap",
-        "selections": 9477,
-        "opportunities": 9477,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=3|field=goal-to-go|action=snap",
-        "selections": 213,
-        "opportunities": 213,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=3|field=midfield|action=snap",
-        "selections": 7570,
-        "opportunities": 7570,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=3|field=opponent|action=snap",
-        "selections": 1392,
-        "opportunities": 1392,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=3|field=own|action=snap",
-        "selections": 8633,
-        "opportunities": 8633,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=4|field=goal-to-go|action=snap",
-        "selections": 166,
-        "opportunities": 166,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=4|field=midfield|action=snap",
-        "selections": 6492,
-        "opportunities": 6492,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=4|field=opponent|action=snap",
-        "selections": 1158,
-        "opportunities": 1158,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=formation|down=4|field=own|action=snap",
-        "selections": 7878,
-        "opportunities": 7878,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=kickoff|down=1|field=own|action=kick",
-        "selections": 1955,
-        "opportunities": 1955,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=kickReturn|down=1|field=goal-to-go|action=recover",
-        "selections": 1,
-        "opportunities": 1,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=kickReturn|down=1|field=midfield|action=recover",
-        "selections": 1047,
-        "opportunities": 1047,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=kickReturn|down=1|field=opponent|action=recover",
-        "selections": 41,
-        "opportunities": 41,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=away|policy=random|phase=kickReturn|down=1|field=own|action=recover",
-        "selections": 544,
-        "opportunities": 544,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
-        "selections": 250,
-        "opportunities": 290,
-        "rate": 0.8620689655172413,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
-        "selections": 4288,
-        "opportunities": 4288,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=kick",
-        "selections": 263,
-        "opportunities": 319,
-        "rate": 0.8244514106583072,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=nextDown",
-        "selections": 13484,
-        "opportunities": 13484,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=kick",
-        "selections": 264,
-        "opportunities": 303,
-        "rate": 0.8712871287128713,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=nextDown",
-        "selections": 8600,
-        "opportunities": 8600,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=own|action=kick",
-        "selections": 75,
-        "opportunities": 92,
-        "rate": 0.8152173913043478,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=own|action=nextDown",
-        "selections": 4216,
-        "opportunities": 4216,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=goal-to-go|action=kick",
-        "selections": 65,
-        "opportunities": 77,
-        "rate": 0.8441558441558441,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
-        "selections": 2432,
-        "opportunities": 2432,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=kick",
-        "selections": 28,
-        "opportunities": 31,
-        "rate": 0.9032258064516129,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=nextDown",
-        "selections": 6907,
-        "opportunities": 6907,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=kick",
-        "selections": 39,
-        "opportunities": 42,
-        "rate": 0.9285714285714286,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=nextDown",
-        "selections": 6113,
-        "opportunities": 6113,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=own|action=kick",
-        "selections": 2,
-        "opportunities": 2,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=own|action=nextDown",
-        "selections": 1455,
-        "opportunities": 1455,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
-        "selections": 10,
-        "opportunities": 12,
-        "rate": 0.8333333333333334,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
-        "selections": 1563,
-        "opportunities": 1563,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=midfield|action=kick",
-        "selections": 3,
-        "opportunities": 3,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=midfield|action=nextDown",
-        "selections": 4627,
-        "opportunities": 4627,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=opponent|action=nextDown",
-        "selections": 4068,
-        "opportunities": 4068,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=own|action=nextDown",
-        "selections": 918,
-        "opportunities": 918,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
-        "selections": 1319,
-        "opportunities": 1319,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=goal-to-go|action=startTwoPointTry",
-        "selections": 1,
-        "opportunities": 1,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=midfield|action=nextDown",
-        "selections": 3615,
-        "opportunities": 3615,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=opponent|action=nextDown",
-        "selections": 3345,
-        "opportunities": 3345,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=own|action=nextDown",
-        "selections": 736,
-        "opportunities": 736,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
       {
         "key": "team=home|policy=heuristic|phase=coinToss|down=1|field=own|action=coinToss",
         "selections": 1000,
@@ -955,275 +224,247 @@
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=heuristic|phase=formation|down=1|field=goal-to-go|action=snap",
-        "selections": 3701,
-        "opportunities": 3701,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=1|field=midfield|action=snap",
-        "selections": 10512,
-        "opportunities": 10512,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=1|field=opponent|action=snap",
-        "selections": 7321,
-        "opportunities": 7321,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=1|field=own|action=snap",
-        "selections": 2723,
-        "opportunities": 2723,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=2|field=goal-to-go|action=snap",
-        "selections": 734,
-        "opportunities": 734,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=2|field=midfield|action=snap",
-        "selections": 2665,
-        "opportunities": 2665,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=2|field=opponent|action=snap",
-        "selections": 1863,
-        "opportunities": 1863,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=2|field=own|action=snap",
-        "selections": 700,
-        "opportunities": 700,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=3|field=goal-to-go|action=snap",
-        "selections": 145,
-        "opportunities": 145,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=3|field=midfield|action=snap",
-        "selections": 602,
-        "opportunities": 602,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=3|field=opponent|action=snap",
-        "selections": 436,
-        "opportunities": 436,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=3|field=own|action=snap",
-        "selections": 165,
-        "opportunities": 165,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=4|field=goal-to-go|action=snap",
-        "selections": 28,
-        "opportunities": 28,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=4|field=midfield|action=snap",
-        "selections": 125,
-        "opportunities": 125,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=4|field=opponent|action=snap",
-        "selections": 108,
-        "opportunities": 108,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=formation|down=4|field=own|action=snap",
-        "selections": 49,
-        "opportunities": 49,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=kickoff|down=1|field=midfield|action=kick",
-        "selections": 5136,
-        "opportunities": 5136,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=goal-to-go|action=recover",
-        "selections": 14,
-        "opportunities": 14,
+        "key": "team=away|policy=random|phase=kickoff|down=1|field=own|action=kick",
+        "selections": 1413,
+        "opportunities": 1413,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
         "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=midfield|action=recover",
-        "selections": 587,
-        "opportunities": 587,
+        "selections": 363,
+        "opportunities": 363,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=opponent|action=recover",
-        "selections": 146,
-        "opportunities": 146,
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=midfield|action=nextDown",
+        "selections": 3272,
+        "opportunities": 3272,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=own|action=recover",
-        "selections": 176,
-        "opportunities": 176,
+        "key": "team=home|policy=heuristic|phase=formation|down=1|field=midfield|action=snap",
+        "selections": 4670,
+        "opportunities": 4670,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
-        "selections": 167,
-        "opportunities": 167,
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=nextDown",
+        "selections": 3086,
+        "opportunities": 3086,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=midfield|action=nextDown",
-        "selections": 6406,
-        "opportunities": 6406,
+        "key": "team=home|policy=heuristic|phase=formation|down=2|field=midfield|action=snap",
+        "selections": 1188,
+        "opportunities": 1188,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=opponent|action=nextDown",
-        "selections": 1062,
-        "opportunities": 1062,
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=nextDown",
+        "selections": 5905,
+        "opportunities": 5905,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=own|action=nextDown",
-        "selections": 10983,
-        "opportunities": 10983,
+        "key": "team=away|policy=random|phase=formation|down=1|field=midfield|action=snap",
+        "selections": 3873,
+        "opportunities": 3873,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
-        "selections": 205,
-        "opportunities": 205,
+        "key": "team=away|policy=random|phase=formation|down=2|field=midfield|action=snap",
+        "selections": 3793,
+        "opportunities": 3793,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=midfield|action=nextDown",
-        "selections": 4631,
-        "opportunities": 4631,
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=midfield|action=nextDown",
+        "selections": 1990,
+        "opportunities": 1990,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=opponent|action=nextDown",
-        "selections": 1021,
-        "opportunities": 1021,
+        "key": "team=away|policy=random|phase=formation|down=3|field=midfield|action=snap",
+        "selections": 3303,
+        "opportunities": 3303,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=own|action=nextDown",
-        "selections": 4156,
-        "opportunities": 4156,
+        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=midfield|action=nextDown",
+        "selections": 1401,
+        "opportunities": 1401,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
-        "selections": 6,
-        "opportunities": 7,
-        "rate": 0.8571428571428571,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
-        "selections": 122,
-        "opportunities": 122,
+        "key": "team=away|policy=random|phase=formation|down=4|field=midfield|action=snap",
+        "selections": 2799,
+        "opportunities": 2799,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=midfield|action=nextDown",
-        "selections": 3569,
-        "opportunities": 3569,
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=nextDown",
+        "selections": 3717,
+        "opportunities": 3717,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=opponent|action=nextDown",
-        "selections": 729,
-        "opportunities": 729,
+        "key": "team=away|policy=random|phase=formation|down=1|field=own|action=snap",
+        "selections": 3522,
+        "opportunities": 3522,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=own|action=nextDown",
-        "selections": 3830,
-        "opportunities": 3830,
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=own|action=nextDown",
+        "selections": 1744,
+        "opportunities": 1744,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=goal-to-go|action=kick",
-        "selections": 1,
-        "opportunities": 1,
+        "key": "team=away|policy=random|phase=formation|down=2|field=own|action=snap",
+        "selections": 3901,
+        "opportunities": 3901,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
-        "selections": 130,
-        "opportunities": 130,
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
+        "selections": 934,
+        "opportunities": 934,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=midfield|action=nextDown",
-        "selections": 3257,
-        "opportunities": 3257,
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=own|action=nextDown",
+        "selections": 1634,
+        "opportunities": 1634,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=opponent|action=nextDown",
-        "selections": 636,
-        "opportunities": 636,
+        "key": "team=away|policy=random|phase=formation|down=3|field=own|action=snap",
+        "selections": 3522,
+        "opportunities": 3522,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=own|action=nextDown",
-        "selections": 3253,
-        "opportunities": 3253,
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
+        "selections": 501,
+        "opportunities": 501,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=4|field=own|action=snap",
+        "selections": 3238,
+        "opportunities": 3238,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=own|action=nextDown",
+        "selections": 4526,
+        "opportunities": 4526,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
+        "selections": 588,
+        "opportunities": 588,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
+        "selections": 1646,
+        "opportunities": 1646,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=1|field=goal-to-go|action=snap",
+        "selections": 1342,
+        "opportunities": 1342,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=kickoff|down=1|field=midfield|action=kick",
+        "selections": 2408,
+        "opportunities": 2408,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=midfield|action=nextDown",
+        "selections": 1960,
+        "opportunities": 1960,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=nextDown",
+        "selections": 2648,
+        "opportunities": 2648,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=own|action=nextDown",
+        "selections": 1371,
+        "opportunities": 1371,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=1|field=opponent|action=snap",
+        "selections": 3003,
+        "opportunities": 3003,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=2|field=opponent|action=snap",
+        "selections": 776,
+        "opportunities": 776,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=kickReturn|down=1|field=midfield|action=recover",
+        "selections": 505,
+        "opportunities": 505,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=midfield|action=nextDown",
+        "selections": 1538,
+        "opportunities": 1538,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=3|field=midfield|action=snap",
+        "selections": 273,
+        "opportunities": 273,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
@@ -1235,121 +476,912 @@
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=formation|down=1|field=goal-to-go|action=snap",
-        "selections": 643,
-        "opportunities": 643,
+        "key": "team=home|policy=random|phase=kickoff|down=1|field=midfield|action=kick",
+        "selections": 1404,
+        "opportunities": 1404,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=midfield|action=recover",
+        "selections": 376,
+        "opportunities": 376,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=midfield|action=nextDown",
+        "selections": 3223,
+        "opportunities": 3223,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=1|field=midfield|action=snap",
+        "selections": 4661,
+        "opportunities": 4661,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=nextDown",
+        "selections": 3080,
+        "opportunities": 3080,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=2|field=midfield|action=snap",
+        "selections": 1161,
+        "opportunities": 1161,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=nextDown",
+        "selections": 6021,
+        "opportunities": 6021,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
         "key": "team=home|policy=random|phase=formation|down=1|field=midfield|action=snap",
-        "selections": 9062,
-        "opportunities": 9062,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=formation|down=1|field=opponent|action=snap",
-        "selections": 1898,
-        "opportunities": 1898,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=formation|down=1|field=own|action=snap",
-        "selections": 8282,
-        "opportunities": 8282,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=formation|down=2|field=goal-to-go|action=snap",
-        "selections": 316,
-        "opportunities": 316,
+        "selections": 3917,
+        "opportunities": 3917,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
         "key": "team=home|policy=random|phase=formation|down=2|field=midfield|action=snap",
-        "selections": 8858,
-        "opportunities": 8858,
+        "selections": 3848,
+        "opportunities": 3848,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=formation|down=2|field=opponent|action=snap",
-        "selections": 1687,
-        "opportunities": 1687,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=formation|down=2|field=own|action=snap",
-        "selections": 9349,
-        "opportunities": 9349,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=formation|down=3|field=goal-to-go|action=snap",
-        "selections": 232,
-        "opportunities": 232,
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=midfield|action=nextDown",
+        "selections": 2009,
+        "opportunities": 2009,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
         "key": "team=home|policy=random|phase=formation|down=3|field=midfield|action=snap",
-        "selections": 7618,
-        "opportunities": 7618,
+        "selections": 3313,
+        "opportunities": 3313,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=formation|down=3|field=opponent|action=snap",
-        "selections": 1374,
-        "opportunities": 1374,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=formation|down=3|field=own|action=snap",
-        "selections": 8555,
-        "opportunities": 8555,
-        "rate": 1,
-        "screen": "selection-rate-at-least-0.80"
-      },
-      {
-        "key": "team=home|policy=random|phase=formation|down=4|field=goal-to-go|action=snap",
-        "selections": 183,
-        "opportunities": 183,
+        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=midfield|action=nextDown",
+        "selections": 1391,
+        "opportunities": 1391,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
         "key": "team=home|policy=random|phase=formation|down=4|field=midfield|action=snap",
-        "selections": 6551,
-        "opportunities": 6551,
+        "selections": 2836,
+        "opportunities": 2836,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=formation|down=4|field=opponent|action=snap",
-        "selections": 1117,
-        "opportunities": 1117,
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=nextDown",
+        "selections": 3616,
+        "opportunities": 3616,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=1|field=own|action=snap",
+        "selections": 3464,
+        "opportunities": 3464,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=own|action=nextDown",
+        "selections": 1713,
+        "opportunities": 1713,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=2|field=own|action=snap",
+        "selections": 3836,
+        "opportunities": 3836,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
+        "selections": 983,
+        "opportunities": 983,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=own|action=nextDown",
+        "selections": 1572,
+        "opportunities": 1572,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=3|field=own|action=snap",
+        "selections": 3475,
+        "opportunities": 3475,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
+        "selections": 482,
+        "opportunities": 482,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
         "key": "team=home|policy=random|phase=formation|down=4|field=own|action=snap",
-        "selections": 7842,
-        "opportunities": 7842,
+        "selections": 3190,
+        "opportunities": 3190,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=kickoff|down=1|field=midfield|action=kick",
-        "selections": 1899,
-        "opportunities": 1899,
+        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=own|action=nextDown",
+        "selections": 4500,
+        "opportunities": 4500,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
+        "selections": 589,
+        "opportunities": 589,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
+        "selections": 1609,
+        "opportunities": 1609,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=1|field=goal-to-go|action=snap",
+        "selections": 1332,
+        "opportunities": 1332,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=kickoff|down=1|field=own|action=kick",
+        "selections": 2373,
+        "opportunities": 2373,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=midfield|action=nextDown",
+        "selections": 1987,
+        "opportunities": 1987,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=nextDown",
+        "selections": 2535,
+        "opportunities": 2535,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=own|action=nextDown",
+        "selections": 1360,
+        "opportunities": 1360,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=1|field=opponent|action=snap",
+        "selections": 2949,
+        "opportunities": 2949,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=2|field=opponent|action=snap",
+        "selections": 741,
+        "opportunities": 741,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=kickReturn|down=1|field=midfield|action=recover",
+        "selections": 484,
+        "opportunities": 484,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=midfield|action=nextDown",
+        "selections": 1585,
+        "opportunities": 1585,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=3|field=midfield|action=snap",
+        "selections": 281,
+        "opportunities": 281,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=opponent|action=nextDown",
+        "selections": 1658,
+        "opportunities": 1658,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=opponent|action=recover",
+        "selections": 71,
+        "opportunities": 71,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=own|action=nextDown",
+        "selections": 1849,
+        "opportunities": 1849,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=1|field=opponent|action=snap",
+        "selections": 860,
+        "opportunities": 860,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=1|field=own|action=snap",
+        "selections": 1003,
+        "opportunities": 1003,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=own|action=nextDown",
+        "selections": 591,
+        "opportunities": 591,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=2|field=opponent|action=snap",
+        "selections": 726,
+        "opportunities": 726,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=opponent|action=nextDown",
+        "selections": 330,
+        "opportunities": 330,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=3|field=opponent|action=snap",
+        "selections": 598,
+        "opportunities": 598,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=opponent|action=nextDown",
+        "selections": 404,
+        "opportunities": 404,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=2|field=own|action=snap",
+        "selections": 249,
+        "opportunities": 249,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=midfield|action=nextDown",
+        "selections": 1591,
+        "opportunities": 1591,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
+        "selections": 79,
+        "opportunities": 79,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=opponent|action=nextDown",
+        "selections": 426,
+        "opportunities": 426,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=kick",
+        "selections": 106,
+        "opportunities": 123,
+        "rate": 0.8617886178861789,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=opponent|action=nextDown",
+        "selections": 1647,
+        "opportunities": 1647,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=opponent|action=recover",
+        "selections": 57,
+        "opportunities": 57,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=midfield|action=nextDown",
+        "selections": 1592,
+        "opportunities": 1592,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=own|action=nextDown",
+        "selections": 365,
+        "opportunities": 365,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=own|action=nextDown",
+        "selections": 309,
+        "opportunities": 309,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=4|field=opponent|action=snap",
+        "selections": 510,
+        "opportunities": 510,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=goal-to-go|action=recover",
+        "selections": 7,
+        "opportunities": 7,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
+        "selections": 94,
+        "opportunities": 112,
+        "rate": 0.8392857142857143,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=own|action=nextDown",
+        "selections": 1912,
+        "opportunities": 1912,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=1|field=opponent|action=snap",
+        "selections": 854,
+        "opportunities": 854,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=opponent|action=nextDown",
+        "selections": 432,
+        "opportunities": 432,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=opponent|action=nextDown",
+        "selections": 427,
+        "opportunities": 427,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=2|field=opponent|action=snap",
+        "selections": 722,
+        "opportunities": 722,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=own|action=nextDown",
+        "selections": 396,
+        "opportunities": 396,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=3|field=opponent|action=snap",
+        "selections": 615,
+        "opportunities": 615,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=own|action=nextDown",
+        "selections": 307,
+        "opportunities": 307,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=4|field=opponent|action=snap",
+        "selections": 499,
+        "opportunities": 499,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=2|field=own|action=snap",
+        "selections": 268,
+        "opportunities": 268,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=goal-to-go|action=recover",
+        "selections": 5,
+        "opportunities": 5,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
+        "selections": 88,
+        "opportunities": 106,
+        "rate": 0.8301886792452831,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=4|field=opponent|action=nextDown",
+        "selections": 1448,
+        "opportunities": 1448,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=own|action=recover",
+        "selections": 96,
+        "opportunities": 96,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=3|field=own|action=snap",
+        "selections": 50,
+        "opportunities": 50,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=opponent|action=kick",
+        "selections": 95,
+        "opportunities": 117,
+        "rate": 0.811965811965812,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=own|action=nextDown",
+        "selections": 625,
+        "opportunities": 625,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=opponent|action=nextDown",
+        "selections": 336,
+        "opportunities": 336,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=4|field=opponent|action=nextDown",
+        "selections": 1427,
+        "opportunities": 1427,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=3|field=opponent|action=snap",
+        "selections": 176,
+        "opportunities": 176,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=3|field=opponent|action=snap",
+        "selections": 166,
+        "opportunities": 166,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=kick",
+        "selections": 110,
+        "opportunities": 128,
+        "rate": 0.859375,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=opponent|action=nextDown",
+        "selections": 296,
+        "opportunities": 296,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=1|field=goal-to-go|action=snap",
+        "selections": 277,
+        "opportunities": 277,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=2|field=goal-to-go|action=snap",
+        "selections": 259,
+        "opportunities": 259,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=1|field=own|action=snap",
+        "selections": 1079,
+        "opportunities": 1079,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=4|field=opponent|action=snap",
+        "selections": 43,
+        "opportunities": 43,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=kickReturn|down=1|field=own|action=recover",
+        "selections": 264,
+        "opportunities": 264,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=opponent|action=nextDown",
+        "selections": 306,
+        "opportunities": 306,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=2|field=goal-to-go|action=snap",
+        "selections": 273,
+        "opportunities": 273,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=3|field=own|action=snap",
+        "selections": 66,
+        "opportunities": 66,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=1|field=goal-to-go|action=snap",
+        "selections": 238,
+        "opportunities": 238,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=2|field=goal-to-go|action=snap",
+        "selections": 142,
+        "opportunities": 142,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=3|field=goal-to-go|action=snap",
+        "selections": 105,
+        "opportunities": 105,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=own|action=recover",
+        "selections": 92,
+        "opportunities": 92,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=nextDown",
+        "selections": 99,
+        "opportunities": 99,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=kickReturn|down=1|field=own|action=recover",
+        "selections": 261,
+        "opportunities": 261,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
+        "selections": 4,
+        "opportunities": 5,
+        "rate": 0.8,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
+        "selections": 76,
+        "opportunities": 76,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=nextDown",
+        "selections": 79,
+        "opportunities": 79,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=1|field=midfield|action=kick",
+        "selections": 122,
+        "opportunities": 145,
+        "rate": 0.8413793103448276,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=3|field=goal-to-go|action=snap",
+        "selections": 60,
+        "opportunities": 60,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=4|field=midfield|action=snap",
+        "selections": 55,
+        "opportunities": 55,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=4|field=midfield|action=snap",
+        "selections": 54,
+        "opportunities": 54,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
+        "selections": 61,
+        "opportunities": 61,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
+        "selections": 45,
+        "opportunities": 45,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=4|field=goal-to-go|action=snap",
+        "selections": 81,
+        "opportunities": 81,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=4|field=own|action=snap",
+        "selections": 18,
+        "opportunities": 18,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=4|field=opponent|action=snap",
+        "selections": 39,
+        "opportunities": 39,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=3|field=goal-to-go|action=snap",
+        "selections": 57,
+        "opportunities": 57,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=2|field=goal-to-go|action=snap",
+        "selections": 106,
+        "opportunities": 106,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=3|field=goal-to-go|action=snap",
+        "selections": 84,
+        "opportunities": 84,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=4|field=goal-to-go|action=snap",
+        "selections": 61,
+        "opportunities": 61,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=1|field=own|action=kick",
+        "selections": 41,
+        "opportunities": 50,
+        "rate": 0.82,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=nextDown",
+        "selections": 45,
+        "opportunities": 45,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=4|field=goal-to-go|action=nextDown",
+        "selections": 36,
+        "opportunities": 36,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=own|action=kick",
+        "selections": 4,
+        "opportunities": 4,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=kick",
+        "selections": 19,
+        "opportunities": 23,
+        "rate": 0.8260869565217391,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=4|field=goal-to-go|action=snap",
+        "selections": 17,
+        "opportunities": 17,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=own|action=kick",
+        "selections": 3,
+        "opportunities": 3,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=4|field=own|action=snap",
+        "selections": 13,
+        "opportunities": 13,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=kick",
+        "selections": 10,
+        "opportunities": 11,
+        "rate": 0.9090909090909091,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=kickReturn|down=1|field=opponent|action=recover",
+        "selections": 13,
+        "opportunities": 13,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=kickReturn|down=1|field=opponent|action=recover",
+        "selections": 22,
+        "opportunities": 22,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=opponent|action=kick",
+        "selections": 16,
+        "opportunities": 20,
+        "rate": 0.8,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
+        "selections": 4,
+        "opportunities": 4,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=goal-to-go|action=kick",
+        "selections": 24,
+        "opportunities": 28,
+        "rate": 0.8571428571428571,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=goal-to-go|action=kick",
+        "selections": 22,
+        "opportunities": 27,
+        "rate": 0.8148148148148148,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=formation|down=4|field=goal-to-go|action=snap",
+        "selections": 16,
+        "opportunities": 16,
+        "rate": 1,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=kick",
+        "selections": 9,
+        "opportunities": 10,
+        "rate": 0.9,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=opponent|action=kick",
+        "selections": 5,
+        "opportunities": 6,
+        "rate": 0.8333333333333334,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=opponent|action=kick",
+        "selections": 6,
+        "opportunities": 6,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
@@ -1361,570 +1393,109 @@
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=kickReturn|down=1|field=midfield|action=recover",
-        "selections": 1085,
-        "opportunities": 1085,
+        "key": "team=home|policy=random|phase=betweenDowns|down=4|field=goal-to-go|action=kick",
+        "selections": 1,
+        "opportunities": 1,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=kickReturn|down=1|field=opponent|action=recover",
-        "selections": 51,
-        "opportunities": 51,
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=opponent|action=kick",
+        "selections": 5,
+        "opportunities": 6,
+        "rate": 0.8333333333333334,
+        "screen": "selection-rate-at-least-0.80"
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
+        "selections": 1,
+        "opportunities": 1,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       },
       {
-        "key": "team=home|policy=random|phase=kickReturn|down=1|field=own|action=recover",
-        "selections": 542,
-        "opportunities": 542,
+        "key": "team=away|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
+        "selections": 3,
+        "opportunities": 3,
         "rate": 1,
         "screen": "selection-rate-at-least-0.80"
       }
     ],
-    "cohortDifferences": [
+    "outcomeDifference": [
       {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=kick",
+        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=midfield|action=move",
         "policy": "heuristic",
-        "team": "away",
-        "selections": 35,
-        "opportunities": 43,
-        "selectionRate": 0.813953488372093,
+        "team": "home",
+        "selections": 6954,
+        "opportunities": 2907842,
+        "selectionRate": 0.0023914641854681238,
         "selected": {
-          "games": 35,
-          "wins": 35,
-          "ties": 0,
-          "losses": 0,
-          "averageScoreDifferential": 20.97142857142857
-        },
-        "notSelected": {
-          "games": 8,
-          "wins": 7,
-          "ties": 0,
-          "losses": 1,
-          "averageScoreDifferential": 17.75
-        },
-        "winShareDifference": 0.125,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=startTwoPointTry",
-        "policy": "heuristic",
-        "team": "away",
-        "selections": 8,
-        "opportunities": 43,
-        "selectionRate": 0.18604651162790697,
-        "selected": {
-          "games": 8,
-          "wins": 7,
-          "ties": 0,
-          "losses": 1,
-          "averageScoreDifferential": 17.75
-        },
-        "notSelected": {
-          "games": 35,
-          "wins": 35,
-          "ties": 0,
-          "losses": 0,
-          "averageScoreDifferential": 20.97142857142857
-        },
-        "winShareDifference": -0.125,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=formation|down=1|field=goal-to-go|action=chooseFormation",
-        "policy": "heuristic",
-        "team": "away",
-        "selections": 6722,
-        "opportunities": 62208,
-        "selectionRate": 0.108056841563786,
-        "selected": {
-          "games": 964,
-          "wins": 907,
-          "ties": 22,
-          "losses": 35,
-          "averageScoreDifferential": 14.651452282157676
+          "games": 981,
+          "wins": 782,
+          "ties": 116,
+          "losses": 83,
+          "averageScoreDifferential": 5.638124362895005
         },
         "notSelected": {
           "games": 5,
-          "wins": 4,
-          "ties": 0,
-          "losses": 1,
-          "averageScoreDifferential": 12.2
-        },
-        "winShareDifference": 0.15228215767634845,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=live|down=1|field=opponent|action=kick",
-        "policy": "heuristic",
-        "team": "away",
-        "selections": 4379,
-        "opportunities": 28402,
-        "selectionRate": 0.154179283149074,
-        "selected": {
-          "games": 993,
-          "wins": 928,
-          "ties": 24,
-          "losses": 41,
-          "averageScoreDifferential": 14.397784491440081
-        },
-        "notSelected": {
-          "games": 6,
-          "wins": 5,
-          "ties": 0,
-          "losses": 1,
-          "averageScoreDifferential": 12.666666666666666
-        },
-        "winShareDifference": 0.11329305135951662,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=heuristic|phase=live|down=2|field=opponent|action=powerMove",
-        "policy": "heuristic",
-        "team": "away",
-        "selections": 6253,
-        "opportunities": 81911,
-        "selectionRate": 0.0763389532541417,
-        "selected": {
-          "games": 957,
-          "wins": 898,
-          "ties": 22,
-          "losses": 37,
-          "averageScoreDifferential": 14.447230929989551
-        },
-        "notSelected": {
-          "games": 43,
-          "wins": 35,
-          "ties": 2,
-          "losses": 6,
-          "averageScoreDifferential": 12.651162790697674
-        },
-        "winShareDifference": 0.1126339578625063,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "at-least-30-games-in-each-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 6,
-        "opportunities": 9,
-        "selectionRate": 0.6666666666666666,
-        "selected": {
-          "games": 6,
-          "wins": 1,
-          "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -8
-        },
-        "notSelected": {
-          "games": 3,
-          "wins": 0,
-          "ties": 2,
-          "losses": 1,
-          "averageScoreDifferential": -4
-        },
-        "winShareDifference": -0.16666666666666666,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=startTwoPointTry",
-        "policy": "random",
-        "team": "away",
-        "selections": 3,
-        "opportunities": 9,
-        "selectionRate": 0.3333333333333333,
-        "selected": {
-          "games": 3,
-          "wins": 0,
-          "ties": 2,
-          "losses": 1,
-          "averageScoreDifferential": -4
-        },
-        "notSelected": {
-          "games": 6,
-          "wins": 1,
-          "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -8
-        },
-        "winShareDifference": 0.16666666666666666,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 7,
-        "opportunities": 13,
-        "selectionRate": 0.5384615384615384,
-        "selected": {
-          "games": 7,
-          "wins": 1,
-          "ties": 1,
-          "losses": 5,
-          "averageScoreDifferential": -4.142857142857143
-        },
-        "notSelected": {
-          "games": 6,
-          "wins": 2,
-          "ties": 0,
-          "losses": 4,
-          "averageScoreDifferential": -5.166666666666667
-        },
-        "winShareDifference": -0.11904761904761904,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=startTwoPointTry",
-        "policy": "random",
-        "team": "away",
-        "selections": 6,
-        "opportunities": 13,
-        "selectionRate": 0.46153846153846156,
-        "selected": {
-          "games": 6,
-          "wins": 2,
-          "ties": 0,
-          "losses": 4,
-          "averageScoreDifferential": -5.166666666666667
-        },
-        "notSelected": {
-          "games": 7,
-          "wins": 1,
-          "ties": 1,
-          "losses": 5,
-          "averageScoreDifferential": -4.142857142857143
-        },
-        "winShareDifference": 0.11904761904761904,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=midfield|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 22,
-        "opportunities": 40,
-        "selectionRate": 0.55,
-        "selected": {
-          "games": 21,
-          "wins": 8,
-          "ties": 0,
-          "losses": 13,
-          "averageScoreDifferential": -4.904761904761905
-        },
-        "notSelected": {
-          "games": 18,
-          "wins": 2,
-          "ties": 1,
-          "losses": 15,
-          "averageScoreDifferential": -13.333333333333334
-        },
-        "winShareDifference": 0.24206349206349204,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=midfield|action=startTwoPointTry",
-        "policy": "random",
-        "team": "away",
-        "selections": 18,
-        "opportunities": 40,
-        "selectionRate": 0.45,
-        "selected": {
-          "games": 18,
-          "wins": 2,
-          "ties": 1,
-          "losses": 15,
-          "averageScoreDifferential": -13.333333333333334
-        },
-        "notSelected": {
-          "games": 21,
-          "wins": 8,
-          "ties": 0,
-          "losses": 13,
-          "averageScoreDifferential": -4.904761904761905
-        },
-        "winShareDifference": -0.24206349206349204,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=opponent|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 9,
-        "opportunities": 17,
-        "selectionRate": 0.5294117647058824,
-        "selected": {
-          "games": 9,
           "wins": 3,
-          "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -8.222222222222221
-        },
-        "notSelected": {
-          "games": 8,
-          "wins": 0,
-          "ties": 0,
-          "losses": 8,
-          "averageScoreDifferential": -17.5
-        },
-        "winShareDifference": 0.3333333333333333,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=opponent|action=startTwoPointTry",
-        "policy": "random",
-        "team": "away",
-        "selections": 8,
-        "opportunities": 17,
-        "selectionRate": 0.47058823529411764,
-        "selected": {
-          "games": 8,
-          "wins": 0,
-          "ties": 0,
-          "losses": 8,
-          "averageScoreDifferential": -17.5
-        },
-        "notSelected": {
-          "games": 9,
-          "wins": 3,
-          "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -8.222222222222221
-        },
-        "winShareDifference": -0.3333333333333333,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=own|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 6,
-        "opportunities": 14,
-        "selectionRate": 0.42857142857142855,
-        "selected": {
-          "games": 6,
-          "wins": 0,
-          "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -9
-        },
-        "notSelected": {
-          "games": 8,
-          "wins": 2,
           "ties": 1,
-          "losses": 5,
-          "averageScoreDifferential": -9.75
+          "losses": 1,
+          "averageScoreDifferential": 1.4
         },
-        "winShareDifference": -0.3125,
+        "winShareDifference": 0.15626911314984715,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
-        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=own|action=startTwoPointTry",
+        "key": "team=away|policy=random|phase=kickReturn|down=1|field=midfield|action=move",
         "policy": "random",
         "team": "away",
-        "selections": 8,
-        "opportunities": 14,
-        "selectionRate": 0.5714285714285714,
+        "selections": 7351,
+        "opportunities": 2791444,
+        "selectionRate": 0.002633404073303996,
         "selected": {
-          "games": 8,
-          "wins": 2,
-          "ties": 1,
-          "losses": 5,
-          "averageScoreDifferential": -9.75
-        },
-        "notSelected": {
-          "games": 6,
-          "wins": 0,
-          "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -9
-        },
-        "winShareDifference": 0.3125,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 10,
-        "opportunities": 15,
-        "selectionRate": 0.6666666666666666,
-        "selected": {
-          "games": 10,
-          "wins": 0,
-          "ties": 0,
-          "losses": 10,
-          "averageScoreDifferential": -12.2
-        },
-        "notSelected": {
-          "games": 5,
-          "wins": 0,
-          "ties": 1,
-          "losses": 4,
-          "averageScoreDifferential": -7.8
-        },
-        "winShareDifference": -0.1,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=startTwoPointTry",
-        "policy": "random",
-        "team": "away",
-        "selections": 5,
-        "opportunities": 15,
-        "selectionRate": 0.3333333333333333,
-        "selected": {
-          "games": 5,
-          "wins": 0,
-          "ties": 1,
-          "losses": 4,
-          "averageScoreDifferential": -7.8
-        },
-        "notSelected": {
-          "games": 10,
-          "wins": 0,
-          "ties": 0,
-          "losses": 10,
-          "averageScoreDifferential": -12.2
-        },
-        "winShareDifference": 0.1,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=opponent|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 9,
-        "opportunities": 14,
-        "selectionRate": 0.6428571428571429,
-        "selected": {
-          "games": 9,
-          "wins": 2,
-          "ties": 0,
-          "losses": 7,
-          "averageScoreDifferential": -3.111111111111111
+          "games": 981,
+          "wins": 84,
+          "ties": 117,
+          "losses": 780,
+          "averageScoreDifferential": -5.616717635066259
         },
         "notSelected": {
           "games": 5,
           "wins": 0,
           "ties": 0,
           "losses": 5,
-          "averageScoreDifferential": -14
+          "averageScoreDifferential": -5.6
         },
-        "winShareDifference": 0.2222222222222222,
+        "winShareDifference": 0.1452599388379205,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=opponent|action=startTwoPointTry",
-        "policy": "random",
-        "team": "away",
-        "selections": 5,
-        "opportunities": 14,
-        "selectionRate": 0.35714285714285715,
+        "key": "team=home|policy=heuristic|phase=kickReturn|down=1|field=goal-to-go|action=move",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 3051,
+        "opportunities": 2058391,
+        "selectionRate": 0.0014822256801550336,
         "selected": {
-          "games": 5,
-          "wins": 0,
-          "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -14
+          "games": 838,
+          "wins": 676,
+          "ties": 89,
+          "losses": 73,
+          "averageScoreDifferential": 5.6682577565632455
         },
         "notSelected": {
-          "games": 9,
-          "wins": 2,
-          "ties": 0,
-          "losses": 7,
-          "averageScoreDifferential": -3.111111111111111
-        },
-        "winShareDifference": -0.2222222222222222,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=own|action=kick",
-        "policy": "random",
-        "team": "away",
-        "selections": 10,
-        "opportunities": 26,
-        "selectionRate": 0.38461538461538464,
-        "selected": {
-          "games": 10,
-          "wins": 2,
-          "ties": 0,
-          "losses": 8,
-          "averageScoreDifferential": -6.9
-        },
-        "notSelected": {
-          "games": 16,
+          "games": 8,
           "wins": 5,
-          "ties": 1,
-          "losses": 10,
-          "averageScoreDifferential": -4.5625
+          "ties": 2,
+          "losses": 1,
+          "averageScoreDifferential": 2.25
         },
-        "winShareDifference": -0.14375,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=own|action=startTwoPointTry",
-        "policy": "random",
-        "team": "away",
-        "selections": 16,
-        "opportunities": 26,
-        "selectionRate": 0.6153846153846154,
-        "selected": {
-          "games": 16,
-          "wins": 5,
-          "ties": 1,
-          "losses": 10,
-          "averageScoreDifferential": -4.5625
-        },
-        "notSelected": {
-          "games": 10,
-          "wins": 2,
-          "ties": 0,
-          "losses": 8,
-          "averageScoreDifferential": -6.9
-        },
-        "winShareDifference": 0.14375,
+        "winShareDifference": 0.10978520286396176,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
@@ -1933,466 +1504,700 @@
         "key": "team=away|policy=random|phase=live|down=1|field=midfield|action=pass",
         "policy": "random",
         "team": "away",
-        "selections": 6994,
-        "opportunities": 133906,
-        "selectionRate": 0.05223066927546189,
+        "selections": 3068,
+        "opportunities": 58754,
+        "selectionRate": 0.05221772134663172,
         "selected": {
-          "games": 995,
-          "wins": 48,
-          "ties": 29,
-          "losses": 918,
-          "averageScoreDifferential": -14.705527638190954
+          "games": 969,
+          "wins": 82,
+          "ties": 109,
+          "losses": 778,
+          "averageScoreDifferential": -5.69969040247678
         },
         "notSelected": {
-          "games": 5,
-          "wins": 1,
-          "ties": 0,
-          "losses": 4,
-          "averageScoreDifferential": -4
-        },
-        "winShareDifference": -0.13718592964824122,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=live|down=1|field=own|action=pass",
-        "policy": "random",
-        "team": "away",
-        "selections": 6720,
-        "opportunities": 128073,
-        "selectionRate": 0.05247007565997517,
-        "selected": {
-          "games": 998,
-          "wins": 48,
-          "ties": 29,
-          "losses": 921,
-          "averageScoreDifferential": -14.661322645290582
-        },
-        "notSelected": {
-          "games": 2,
-          "wins": 1,
-          "ties": 0,
-          "losses": 1,
-          "averageScoreDifferential": -10
-        },
-        "winShareDifference": -0.437374749498998,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=live|down=2|field=midfield|action=move",
-        "policy": "random",
-        "team": "away",
-        "selections": 13992,
-        "opportunities": 2307574,
-        "selectionRate": 0.006063510855989883,
-        "selected": {
-          "games": 994,
-          "wins": 48,
-          "ties": 29,
-          "losses": 917,
-          "averageScoreDifferential": -14.711267605633802
-        },
-        "notSelected": {
-          "games": 5,
-          "wins": 1,
-          "ties": 0,
-          "losses": 4,
-          "averageScoreDifferential": -5.6
-        },
-        "winShareDifference": -0.13712273641851108,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=live|down=2|field=midfield|action=pass",
-        "policy": "random",
-        "team": "away",
-        "selections": 6872,
-        "opportunities": 132616,
-        "selectionRate": 0.051818785063642396,
-        "selected": {
-          "games": 991,
-          "wins": 46,
-          "ties": 29,
-          "losses": 916,
-          "averageScoreDifferential": -14.751765893037335
-        },
-        "notSelected": {
-          "games": 8,
+          "games": 26,
           "wins": 3,
-          "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -4
+          "ties": 7,
+          "losses": 16,
+          "averageScoreDifferential": -3.269230769230769
         },
-        "winShareDifference": -0.3139505549949546,
+        "winShareDifference": -0.10913312693498453,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
-        "key": "team=away|policy=random|phase=live|down=2|field=own|action=handoff",
+        "key": "team=away|policy=random|phase=live|down=4|field=midfield|action=powerMove",
         "policy": "random",
         "team": "away",
-        "selections": 6422,
-        "opportunities": 67872,
-        "selectionRate": 0.09461928335690711,
+        "selections": 6,
+        "opportunities": 10758,
+        "selectionRate": 0.0005577244841048522,
         "selected": {
-          "games": 998,
-          "wins": 48,
-          "ties": 29,
-          "losses": 921,
-          "averageScoreDifferential": -14.668336673346694
-        },
-        "notSelected": {
-          "games": 2,
-          "wins": 1,
+          "games": 6,
+          "wins": 0,
           "ties": 0,
-          "losses": 1,
-          "averageScoreDifferential": -6.5
-        },
-        "winShareDifference": -0.437374749498998,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=live|down=2|field=own|action=move",
-        "policy": "random",
-        "team": "away",
-        "selections": 15110,
-        "opportunities": 2294283,
-        "selectionRate": 0.006585935562439333,
-        "selected": {
-          "games": 999,
-          "wins": 48,
-          "ties": 29,
-          "losses": 922,
-          "averageScoreDifferential": -14.66966966966967
+          "losses": 6,
+          "averageScoreDifferential": -9.666666666666666
         },
         "notSelected": {
-          "games": 1,
-          "wins": 1,
-          "ties": 0,
-          "losses": 0,
-          "averageScoreDifferential": 3
-        },
-        "winShareDifference": -0.9374374374374375,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=live|down=3|field=midfield|action=move",
-        "policy": "random",
-        "team": "away",
-        "selections": 11558,
-        "opportunities": 1743052,
-        "selectionRate": 0.006630897988126574,
-        "selected": {
-          "games": 981,
-          "wins": 46,
-          "ties": 25,
-          "losses": 910,
-          "averageScoreDifferential": -14.851172273190622
-        },
-        "notSelected": {
-          "games": 14,
-          "wins": 1,
-          "ties": 3,
-          "losses": 10,
-          "averageScoreDifferential": -6.142857142857143
-        },
-        "winShareDifference": -0.11893840104849279,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=live|down=3|field=midfield|action=pass",
-        "policy": "random",
-        "team": "away",
-        "selections": 5965,
-        "opportunities": 112579,
-        "selectionRate": 0.05298501496726743,
-        "selected": {
-          "games": 984,
-          "wins": 43,
-          "ties": 28,
-          "losses": 913,
-          "averageScoreDifferential": -14.861788617886178
-        },
-        "notSelected": {
-          "games": 10,
-          "wins": 3,
-          "ties": 0,
-          "losses": 7,
-          "averageScoreDifferential": -4.1
-        },
-        "winShareDifference": -0.2420731707317073,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=away|policy=random|phase=live|down=3|field=own|action=pass",
-        "policy": "random",
-        "team": "away",
-        "selections": 6857,
-        "opportunities": 130085,
-        "selectionRate": 0.052711688511357956,
-        "selected": {
-          "games": 995,
-          "wins": 47,
-          "ties": 28,
-          "losses": 920,
-          "averageScoreDifferential": -14.691457286432161
-        },
-        "notSelected": {
-          "games": 5,
-          "wins": 2,
-          "ties": 1,
-          "losses": 2,
-          "averageScoreDifferential": -6.8
-        },
-        "winShareDifference": -0.4386934673366834,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
-        "policy": "heuristic",
-        "team": "home",
-        "selections": 10,
-        "opportunities": 12,
-        "selectionRate": 0.8333333333333334,
-        "selected": {
-          "games": 10,
-          "wins": 10,
-          "ties": 0,
-          "losses": 0,
-          "averageScoreDifferential": 23.1
-        },
-        "notSelected": {
-          "games": 2,
-          "wins": 1,
-          "ties": 1,
-          "losses": 0,
-          "averageScoreDifferential": 31.5
-        },
-        "winShareDifference": 0.25,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=betweenDowns|down=3|field=goal-to-go|action=startTwoPointTry",
-        "policy": "heuristic",
-        "team": "home",
-        "selections": 2,
-        "opportunities": 12,
-        "selectionRate": 0.16666666666666666,
-        "selected": {
-          "games": 2,
-          "wins": 1,
-          "ties": 1,
-          "losses": 0,
-          "averageScoreDifferential": 31.5
-        },
-        "notSelected": {
-          "games": 10,
-          "wins": 10,
-          "ties": 0,
-          "losses": 0,
-          "averageScoreDifferential": 23.1
-        },
-        "winShareDifference": -0.25,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=live|down=1|field=midfield|action=kick",
-        "policy": "heuristic",
-        "team": "home",
-        "selections": 5605,
-        "opportunities": 45104,
-        "selectionRate": 0.12426835757360766,
-        "selected": {
-          "games": 991,
-          "wins": 915,
-          "ties": 28,
-          "losses": 48,
-          "averageScoreDifferential": 14.735620585267407
-        },
-        "notSelected": {
-          "games": 9,
-          "wins": 7,
-          "ties": 1,
-          "losses": 1,
-          "averageScoreDifferential": 5.444444444444445
-        },
-        "winShareDifference": 0.10410359905819033,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=live|down=1|field=midfield|action=pass",
-        "policy": "heuristic",
-        "team": "home",
-        "selections": 3791,
-        "opportunities": 112760,
-        "selectionRate": 0.03362007804185881,
-        "selected": {
-          "games": 971,
-          "wins": 902,
-          "ties": 27,
-          "losses": 42,
-          "averageScoreDifferential": 14.850669412976313
-        },
-        "notSelected": {
-          "games": 29,
-          "wins": 20,
-          "ties": 2,
-          "losses": 7,
-          "averageScoreDifferential": 8
-        },
-        "winShareDifference": 0.21870449944955428,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=live|down=1|field=midfield|action=powerMove",
-        "policy": "heuristic",
-        "team": "home",
-        "selections": 11599,
-        "opportunities": 152007,
-        "selectionRate": 0.07630569644818988,
-        "selected": {
-          "games": 978,
-          "wins": 906,
-          "ties": 25,
-          "losses": 47,
-          "averageScoreDifferential": 14.741308793456033
-        },
-        "notSelected": {
-          "games": 22,
-          "wins": 16,
-          "ties": 4,
-          "losses": 2,
-          "averageScoreDifferential": 10.681818181818182
-        },
-        "winShareDifference": 0.12097973601041079,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=live|down=1|field=opponent|action=kick",
-        "policy": "heuristic",
-        "team": "home",
-        "selections": 4280,
-        "opportunities": 28046,
-        "selectionRate": 0.1526064322898096,
-        "selected": {
-          "games": 987,
-          "wins": 913,
-          "ties": 28,
-          "losses": 46,
-          "averageScoreDifferential": 14.760891590678824
-        },
-        "notSelected": {
-          "games": 12,
-          "wins": 9,
-          "ties": 1,
-          "losses": 2,
-          "averageScoreDifferential": 7.166666666666667
-        },
-        "winShareDifference": 0.14754305977710236,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=heuristic|phase=live|down=3|field=goal-to-go|action=kick",
-        "policy": "heuristic",
-        "team": "home",
-        "selections": 90,
-        "opportunities": 470,
-        "selectionRate": 0.19148936170212766,
-        "selected": {
-          "games": 82,
+          "games": 967,
           "wins": 80,
-          "ties": 1,
-          "losses": 1,
-          "averageScoreDifferential": 19.0609756097561
+          "ties": 117,
+          "losses": 770,
+          "averageScoreDifferential": -5.668045501551189
+        },
+        "winShareDifference": -0.14322647362978283,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=4|field=midfield|action=move",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 8,
+        "opportunities": 142257,
+        "selectionRate": 0.00005623624847986391,
+        "selected": {
+          "games": 8,
+          "wins": 8,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 7.125
         },
         "notSelected": {
-          "games": 49,
-          "wins": 41,
-          "ties": 3,
-          "losses": 5,
-          "averageScoreDifferential": 14.53061224489796
+          "games": 671,
+          "wins": 541,
+          "ties": 77,
+          "losses": 53,
+          "averageScoreDifferential": 5.873323397913562
         },
-        "winShareDifference": 0.11436037829766055,
+        "winShareDifference": 0.13636363636363635,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=live|down=4|field=own|action=powerMove",
+        "policy": "random",
+        "team": "away",
+        "selections": 2,
+        "opportunities": 12289,
+        "selectionRate": 0.00016274717226788185,
+        "selected": {
+          "games": 2,
+          "wins": 0,
+          "ties": 1,
+          "losses": 1,
+          "averageScoreDifferential": -6
+        },
+        "notSelected": {
+          "games": 977,
+          "wins": 82,
+          "ties": 114,
+          "losses": 781,
+          "averageScoreDifferential": -5.65711361310133
+        },
+        "winShareDifference": 0.10772773797338792,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=3|field=midfield|action=kick",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 162,
+        "opportunities": 1144,
+        "selectionRate": 0.14160839160839161,
+        "selected": {
+          "games": 147,
+          "wins": 105,
+          "ties": 24,
+          "losses": 18,
+          "averageScoreDifferential": 4.414965986394558
+        },
+        "notSelected": {
+          "games": 93,
+          "wins": 80,
+          "ties": 7,
+          "losses": 6,
+          "averageScoreDifferential": 5.978494623655914
+        },
+        "winShareDifference": -0.1019310950186526,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "at-least-30-games-in-each-arm",
         "exploratory": true
       },
       {
-        "key": "team=home|policy=heuristic|phase=live|down=4|field=goal-to-go|action=kick",
+        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=midfield|action=move",
         "policy": "heuristic",
-        "team": "home",
-        "selections": 27,
-        "opportunities": 58,
-        "selectionRate": 0.46551724137931033,
+        "team": "away",
+        "selections": 7016,
+        "opportunities": 2944780,
+        "selectionRate": 0.002382520935350009,
         "selected": {
-          "games": 26,
-          "wins": 20,
-          "ties": 1,
-          "losses": 5,
-          "averageScoreDifferential": 11.884615384615385
+          "games": 976,
+          "wins": 772,
+          "ties": 118,
+          "losses": 86,
+          "averageScoreDifferential": 5.466188524590164
         },
         "notSelected": {
-          "games": 1,
-          "wins": 1,
-          "ties": 0,
-          "losses": 0,
-          "averageScoreDifferential": 35
+          "games": 9,
+          "wins": 5,
+          "ties": 3,
+          "losses": 1,
+          "averageScoreDifferential": 2.2222222222222223
         },
-        "winShareDifference": -0.21153846153846156,
+        "winShareDifference": 0.12921220400728595,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
-        "key": "team=home|policy=heuristic|phase=live|down=4|field=goal-to-go|action=pass",
-        "policy": "heuristic",
+        "key": "team=home|policy=random|phase=kickReturn|down=1|field=midfield|action=move",
+        "policy": "random",
         "team": "home",
-        "selections": 1,
-        "opportunities": 145,
-        "selectionRate": 0.006896551724137931,
+        "selections": 7391,
+        "opportunities": 2788856,
+        "selectionRate": 0.002650190615793716,
         "selected": {
-          "games": 1,
-          "wins": 1,
-          "ties": 0,
-          "losses": 0,
-          "averageScoreDifferential": 35
+          "games": 980,
+          "wins": 87,
+          "ties": 121,
+          "losses": 772,
+          "averageScoreDifferential": -5.436734693877551
         },
         "notSelected": {
-          "games": 26,
-          "wins": 20,
-          "ties": 1,
+          "games": 5,
+          "wins": 0,
+          "ties": 0,
           "losses": 5,
-          "averageScoreDifferential": 11.884615384615385
+          "averageScoreDifferential": -5.4
         },
-        "winShareDifference": 0.21153846153846156,
+        "winShareDifference": 0.15051020408163265,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=live|down=3|field=midfield|action=move",
+        "policy": "random",
+        "team": "home",
+        "selections": 5138,
+        "opportunities": 765112,
+        "selectionRate": 0.006715356705946319,
+        "selected": {
+          "games": 904,
+          "wins": 70,
+          "ties": 111,
+          "losses": 723,
+          "averageScoreDifferential": -5.631637168141593
+        },
+        "notSelected": {
+          "games": 82,
+          "wins": 15,
+          "ties": 11,
+          "losses": 56,
+          "averageScoreDifferential": -3.6707317073170733
+        },
+        "winShareDifference": -0.11117256637168141,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=opponent|action=move",
+        "policy": "heuristic",
+        "team": "away",
+        "selections": 5634,
+        "opportunities": 4069404,
+        "selectionRate": 0.0013844779235485099,
+        "selected": {
+          "games": 967,
+          "wins": 766,
+          "ties": 118,
+          "losses": 83,
+          "averageScoreDifferential": 5.5046535677352635
+        },
+        "notSelected": {
+          "games": 14,
+          "wins": 8,
+          "ties": 3,
+          "losses": 3,
+          "averageScoreDifferential": 1.8571428571428572
+        },
+        "winShareDifference": 0.17458265622691682,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=formation|down=1|field=goal-to-go|action=chooseFormation",
+        "policy": "heuristic",
+        "team": "away",
+        "selections": 2500,
+        "opportunities": 23238,
+        "selectionRate": 0.10758240812462345,
+        "selected": {
+          "games": 712,
+          "wins": 604,
+          "ties": 58,
+          "losses": 50,
+          "averageScoreDifferential": 6.172752808988764
+        },
+        "notSelected": {
+          "games": 15,
+          "wins": 15,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 10.933333333333334
+        },
+        "winShareDifference": -0.1109550561797753,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=live|down=3|field=midfield|action=kick",
+        "policy": "heuristic",
+        "team": "away",
+        "selections": 161,
+        "opportunities": 1150,
+        "selectionRate": 0.14,
+        "selected": {
+          "games": 147,
+          "wins": 105,
+          "ties": 22,
+          "losses": 20,
+          "averageScoreDifferential": 4.414965986394558
+        },
+        "notSelected": {
+          "games": 102,
+          "wins": 87,
+          "ties": 9,
+          "losses": 6,
+          "averageScoreDifferential": 5.794117647058823
+        },
+        "winShareDifference": -0.10794317727090841,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=live|down=3|field=opponent|action=powerMove",
+        "policy": "random",
+        "team": "away",
+        "selections": 7,
+        "opportunities": 5299,
+        "selectionRate": 0.001321003963011889,
+        "selected": {
+          "games": 6,
+          "wins": 0,
+          "ties": 0,
+          "losses": 6,
+          "averageScoreDifferential": -8.166666666666666
+        },
+        "notSelected": {
+          "games": 417,
+          "wins": 41,
+          "ties": 55,
+          "losses": 321,
+          "averageScoreDifferential": -5.537170263788969
+        },
+        "winShareDifference": -0.1642685851318945,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=2|field=own|action=handoff",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 47,
+        "opportunities": 1673,
+        "selectionRate": 0.028093245666467422,
+        "selected": {
+          "games": 46,
+          "wins": 31,
+          "ties": 5,
+          "losses": 10,
+          "averageScoreDifferential": 4.5
+        },
+        "notSelected": {
+          "games": 172,
+          "wins": 138,
+          "ties": 24,
+          "losses": 10,
+          "averageScoreDifferential": 5.709302325581396
+        },
+        "winShareDifference": -0.14383215369059654,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=2|field=own|action=pass",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 79,
+        "opportunities": 2830,
+        "selectionRate": 0.02791519434628975,
+        "selected": {
+          "games": 76,
+          "wins": 63,
+          "ties": 12,
+          "losses": 1,
+          "averageScoreDifferential": 5.855263157894737
+        },
+        "notSelected": {
+          "games": 142,
+          "wins": 106,
+          "ties": 17,
+          "losses": 19,
+          "averageScoreDifferential": 5.23943661971831
+        },
+        "winShareDifference": 0.10155670867309119,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=kickReturn|down=1|field=goal-to-go|action=move",
+        "policy": "random",
+        "team": "away",
+        "selections": 1015,
+        "opportunities": 642426,
+        "selectionRate": 0.001579948507688045,
+        "selected": {
+          "games": 367,
+          "wins": 34,
+          "ties": 34,
+          "losses": 299,
+          "averageScoreDifferential": -5.618528610354224
+        },
+        "notSelected": {
+          "games": 13,
+          "wins": 2,
+          "ties": 4,
+          "losses": 7,
+          "averageScoreDifferential": -3.3076923076923075
+        },
+        "winShareDifference": -0.16872773003563196,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=live|down=2|field=goal-to-go|action=powerMove",
+        "policy": "random",
+        "team": "away",
+        "selections": 2,
+        "opportunities": 952,
+        "selectionRate": 0.0021008403361344537,
+        "selected": {
+          "games": 2,
+          "wins": 0,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": -5
+        },
+        "notSelected": {
+          "games": 101,
+          "wins": 16,
+          "ties": 11,
+          "losses": 74,
+          "averageScoreDifferential": -4.089108910891089
+        },
+        "winShareDifference": -0.21287128712871287,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=kickReturn|down=1|field=own|action=move",
+        "policy": "heuristic",
+        "team": "away",
+        "selections": 8016,
+        "opportunities": 1496627,
+        "selectionRate": 0.0053560439575124595,
+        "selected": {
+          "games": 917,
+          "wins": 717,
+          "ties": 116,
+          "losses": 84,
+          "averageScoreDifferential": 5.331515812431843
+        },
+        "notSelected": {
+          "games": 6,
+          "wins": 6,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 7.666666666666667
+        },
+        "winShareDifference": -0.15485278080697928,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=kickReturn|down=1|field=opponent|action=move",
+        "policy": "random",
+        "team": "home",
+        "selections": 2860,
+        "opportunities": 2063847,
+        "selectionRate": 0.0013857616383385009,
+        "selected": {
+          "games": 852,
+          "wins": 79,
+          "ties": 107,
+          "losses": 666,
+          "averageScoreDifferential": -5.285211267605634
+        },
+        "notSelected": {
+          "games": 14,
+          "wins": 0,
+          "ties": 0,
+          "losses": 14,
+          "averageScoreDifferential": -7.928571428571429
+        },
+        "winShareDifference": 0.15551643192488263,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=live|down=4|field=opponent|action=handoff",
+        "policy": "random",
+        "team": "away",
+        "selections": 111,
+        "opportunities": 2260,
+        "selectionRate": 0.04911504424778761,
+        "selected": {
+          "games": 89,
+          "wins": 2,
+          "ties": 9,
+          "losses": 78,
+          "averageScoreDifferential": -6.820224719101123
+        },
+        "notSelected": {
+          "games": 283,
+          "wins": 31,
+          "ties": 40,
+          "losses": 212,
+          "averageScoreDifferential": -5.18374558303887
+        },
+        "winShareDifference": -0.10717830626910708,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=3|field=own|action=handoff",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 10,
+        "opportunities": 391,
+        "selectionRate": 0.02557544757033248,
+        "selected": {
+          "games": 10,
+          "wins": 10,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 6.4
+        },
+        "notSelected": {
+          "games": 39,
+          "wins": 30,
+          "ties": 8,
+          "losses": 1,
+          "averageScoreDifferential": 5.282051282051282
+        },
+        "winShareDifference": 0.1282051282051282,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=3|field=own|action=kick",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 26,
+        "opportunities": 242,
+        "selectionRate": 0.10743801652892562,
+        "selected": {
+          "games": 26,
+          "wins": 19,
+          "ties": 6,
+          "losses": 1,
+          "averageScoreDifferential": 4.346153846153846
+        },
+        "notSelected": {
+          "games": 23,
+          "wins": 21,
+          "ties": 2,
+          "losses": 0,
+          "averageScoreDifferential": 6.826086956521739
+        },
+        "winShareDifference": -0.11036789297658867,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=formation|down=1|field=goal-to-go|action=chooseFormation",
+        "policy": "random",
+        "team": "home",
+        "selections": 408,
+        "opportunities": 4329,
+        "selectionRate": 0.09424809424809424,
+        "selected": {
+          "games": 141,
+          "wins": 27,
+          "ties": 14,
+          "losses": 100,
+          "averageScoreDifferential": -3.3617021276595747
+        },
+        "notSelected": {
+          "games": 60,
+          "wins": 24,
+          "ties": 11,
+          "losses": 25,
+          "averageScoreDifferential": -0.6
+        },
+        "winShareDifference": -0.25053191489361704,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=live|down=1|field=goal-to-go|action=move",
+        "policy": "random",
+        "team": "home",
+        "selections": 422,
+        "opportunities": 74352,
+        "selectionRate": 0.005675704755756402,
+        "selected": {
+          "games": 146,
+          "wins": 39,
+          "ties": 18,
+          "losses": 89,
+          "averageScoreDifferential": -2.5
+        },
+        "notSelected": {
+          "games": 86,
+          "wins": 13,
+          "ties": 13,
+          "losses": 60,
+          "averageScoreDifferential": -3.6744186046511627
+        },
+        "winShareDifference": 0.1020229372411596,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=live|down=1|field=goal-to-go|action=powerMove",
+        "policy": "random",
+        "team": "home",
+        "selections": 9,
+        "opportunities": 2296,
+        "selectionRate": 0.0039198606271777,
+        "selected": {
+          "games": 8,
+          "wins": 1,
+          "ties": 1,
+          "losses": 6,
+          "averageScoreDifferential": -2.75
+        },
+        "notSelected": {
+          "games": 224,
+          "wins": 51,
+          "ties": 30,
+          "losses": 143,
+          "averageScoreDifferential": -2.9419642857142856
+        },
+        "winShareDifference": -0.10714285714285715,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=4|field=own|action=move",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 2,
+        "opportunities": 29026,
+        "selectionRate": 0.00006890374147316199,
+        "selected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 14
+        },
+        "notSelected": {
+          "games": 194,
+          "wins": 158,
+          "ties": 21,
+          "losses": 15,
+          "averageScoreDifferential": 6.082474226804123
+        },
+        "winShareDifference": 0.13144329896907214,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=live|down=4|field=own|action=powerMove",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 133,
+        "opportunities": 1206,
+        "selectionRate": 0.11028192371475953,
+        "selected": {
+          "games": 102,
+          "wins": 77,
+          "ties": 12,
+          "losses": 13,
+          "averageScoreDifferential": 5.833333333333333
+        },
+        "notSelected": {
+          "games": 94,
+          "wins": 83,
+          "ties": 9,
+          "losses": 2,
+          "averageScoreDifferential": 6.5212765957446805
+        },
+        "winShareDifference": -0.11712557363370879,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=heuristic|phase=live|down=4|field=own|action=move",
+        "policy": "heuristic",
+        "team": "away",
+        "selections": 2,
+        "opportunities": 28691,
+        "selectionRate": 0.00006970827088634067,
+        "selected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 7
+        },
+        "notSelected": {
+          "games": 197,
+          "wins": 145,
+          "ties": 32,
+          "losses": 20,
+          "averageScoreDifferential": 4.8578680203045685
+        },
+        "winShareDifference": 0.18274111675126903,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
@@ -2401,76 +2206,388 @@
         "key": "team=home|policy=random|phase=betweenDowns|down=1|field=midfield|action=kick",
         "policy": "random",
         "team": "home",
-        "selections": 49,
-        "opportunities": 92,
-        "selectionRate": 0.532608695652174,
+        "selections": 21,
+        "opportunities": 43,
+        "selectionRate": 0.4883720930232558,
         "selected": {
-          "games": 49,
-          "wins": 5,
-          "ties": 0,
-          "losses": 44,
-          "averageScoreDifferential": -11.612244897959183
+          "games": 21,
+          "wins": 9,
+          "ties": 4,
+          "losses": 8,
+          "averageScoreDifferential": 0.5238095238095238
         },
         "notSelected": {
-          "games": 36,
-          "wins": 10,
-          "ties": 0,
-          "losses": 26,
-          "averageScoreDifferential": -8.194444444444445
+          "games": 22,
+          "wins": 7,
+          "ties": 2,
+          "losses": 13,
+          "averageScoreDifferential": -0.7727272727272727
         },
-        "winShareDifference": -0.17573696145124718,
+        "winShareDifference": 0.1601731601731602,
         "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "at-least-30-games-in-each-arm",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
         "key": "team=home|policy=random|phase=betweenDowns|down=1|field=midfield|action=startTwoPointTry",
         "policy": "random",
         "team": "home",
-        "selections": 43,
-        "opportunities": 92,
-        "selectionRate": 0.4673913043478261,
+        "selections": 22,
+        "opportunities": 43,
+        "selectionRate": 0.5116279069767442,
         "selected": {
-          "games": 40,
-          "wins": 12,
-          "ties": 0,
-          "losses": 28,
-          "averageScoreDifferential": -7.275
+          "games": 22,
+          "wins": 7,
+          "ties": 2,
+          "losses": 13,
+          "averageScoreDifferential": -0.7727272727272727
         },
         "notSelected": {
-          "games": 45,
-          "wins": 3,
-          "ties": 0,
-          "losses": 42,
-          "averageScoreDifferential": -12.733333333333333
+          "games": 21,
+          "wins": 9,
+          "ties": 4,
+          "losses": 8,
+          "averageScoreDifferential": 0.5238095238095238
         },
-        "winShareDifference": 0.23333333333333334,
+        "winShareDifference": -0.1601731601731602,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=live|down=1|field=goal-to-go|action=move",
+        "policy": "random",
+        "team": "away",
+        "selections": 394,
+        "opportunities": 62487,
+        "selectionRate": 0.0063053115047929965,
+        "selected": {
+          "games": 136,
+          "wins": 40,
+          "ties": 20,
+          "losses": 76,
+          "averageScoreDifferential": -2.198529411764706
+        },
+        "notSelected": {
+          "games": 69,
+          "wins": 14,
+          "ties": 8,
+          "losses": 47,
+          "averageScoreDifferential": -4.144927536231884
+        },
+        "winShareDifference": 0.10677749360613814,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=opponent|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 4,
+        "opportunities": 10,
+        "selectionRate": 0.4,
+        "selected": {
+          "games": 4,
+          "wins": 2,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": -2.75
+        },
+        "notSelected": {
+          "games": 6,
+          "wins": 5,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 1.8333333333333333
+        },
+        "winShareDifference": -0.33333333333333337,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=opponent|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 6,
+        "opportunities": 10,
+        "selectionRate": 0.6,
+        "selected": {
+          "games": 6,
+          "wins": 5,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 1.8333333333333333
+        },
+        "notSelected": {
+          "games": 4,
+          "wins": 2,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": -2.75
+        },
+        "winShareDifference": 0.33333333333333337,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=own|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 16,
+        "opportunities": 42,
+        "selectionRate": 0.38095238095238093,
+        "selected": {
+          "games": 15,
+          "wins": 7,
+          "ties": 1,
+          "losses": 7,
+          "averageScoreDifferential": 0.06666666666666667
+        },
+        "notSelected": {
+          "games": 26,
+          "wins": 13,
+          "ties": 6,
+          "losses": 7,
+          "averageScoreDifferential": 1.6538461538461537
+        },
+        "winShareDifference": -0.11538461538461542,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=own|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 26,
+        "opportunities": 42,
+        "selectionRate": 0.6190476190476191,
+        "selected": {
+          "games": 26,
+          "wins": 13,
+          "ties": 6,
+          "losses": 7,
+          "averageScoreDifferential": 1.6538461538461537
+        },
+        "notSelected": {
+          "games": 15,
+          "wins": 7,
+          "ties": 1,
+          "losses": 7,
+          "averageScoreDifferential": 0.06666666666666667
+        },
+        "winShareDifference": 0.11538461538461542,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=formation|down=1|field=goal-to-go|action=chooseFormation",
+        "policy": "random",
+        "team": "away",
+        "selections": 318,
+        "opportunities": 3573,
+        "selectionRate": 0.08900083963056256,
+        "selected": {
+          "games": 116,
+          "wins": 21,
+          "ties": 13,
+          "losses": 82,
+          "averageScoreDifferential": -3.7844827586206895
+        },
+        "notSelected": {
+          "games": 62,
+          "wins": 29,
+          "ties": 11,
+          "losses": 22,
+          "averageScoreDifferential": -0.43548387096774194
+        },
+        "winShareDifference": -0.3193826473859844,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=live|down=2|field=goal-to-go|action=move",
+        "policy": "random",
+        "team": "home",
+        "selections": 199,
+        "opportunities": 33939,
+        "selectionRate": 0.005863460915171337,
+        "selected": {
+          "games": 71,
+          "wins": 17,
+          "ties": 7,
+          "losses": 47,
+          "averageScoreDifferential": -3.3380281690140845
+        },
+        "notSelected": {
+          "games": 58,
+          "wins": 4,
+          "ties": 9,
+          "losses": 45,
+          "averageScoreDifferential": -4.051724137931035
+        },
+        "winShareDifference": 0.14218067022826616,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "at-least-30-games-in-each-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=live|down=3|field=goal-to-go|action=powerMove",
+        "policy": "random",
+        "team": "home",
+        "selections": 1,
+        "opportunities": 864,
+        "selectionRate": 0.0011574074074074073,
+        "selected": {
+          "games": 1,
+          "wins": 1,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 10
+        },
+        "notSelected": {
+          "games": 95,
+          "wins": 9,
+          "ties": 12,
+          "losses": 74,
+          "averageScoreDifferential": -4.431578947368421
+        },
+        "winShareDifference": 0.8421052631578947,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 4,
+        "opportunities": 5,
+        "selectionRate": 0.8,
+        "selected": {
+          "games": 4,
+          "wins": 3,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 3
+        },
+        "notSelected": {
+          "games": 1,
+          "wins": 0,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": -7
+        },
+        "winShareDifference": 0.75,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 1,
+        "opportunities": 5,
+        "selectionRate": 0.2,
+        "selected": {
+          "games": 1,
+          "wins": 0,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": -7
+        },
+        "notSelected": {
+          "games": 4,
+          "wins": 3,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 3
+        },
+        "winShareDifference": -0.75,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=live|down=3|field=goal-to-go|action=powerMove",
+        "policy": "random",
+        "team": "away",
+        "selections": 2,
+        "opportunities": 693,
+        "selectionRate": 0.002886002886002886,
+        "selected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 9.5
+        },
+        "notSelected": {
+          "games": 77,
+          "wins": 8,
+          "ties": 9,
+          "losses": 60,
+          "averageScoreDifferential": -5.116883116883117
+        },
+        "winShareDifference": 0.8376623376623377,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=live|down=4|field=goal-to-go|action=handoff",
+        "policy": "random",
+        "team": "away",
+        "selections": 9,
+        "opportunities": 279,
+        "selectionRate": 0.03225806451612903,
+        "selected": {
+          "games": 7,
+          "wins": 0,
+          "ties": 1,
+          "losses": 6,
+          "averageScoreDifferential": -6.714285714285714
+        },
+        "notSelected": {
+          "games": 52,
+          "wins": 6,
+          "ties": 6,
+          "losses": 40,
+          "averageScoreDifferential": -5.038461538461538
+        },
+        "winShareDifference": -0.10164835164835165,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
         "key": "team=home|policy=random|phase=betweenDowns|down=1|field=opponent|action=kick",
         "policy": "random",
         "team": "home",
-        "selections": 9,
-        "opportunities": 26,
-        "selectionRate": 0.34615384615384615,
+        "selections": 7,
+        "opportunities": 16,
+        "selectionRate": 0.4375,
         "selected": {
-          "games": 9,
-          "wins": 3,
+          "games": 7,
+          "wins": 4,
           "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -7.222222222222222
+          "losses": 3,
+          "averageScoreDifferential": -0.7142857142857143
         },
         "notSelected": {
-          "games": 17,
-          "wins": 2,
-          "ties": 1,
-          "losses": 14,
-          "averageScoreDifferential": -11.764705882352942
+          "games": 9,
+          "wins": 7,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": 1.4444444444444444
         },
-        "winShareDifference": 0.18627450980392155,
+        "winShareDifference": -0.2063492063492064,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
@@ -2479,76 +2596,440 @@
         "key": "team=home|policy=random|phase=betweenDowns|down=1|field=opponent|action=startTwoPointTry",
         "policy": "random",
         "team": "home",
-        "selections": 17,
-        "opportunities": 26,
-        "selectionRate": 0.6538461538461539,
+        "selections": 9,
+        "opportunities": 16,
+        "selectionRate": 0.5625,
         "selected": {
-          "games": 17,
+          "games": 9,
+          "wins": 7,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": 1.4444444444444444
+        },
+        "notSelected": {
+          "games": 7,
+          "wins": 4,
+          "ties": 0,
+          "losses": 3,
+          "averageScoreDifferential": -0.7142857142857143
+        },
+        "winShareDifference": 0.2063492063492064,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=own|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 4,
+        "opportunities": 7,
+        "selectionRate": 0.5714285714285714,
+        "selected": {
+          "games": 4,
           "wins": 2,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": 1.5
+        },
+        "notSelected": {
+          "games": 3,
+          "wins": 3,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 7.666666666666667
+        },
+        "winShareDifference": -0.5,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=own|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 3,
+        "opportunities": 7,
+        "selectionRate": 0.42857142857142855,
+        "selected": {
+          "games": 3,
+          "wins": 3,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 7.666666666666667
+        },
+        "notSelected": {
+          "games": 4,
+          "wins": 2,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": 1.5
+        },
+        "winShareDifference": 0.5,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 2,
+        "opportunities": 4,
+        "selectionRate": 0.5,
+        "selected": {
+          "games": 2,
+          "wins": 0,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": -4.5
+        },
+        "notSelected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 3
+        },
+        "winShareDifference": -1,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 2,
+        "opportunities": 4,
+        "selectionRate": 0.5,
+        "selected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 3
+        },
+        "notSelected": {
+          "games": 2,
+          "wins": 0,
+          "ties": 0,
+          "losses": 2,
+          "averageScoreDifferential": -4.5
+        },
+        "winShareDifference": 1,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=kick",
+        "policy": "random",
+        "team": "home",
+        "selections": 3,
+        "opportunities": 5,
+        "selectionRate": 0.6,
+        "selected": {
+          "games": 3,
+          "wins": 2,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 0.3333333333333333
+        },
+        "notSelected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 3
+        },
+        "winShareDifference": -0.33333333333333337,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=goal-to-go|action=startTwoPointTry",
+        "policy": "random",
+        "team": "home",
+        "selections": 2,
+        "opportunities": 5,
+        "selectionRate": 0.4,
+        "selected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 3
+        },
+        "notSelected": {
+          "games": 3,
+          "wins": 2,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 0.3333333333333333
+        },
+        "winShareDifference": 0.33333333333333337,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 3,
+        "opportunities": 6,
+        "selectionRate": 0.5,
+        "selected": {
+          "games": 3,
+          "wins": 1,
           "ties": 1,
-          "losses": 14,
-          "averageScoreDifferential": -11.764705882352942
+          "losses": 1,
+          "averageScoreDifferential": 3.3333333333333335
+        },
+        "notSelected": {
+          "games": 3,
+          "wins": 3,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 6
+        },
+        "winShareDifference": -0.5,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=goal-to-go|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 3,
+        "opportunities": 6,
+        "selectionRate": 0.5,
+        "selected": {
+          "games": 3,
+          "wins": 3,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 6
+        },
+        "notSelected": {
+          "games": 3,
+          "wins": 1,
+          "ties": 1,
+          "losses": 1,
+          "averageScoreDifferential": 3.3333333333333335
+        },
+        "winShareDifference": 0.5,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=own|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 5,
+        "opportunities": 8,
+        "selectionRate": 0.625,
+        "selected": {
+          "games": 5,
+          "wins": 2,
+          "ties": 0,
+          "losses": 3,
+          "averageScoreDifferential": -0.6
+        },
+        "notSelected": {
+          "games": 3,
+          "wins": 2,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": -2.6666666666666665
+        },
+        "winShareDifference": -0.2666666666666666,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=own|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 3,
+        "opportunities": 8,
+        "selectionRate": 0.375,
+        "selected": {
+          "games": 3,
+          "wins": 2,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": -2.6666666666666665
+        },
+        "notSelected": {
+          "games": 5,
+          "wins": 2,
+          "ties": 0,
+          "losses": 3,
+          "averageScoreDifferential": -0.6
+        },
+        "winShareDifference": 0.2666666666666666,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=kick",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 9,
+        "opportunities": 10,
+        "selectionRate": 0.9,
+        "selected": {
+          "games": 9,
+          "wins": 8,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 12.333333333333334
+        },
+        "notSelected": {
+          "games": 1,
+          "wins": 1,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 12
+        },
+        "winShareDifference": -0.11111111111111116,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=home|policy=heuristic|phase=betweenDowns|down=2|field=midfield|action=startTwoPointTry",
+        "policy": "heuristic",
+        "team": "home",
+        "selections": 1,
+        "opportunities": 10,
+        "selectionRate": 0.1,
+        "selected": {
+          "games": 1,
+          "wins": 1,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 12
         },
         "notSelected": {
           "games": 9,
-          "wins": 3,
+          "wins": 8,
           "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -7.222222222222222
+          "losses": 1,
+          "averageScoreDifferential": 12.333333333333334
         },
-        "winShareDifference": -0.18627450980392155,
+        "winShareDifference": 0.11111111111111116,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=opponent|action=kick",
+        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=kick",
         "policy": "random",
         "team": "home",
-        "selections": 10,
-        "opportunities": 17,
-        "selectionRate": 0.5882352941176471,
+        "selections": 3,
+        "opportunities": 4,
+        "selectionRate": 0.75,
         "selected": {
-          "games": 10,
-          "wins": 5,
+          "games": 3,
+          "wins": 2,
           "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -7.1
+          "losses": 1,
+          "averageScoreDifferential": 1.6666666666666667
         },
         "notSelected": {
-          "games": 7,
+          "games": 1,
           "wins": 1,
           "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -8.714285714285714
+          "losses": 0,
+          "averageScoreDifferential": 3
         },
-        "winShareDifference": 0.35714285714285715,
+        "winShareDifference": -0.33333333333333337,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
-        "key": "team=home|policy=random|phase=betweenDowns|down=2|field=opponent|action=startTwoPointTry",
+        "key": "team=home|policy=random|phase=betweenDowns|down=1|field=goal-to-go|action=startTwoPointTry",
         "policy": "random",
         "team": "home",
-        "selections": 7,
-        "opportunities": 17,
-        "selectionRate": 0.4117647058823529,
+        "selections": 1,
+        "opportunities": 4,
+        "selectionRate": 0.25,
         "selected": {
-          "games": 7,
+          "games": 1,
           "wins": 1,
           "ties": 0,
-          "losses": 6,
-          "averageScoreDifferential": -8.714285714285714
+          "losses": 0,
+          "averageScoreDifferential": 3
         },
         "notSelected": {
-          "games": 10,
-          "wins": 5,
+          "games": 3,
+          "wins": 2,
           "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -7.1
+          "losses": 1,
+          "averageScoreDifferential": 1.6666666666666667
         },
-        "winShareDifference": -0.35714285714285715,
+        "winShareDifference": 0.33333333333333337,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=opponent|action=kick",
+        "policy": "random",
+        "team": "away",
+        "selections": 5,
+        "opportunities": 6,
+        "selectionRate": 0.8333333333333334,
+        "selected": {
+          "games": 5,
+          "wins": 2,
+          "ties": 1,
+          "losses": 2,
+          "averageScoreDifferential": 0.2
+        },
+        "notSelected": {
+          "games": 1,
+          "wins": 1,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 3
+        },
+        "winShareDifference": -0.5,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=2|field=opponent|action=startTwoPointTry",
+        "policy": "random",
+        "team": "away",
+        "selections": 1,
+        "opportunities": 6,
+        "selectionRate": 0.16666666666666666,
+        "selected": {
+          "games": 1,
+          "wins": 1,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 3
+        },
+        "notSelected": {
+          "games": 5,
+          "wins": 2,
+          "ties": 1,
+          "losses": 2,
+          "averageScoreDifferential": 0.2
+        },
+        "winShareDifference": 0.5,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
@@ -2557,24 +3038,24 @@
         "key": "team=home|policy=random|phase=betweenDowns|down=3|field=opponent|action=kick",
         "policy": "random",
         "team": "home",
-        "selections": 9,
-        "opportunities": 14,
-        "selectionRate": 0.6428571428571429,
+        "selections": 6,
+        "opportunities": 8,
+        "selectionRate": 0.75,
         "selected": {
-          "games": 9,
-          "wins": 2,
+          "games": 6,
+          "wins": 5,
           "ties": 0,
-          "losses": 7,
-          "averageScoreDifferential": -5.666666666666667
+          "losses": 1,
+          "averageScoreDifferential": 3.5
         },
         "notSelected": {
-          "games": 5,
-          "wins": 0,
+          "games": 2,
+          "wins": 2,
           "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -10.4
+          "losses": 0,
+          "averageScoreDifferential": 5
         },
-        "winShareDifference": 0.2222222222222222,
+        "winShareDifference": -0.16666666666666663,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
@@ -2583,180 +3064,76 @@
         "key": "team=home|policy=random|phase=betweenDowns|down=3|field=opponent|action=startTwoPointTry",
         "policy": "random",
         "team": "home",
+        "selections": 2,
+        "opportunities": 8,
+        "selectionRate": 0.25,
+        "selected": {
+          "games": 2,
+          "wins": 2,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 5
+        },
+        "notSelected": {
+          "games": 6,
+          "wins": 5,
+          "ties": 0,
+          "losses": 1,
+          "averageScoreDifferential": 3.5
+        },
+        "winShareDifference": 0.16666666666666663,
+        "screen": "absolute-win-share-difference-at-least-0.10",
+        "dataDensity": "sparse-under-30-games-in-an-arm",
+        "exploratory": true
+      },
+      {
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=opponent|action=kick",
+        "policy": "random",
+        "team": "away",
         "selections": 5,
-        "opportunities": 14,
-        "selectionRate": 0.35714285714285715,
+        "opportunities": 6,
+        "selectionRate": 0.8333333333333334,
         "selected": {
           "games": 5,
-          "wins": 0,
+          "wins": 4,
           "ties": 0,
-          "losses": 5,
-          "averageScoreDifferential": -10.4
+          "losses": 1,
+          "averageScoreDifferential": 0.4
         },
         "notSelected": {
-          "games": 9,
-          "wins": 2,
-          "ties": 0,
-          "losses": 7,
-          "averageScoreDifferential": -5.666666666666667
-        },
-        "winShareDifference": -0.2222222222222222,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=own|action=kick",
-        "policy": "random",
-        "team": "home",
-        "selections": 4,
-        "opportunities": 11,
-        "selectionRate": 0.36363636363636365,
-        "selected": {
-          "games": 4,
-          "wins": 2,
-          "ties": 0,
-          "losses": 2,
-          "averageScoreDifferential": -4
-        },
-        "notSelected": {
-          "games": 7,
-          "wins": 2,
-          "ties": 1,
-          "losses": 4,
-          "averageScoreDifferential": -6.714285714285714
-        },
-        "winShareDifference": 0.14285714285714285,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=random|phase=betweenDowns|down=3|field=own|action=startTwoPointTry",
-        "policy": "random",
-        "team": "home",
-        "selections": 7,
-        "opportunities": 11,
-        "selectionRate": 0.6363636363636364,
-        "selected": {
-          "games": 7,
-          "wins": 2,
-          "ties": 1,
-          "losses": 4,
-          "averageScoreDifferential": -6.714285714285714
-        },
-        "notSelected": {
-          "games": 4,
-          "wins": 2,
-          "ties": 0,
-          "losses": 2,
-          "averageScoreDifferential": -4
-        },
-        "winShareDifference": -0.14285714285714285,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=random|phase=live|down=2|field=midfield|action=pass",
-        "policy": "random",
-        "team": "home",
-        "selections": 7046,
-        "opportunities": 134750,
-        "selectionRate": 0.05228942486085343,
-        "selected": {
-          "games": 993,
-          "wins": 42,
-          "ties": 24,
-          "losses": 927,
-          "averageScoreDifferential": -14.440080563947634
-        },
-        "notSelected": {
-          "games": 4,
+          "games": 1,
           "wins": 1,
           "ties": 0,
-          "losses": 3,
-          "averageScoreDifferential": -5.5
+          "losses": 0,
+          "averageScoreDifferential": 9
         },
-        "winShareDifference": -0.19561933534743203,
+        "winShareDifference": -0.19999999999999996,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true
       },
       {
-        "key": "team=home|policy=random|phase=live|down=3|field=midfield|action=handoff",
+        "key": "team=away|policy=random|phase=betweenDowns|down=3|field=opponent|action=startTwoPointTry",
         "policy": "random",
-        "team": "home",
-        "selections": 4884,
-        "opportunities": 52587,
-        "selectionRate": 0.09287466484112043,
+        "team": "away",
+        "selections": 1,
+        "opportunities": 6,
+        "selectionRate": 0.16666666666666666,
         "selected": {
-          "games": 957,
-          "wins": 37,
-          "ties": 21,
-          "losses": 899,
-          "averageScoreDifferential": -14.717868338557993
+          "games": 1,
+          "wins": 1,
+          "ties": 0,
+          "losses": 0,
+          "averageScoreDifferential": 9
         },
         "notSelected": {
-          "games": 38,
-          "wins": 5,
-          "ties": 3,
-          "losses": 30,
-          "averageScoreDifferential": -7.368421052631579
-        },
-        "winShareDifference": -0.12141835780674257,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "at-least-30-games-in-each-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=random|phase=live|down=3|field=midfield|action=move",
-        "policy": "random",
-        "team": "home",
-        "selections": 11592,
-        "opportunities": 1734871,
-        "selectionRate": 0.006681764811331793,
-        "selected": {
-          "games": 976,
-          "wins": 41,
-          "ties": 20,
-          "losses": 915,
-          "averageScoreDifferential": -14.614754098360656
-        },
-        "notSelected": {
-          "games": 20,
-          "wins": 2,
-          "ties": 4,
-          "losses": 14,
-          "averageScoreDifferential": -4.55
-        },
-        "winShareDifference": -0.14774590163934426,
-        "screen": "absolute-win-share-difference-at-least-0.10",
-        "dataDensity": "sparse-under-30-games-in-an-arm",
-        "exploratory": true
-      },
-      {
-        "key": "team=home|policy=random|phase=live|down=3|field=own|action=pass",
-        "policy": "random",
-        "team": "home",
-        "selections": 6781,
-        "opportunities": 129278,
-        "selectionRate": 0.05245285354043225,
-        "selected": {
-          "games": 998,
-          "wins": 43,
-          "ties": 23,
-          "losses": 932,
-          "averageScoreDifferential": -14.380761523046091
-        },
-        "notSelected": {
-          "games": 2,
-          "wins": 0,
-          "ties": 1,
+          "games": 5,
+          "wins": 4,
+          "ties": 0,
           "losses": 1,
-          "averageScoreDifferential": -9
+          "averageScoreDifferential": 0.4
         },
-        "winShareDifference": -0.19539078156312625,
+        "winShareDifference": 0.19999999999999996,
         "screen": "absolute-win-share-difference-at-least-0.10",
         "dataDensity": "sparse-under-30-games-in-an-arm",
         "exploratory": true

@@ -6,7 +6,7 @@ Preserve Chessball's approachable hybrid of chess and American football while en
 
 ## Status
 
-in-progress
+done
 
 ## Subgoals
 
@@ -24,12 +24,15 @@ in-progress
 - [Physical-board viability](physical-board-viability/main.md)
 - [UI quality](ui-quality/main.md)
 
-## Open Questions
+## Remaining Nonblocking Recommendations
 
-- Which current mechanics, if any, fail the evidence-led audit?
+- Investigate goal-line and shotgun formation geometry with adaptive counterplay before any tuning.
+- Implement the prioritized UI/accessibility recommendations in a separate UI change.
+- Prototype reference cards and markers before physical production.
 
 ## Activity Log
 
 - 2026-07-11: Confirmed a hybrid, moderate-luck direction and an evidence-led audit before rule changes.
 - 2026-07-11: Added physical-board viability as a design constraint and UI quality as an analysis-only branch.
 - 2026-07-12: Approved implementation plan entered subagent-driven execution.
+- 2026-07-12: Completed the post-fix audit: 3,000 core matched pairs plus 2,900 formation pairs all completed; focused/full tests and build were refreshed. All five audit branches are done, with optional implementation work deferred.

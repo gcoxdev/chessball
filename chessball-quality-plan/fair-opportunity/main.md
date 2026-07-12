@@ -10,7 +10,7 @@ Home and away should have equivalent starting opportunities after accounting for
 
 ## Status
 
-in-progress
+done
 
 ## Planning Depth
 
@@ -24,11 +24,12 @@ None.
 
 - [Root goal](../main.md)
 
-## Open Questions
+## Remaining Nonblocking Recommendations
 
-- What sample size is needed for stable mirrored-match confidence?
+- A future crossed design could isolate kickoff choice from direction; current evidence establishes fair combined mirrored opportunity.
 
 ## Activity Log
 
 - 2026-07-11: Confirmed symmetry across teams and starting conditions as the fairness standard.
 - 2026-07-12: Matched-policy and mirrored-condition evaluation started.
+- 2026-07-12: Fresh post-fix HH, RR, and HR audits completed 1,000/1,000 pairs each with zero exclusions. No home-win CI excluded 50%; HH's -0.2555 score effect excluded zero but remained below the required 1-point practical threshold, so no actionable asymmetry was found.

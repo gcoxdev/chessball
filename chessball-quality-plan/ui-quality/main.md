@@ -10,7 +10,7 @@ Analyze whether the current interface makes the board, legal choices, game state
 
 ## Status
 
-confirmed
+done
 
 ## Planning Depth
 
@@ -24,10 +24,12 @@ None.
 
 - [Root goal](../main.md)
 
-## Open Questions
+## Remaining Nonblocking Recommendations
 
-- Which usability findings materially affect learning, strategy, or accessibility?
+- Implement the documented P1 accessible-grid and modal-focus fixes in a separate UI-scoped change.
+- Follow with live-announcement, focus-visible, touch-target, and responsive-board improvements.
 
 ## Activity Log
 
 - 2026-07-11: Confirmed an analysis-only UI review.
+- 2026-07-12: Completed static and rendered desktop/mobile analysis. Findings and prioritized remedies are documented; implementation was intentionally deferred to preserve the audit's read-only UI scope.

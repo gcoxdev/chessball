@@ -1,27 +1,29 @@
 # Current Project Alignment
 
-## Aligned Areas
+## Resolved
 
-- The engine applies the same piece roles and action rules to home and away.
-- Seeded simulation already reports home/away results and several starting-condition splits.
-- Formation selection, positioning, passing, tackling, kicking, and risk rolls create meaningful decision points.
-- The test suite covers the major rule transitions and UI interactions.
+- Independent home/away policies, forced mirrored openings, contextual telemetry, and deterministic paired-bootstrap intervals now support matched audits.
+- Fresh post-fix HH, RR, and HR audits completed 3,000/3,000 pairs with no exclusions; no result met the actionable fair-opportunity threshold.
+- Fresh heuristic/random evidence supports a durable tested-policy skill gap: 85.25% tie-adjusted share [83.55%, 86.90%].
+- Drive ownership now credits the prior offense for punts and possession transfers, suppresses kickoff pseudo-drives, and is covered at quarter/final boundaries.
+- The nine-cell formation screen and two 1,000-pair follow-ups were regenerated after the ownership fix; formation/tactic results remain documented leads rather than rule-change authority.
+- Football flows, tabletop execution, and desktop/mobile UI/accessibility were audited. UI work remained analysis-only as scoped.
+- The simulator CLI validates audit inputs, discloses incomplete games, and returns failure status for audit incompleteness.
 
-## Missing Areas
+## Remaining Nonblocking Recommendations
 
-- Simulations do not directly compare strong and weak policies against each other, so they cannot yet measure a player skill gap.
-- Existing balance buckets report correlations but do not run paired mirrored games that isolate team, direction, and kickoff advantages.
-- Outcome reporting lacks drive-level rates needed to assess tactical variety and football plausibility.
-- There is no physical-play checklist or tabletop bookkeeping assessment.
-- The UI has automated interaction coverage but no consolidated accessibility and decision-clarity audit.
+- Test goal-line defense and shotgun offense against adaptive counter-formations in focused legal states before any tuning.
+- Clarify player-facing formation shifts, conversion-line placement, kick-edge behavior, and physical path/distance adjudication.
+- Prototype tabletop formation mats, reference cards, down/drive trackers, and an explicit drive-owner marker.
+- Implement the documented P1 accessible board keyboard model and complete modal focus pattern, then address responsive/mobile and announcement findings.
+- Run a separately scoped dependency review; the historical install summary reported vulnerabilities, but this audit did not attribute or update packages.
 
-## Conflicts
+## Intentionally Deferred
 
-- A simulation may stall yet the command exits successfully, weakening its use as an automated audit.
-- Current policy assignment gives heuristic play to one half of seeds and random play to the other, rather than comparing policies under matched conditions.
+- No formation or tactic tuning: screens are observational or fixed-plan evidence and did not demonstrate a legal state with absent counterplay.
+- No UI implementation: the audit deliverable was findings and recommendations only.
+- No comprehensive rules redesign, exact NFL calibration, or physical component production.
 
-## Unclear Areas
+## Evidence Boundary
 
-- The existing heuristic policy may represent plausible play, but its strength relative to random play is not currently measured head-to-head.
-- Small-sample score and win-rate warnings may reflect noise rather than a rules imbalance.
-- Some engine state may be easy for software to track but burdensome at a physical table.
+Current quantitative claims come only from post-drive-ownership-fix artifacts generated with maxActions 5,000 and the documented seeds. Historical pre-fix values are not used as current evidence. Mirroring reverses home/away, receiver, direction, policy, and formation-plan identity together, so it establishes combined fair opportunity rather than an isolated kickoff causal effect.

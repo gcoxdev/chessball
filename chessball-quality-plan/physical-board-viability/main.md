@@ -10,7 +10,7 @@ Core play should remain practical with a physical board, pieces, dice, markers, 
 
 ## Status
 
-confirmed
+done
 
 ## Planning Depth
 
@@ -24,10 +24,11 @@ None.
 
 - [Root goal](../main.md)
 
-## Open Questions
+## Remaining Nonblocking Recommendations
 
-- Which current states or calculations would be hardest for tabletop players to track reliably?
+- Prototype formation mats, path/reference cards, down/drive trackers, and a drive-owner marker before production.
 
 ## Activity Log
 
 - 2026-07-11: Confirmed physical play as an audit constraint.
+- 2026-07-12: Completed the physical-turn walkthrough. Core play needs no computer or hidden information, but repeated formations, path adjudication, and drive/quarter bookkeeping are high-friction and documented with component recommendations.

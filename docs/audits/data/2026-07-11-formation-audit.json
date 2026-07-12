@@ -45,17 +45,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4325,
-          "high": 0.5425,
-          "mean": 0.4875,
+          "low": 0.4725,
+          "high": 0.54,
+          "mean": 0.505,
           "seed": 71,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -1.53,
-          "high": 1.04,
-          "mean": -0.24,
+          "low": -0.485,
+          "high": 0.435,
+          "mean": -0.015,
           "seed": 71,
           "samples": 10000,
           "confidence": 0.95
@@ -63,32 +63,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 91,
-        "comparisonWins": 100,
-        "ties": 9,
+        "wins": 70,
+        "comparisonWins": 84,
+        "ties": 46,
         "winShareInterval": {
-          "low": 0.4,
-          "high": 0.555,
-          "mean": 0.4775,
+          "low": 0.385,
+          "high": 0.545,
+          "mean": 0.465,
           "seed": 71,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -2.09,
-          "high": 2.26,
-          "mean": 0.05,
+          "low": -1.765,
+          "high": 0.455,
+          "mean": -0.655,
           "seed": 71,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "inconclusive",
-          "effect": -0.02250000000000002,
+          "effect": -0.034999999999999976,
           "interval": {
-            "low": 0.4,
-            "high": 0.555,
-            "mean": 0.4775,
+            "low": 0.385,
+            "high": 0.545,
+            "mean": 0.465,
             "seed": 71,
             "samples": 10000,
             "confidence": 0.95
@@ -97,19 +97,18 @@
       },
       "completion": {
         "games": 200,
-        "actions": 241902,
-        "averageActions": 1209.51
+        "actions": 72042,
+        "averageActions": 360.21
       },
       "driveOutcomes": {
-        "total": 2794,
-        "fieldGoalGood": 727,
-        "fieldGoalMissed": 750,
-        "touchdown": 668,
-        "twoPointFailed": 59,
-        "extraPointMissed": 74,
-        "extraPointGood": 499,
-        "twoPointGood": 15,
-        "interception": 2
+        "total": 752,
+        "fieldGoalGood": 210,
+        "touchdown": 182,
+        "extraPointGood": 137,
+        "fieldGoalMissed": 185,
+        "twoPointFailed": 20,
+        "extraPointMissed": 15,
+        "twoPointGood": 3
       }
     },
     {
@@ -150,17 +149,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.435,
-          "high": 0.5475,
-          "mean": 0.4925,
+          "low": 0.445,
+          "high": 0.5025,
+          "mean": 0.475,
           "seed": 72,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -2.14,
-          "high": 0.705,
-          "mean": -0.705,
+          "low": -0.95,
+          "high": 0.045,
+          "mean": -0.45,
           "seed": 72,
           "samples": 10000,
           "confidence": 0.95
@@ -168,32 +167,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 99,
-        "comparisonWins": 94,
-        "ties": 7,
+        "wins": 95,
+        "comparisonWins": 69,
+        "ties": 36,
         "winShareInterval": {
-          "low": 0.435,
-          "high": 0.5925,
-          "mean": 0.5125,
+          "low": 0.48,
+          "high": 0.6475,
+          "mean": 0.565,
           "seed": 72,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -1.46,
-          "high": 2.495,
-          "mean": 0.485,
+          "low": -0.435,
+          "high": 1.85,
+          "mean": 0.7,
           "seed": 72,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "inconclusive",
-          "effect": 0.012499999999999956,
+          "effect": 0.06499999999999995,
           "interval": {
-            "low": 0.435,
-            "high": 0.5925,
-            "mean": 0.5125,
+            "low": 0.48,
+            "high": 0.6475,
+            "mean": 0.565,
             "seed": 72,
             "samples": 10000,
             "confidence": 0.95
@@ -202,19 +201,18 @@
       },
       "completion": {
         "games": 200,
-        "actions": 247485,
-        "averageActions": 1237.425
+        "actions": 73421,
+        "averageActions": 367.105
       },
       "driveOutcomes": {
-        "total": 2877,
-        "fieldGoalGood": 740,
-        "fieldGoalMissed": 763,
-        "touchdown": 701,
-        "extraPointGood": 493,
-        "extraPointMissed": 101,
-        "twoPointFailed": 63,
-        "twoPointGood": 15,
-        "interception": 1
+        "total": 777,
+        "fieldGoalGood": 204,
+        "fieldGoalMissed": 202,
+        "touchdown": 188,
+        "extraPointGood": 130,
+        "extraPointMissed": 33,
+        "twoPointFailed": 19,
+        "twoPointGood": 1
       }
     },
     {
@@ -255,17 +253,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4525,
-          "high": 0.5375,
-          "mean": 0.495,
+          "low": 0.4875,
+          "high": 0.5475,
+          "mean": 0.5175,
           "seed": 73,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -1.145,
-          "high": 1.26,
-          "mean": 0.06,
+          "low": -0.21,
+          "high": 0.535,
+          "mean": 0.16,
           "seed": 73,
           "samples": 10000,
           "confidence": 0.95
@@ -273,32 +271,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 159,
-        "comparisonWins": 33,
-        "ties": 8,
+        "wins": 110,
+        "comparisonWins": 41,
+        "ties": 49,
         "winShareInterval": {
-          "low": 0.7525,
-          "high": 0.8725,
-          "mean": 0.815,
+          "low": 0.6,
+          "high": 0.745,
+          "mean": 0.6725,
           "seed": 73,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 7.355,
-          "high": 10.895,
-          "mean": 9.14,
+          "low": 1.81,
+          "high": 4.08,
+          "mean": 2.92,
           "seed": 73,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "supported",
-          "effect": 0.31499999999999995,
+          "effect": 0.1725,
           "interval": {
-            "low": 0.7525,
-            "high": 0.8725,
-            "mean": 0.815,
+            "low": 0.6,
+            "high": 0.745,
+            "mean": 0.6725,
             "seed": 73,
             "samples": 10000,
             "confidence": 0.95
@@ -307,20 +305,19 @@
       },
       "completion": {
         "games": 200,
-        "actions": 245854,
-        "averageActions": 1229.27
+        "actions": 69775,
+        "averageActions": 348.875
       },
       "driveOutcomes": {
-        "total": 2909,
-        "fieldGoalGood": 746,
-        "fieldGoalMissed": 813,
-        "touchdown": 662,
-        "extraPointGood": 462,
-        "twoPointFailed": 55,
-        "interception": 56,
-        "extraPointMissed": 102,
-        "safety": 2,
-        "twoPointGood": 11
+        "total": 719,
+        "fieldGoalGood": 169,
+        "fieldGoalMissed": 206,
+        "touchdown": 174,
+        "extraPointGood": 123,
+        "twoPointFailed": 13,
+        "extraPointMissed": 24,
+        "interception": 8,
+        "twoPointGood": 2
       }
     },
     {
@@ -361,17 +358,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4475,
-          "high": 0.55,
-          "mean": 0.4975,
+          "low": 0.485,
+          "high": 0.5575,
+          "mean": 0.52,
           "seed": 74,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -1.93,
+          "low": -0.595,
           "high": 0.55,
-          "mean": -0.695,
+          "mean": -0.02,
           "seed": 74,
           "samples": 10000,
           "confidence": 0.95
@@ -379,32 +376,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 116,
-        "comparisonWins": 73,
-        "ties": 11,
+        "wins": 102,
+        "comparisonWins": 76,
+        "ties": 22,
         "winShareInterval": {
-          "low": 0.53,
-          "high": 0.6825,
-          "mean": 0.6075,
+          "low": 0.48,
+          "high": 0.6475,
+          "mean": 0.565,
           "seed": 74,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 1.55,
-          "high": 6.145,
-          "mean": 3.845,
+          "low": -0.58,
+          "high": 2.47,
+          "mean": 0.98,
           "seed": 74,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
-          "state": "supported",
-          "effect": 0.10750000000000004,
+          "state": "inconclusive",
+          "effect": 0.06499999999999995,
           "interval": {
-            "low": 0.53,
-            "high": 0.6825,
-            "mean": 0.6075,
+            "low": 0.48,
+            "high": 0.6475,
+            "mean": 0.565,
             "seed": 74,
             "samples": 10000,
             "confidence": 0.95
@@ -413,20 +410,19 @@
       },
       "completion": {
         "games": 200,
-        "actions": 260497,
-        "averageActions": 1302.485
+        "actions": 83052,
+        "averageActions": 415.26
       },
       "driveOutcomes": {
-        "total": 2850,
-        "fieldGoalMissed": 638,
-        "touchdown": 766,
-        "extraPointGood": 535,
-        "fieldGoalGood": 704,
-        "extraPointMissed": 109,
-        "twoPointFailed": 77,
-        "interception": 3,
-        "twoPointGood": 17,
-        "safety": 1
+        "total": 883,
+        "fieldGoalMissed": 204,
+        "touchdown": 238,
+        "extraPointGood": 169,
+        "fieldGoalGood": 207,
+        "twoPointFailed": 19,
+        "interception": 2,
+        "extraPointMissed": 38,
+        "twoPointGood": 6
       }
     },
     {
@@ -467,17 +463,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4575,
-          "high": 0.565,
-          "mean": 0.5125,
+          "low": 0.46,
+          "high": 0.5375,
+          "mean": 0.5,
           "seed": 75,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -1.13,
-          "high": 1.55,
-          "mean": 0.215,
+          "low": -0.565,
+          "high": 0.57,
+          "mean": -0.015,
           "seed": 75,
           "samples": 10000,
           "confidence": 0.95
@@ -485,32 +481,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 129,
-        "comparisonWins": 66,
-        "ties": 5,
+        "wins": 110,
+        "comparisonWins": 56,
+        "ties": 34,
         "winShareInterval": {
-          "low": 0.58,
-          "high": 0.7325,
-          "mean": 0.6575,
+          "low": 0.555,
+          "high": 0.7075,
+          "mean": 0.635,
           "seed": 75,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 2.73,
-          "high": 6.77,
-          "mean": 4.745,
+          "low": 0.53,
+          "high": 2.75,
+          "mean": 1.665,
           "seed": 75,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "supported",
-          "effect": 0.15749999999999997,
+          "effect": 0.135,
           "interval": {
-            "low": 0.58,
-            "high": 0.7325,
-            "mean": 0.6575,
+            "low": 0.555,
+            "high": 0.7075,
+            "mean": 0.635,
             "seed": 75,
             "samples": 10000,
             "confidence": 0.95
@@ -519,19 +515,18 @@
       },
       "completion": {
         "games": 200,
-        "actions": 256880,
-        "averageActions": 1284.4
+        "actions": 83211,
+        "averageActions": 416.055
       },
       "driveOutcomes": {
-        "total": 2718,
-        "touchdown": 650,
-        "extraPointGood": 458,
-        "twoPointFailed": 67,
-        "fieldGoalGood": 711,
-        "fieldGoalMissed": 722,
-        "extraPointMissed": 97,
-        "twoPointGood": 11,
-        "safety": 2
+        "total": 820,
+        "touchdown": 202,
+        "extraPointGood": 151,
+        "fieldGoalGood": 216,
+        "fieldGoalMissed": 204,
+        "twoPointFailed": 23,
+        "extraPointMissed": 22,
+        "twoPointGood": 2
       }
     },
     {
@@ -572,17 +567,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4675,
-          "high": 0.5375,
-          "mean": 0.5025,
+          "low": 0.49,
+          "high": 0.555,
+          "mean": 0.5225,
           "seed": 76,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -0.82,
-          "high": 1.425,
-          "mean": 0.3,
+          "low": -0.4,
+          "high": 0.395,
+          "mean": -0.005,
           "seed": 76,
           "samples": 10000,
           "confidence": 0.95
@@ -590,32 +585,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 159,
-        "comparisonWins": 36,
-        "ties": 5,
+        "wins": 131,
+        "comparisonWins": 40,
+        "ties": 29,
         "winShareInterval": {
-          "low": 0.74,
-          "high": 0.87,
-          "mean": 0.8075,
+          "low": 0.655,
+          "high": 0.7975,
+          "mean": 0.7275,
           "seed": 76,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 8.92,
-          "high": 12.8,
-          "mean": 10.87,
+          "low": 3.04,
+          "high": 5.285,
+          "mean": 4.145,
           "seed": 76,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "supported",
-          "effect": 0.3075,
+          "effect": 0.22750000000000004,
           "interval": {
-            "low": 0.74,
-            "high": 0.87,
-            "mean": 0.8075,
+            "low": 0.655,
+            "high": 0.7975,
+            "mean": 0.7275,
             "seed": 76,
             "samples": 10000,
             "confidence": 0.95
@@ -624,20 +619,20 @@
       },
       "completion": {
         "games": 200,
-        "actions": 257150,
-        "averageActions": 1285.75
+        "actions": 79509,
+        "averageActions": 397.545
       },
       "driveOutcomes": {
-        "total": 2612,
-        "fieldGoalMissed": 633,
-        "interception": 47,
-        "touchdown": 626,
-        "extraPointMissed": 95,
-        "extraPointGood": 428,
-        "fieldGoalGood": 700,
-        "twoPointFailed": 64,
-        "twoPointGood": 14,
-        "safety": 5
+        "total": 820,
+        "fieldGoalMissed": 190,
+        "fieldGoalGood": 201,
+        "touchdown": 212,
+        "extraPointGood": 148,
+        "extraPointMissed": 32,
+        "twoPointFailed": 17,
+        "interception": 13,
+        "twoPointGood": 4,
+        "safety": 3
       }
     },
     {
@@ -678,17 +673,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4575,
-          "high": 0.575,
-          "mean": 0.5175,
+          "low": 0.4475,
+          "high": 0.5025,
+          "mean": 0.475,
           "seed": 77,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -0.08,
-          "high": 2.525,
-          "mean": 1.235,
+          "low": -0.56,
+          "high": 0.14,
+          "mean": -0.215,
           "seed": 77,
           "samples": 10000,
           "confidence": 0.95
@@ -696,32 +691,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 95,
-        "comparisonWins": 94,
-        "ties": 11,
+        "wins": 87,
+        "comparisonWins": 79,
+        "ties": 34,
         "winShareInterval": {
-          "low": 0.4275,
-          "high": 0.5775,
-          "mean": 0.5025,
+          "low": 0.435,
+          "high": 0.605,
+          "mean": 0.52,
           "seed": 77,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -1.515,
-          "high": 2.49,
-          "mean": 0.475,
+          "low": -0.43,
+          "high": 1.93,
+          "mean": 0.755,
           "seed": 77,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "inconclusive",
-          "effect": 0.0024999999999999467,
+          "effect": 0.020000000000000018,
           "interval": {
-            "low": 0.4275,
-            "high": 0.5775,
-            "mean": 0.5025,
+            "low": 0.435,
+            "high": 0.605,
+            "mean": 0.52,
             "seed": 77,
             "samples": 10000,
             "confidence": 0.95
@@ -730,19 +725,18 @@
       },
       "completion": {
         "games": 200,
-        "actions": 240215,
-        "averageActions": 1201.075
+        "actions": 74538,
+        "averageActions": 372.69
       },
       "driveOutcomes": {
-        "total": 2821,
-        "fieldGoalMissed": 750,
-        "touchdown": 675,
-        "extraPointGood": 485,
-        "fieldGoalGood": 742,
-        "extraPointMissed": 95,
-        "twoPointFailed": 61,
-        "twoPointGood": 10,
-        "interception": 3
+        "total": 773,
+        "fieldGoalMissed": 185,
+        "touchdown": 192,
+        "extraPointGood": 151,
+        "fieldGoalGood": 208,
+        "extraPointMissed": 23,
+        "twoPointFailed": 11,
+        "twoPointGood": 3
       }
     },
     {
@@ -783,17 +777,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.405,
-          "high": 0.525,
-          "mean": 0.465,
+          "low": 0.4675,
+          "high": 0.5225,
+          "mean": 0.495,
           "seed": 78,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -1.815,
-          "high": 0.84,
-          "mean": -0.5,
+          "low": -0.62,
+          "high": 0.285,
+          "mean": -0.16,
           "seed": 78,
           "samples": 10000,
           "confidence": 0.95
@@ -801,32 +795,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 117,
-        "comparisonWins": 73,
-        "ties": 10,
+        "wins": 86,
+        "comparisonWins": 72,
+        "ties": 42,
         "winShareInterval": {
-          "low": 0.54,
-          "high": 0.68,
-          "mean": 0.61,
+          "low": 0.4525,
+          "high": 0.6175,
+          "mean": 0.535,
           "seed": 78,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 0.65,
-          "high": 4.92,
-          "mean": 2.78,
+          "low": -1.16,
+          "high": 1.76,
+          "mean": 0.29,
           "seed": 78,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
-          "state": "supported",
-          "effect": 0.10999999999999999,
+          "state": "inconclusive",
+          "effect": 0.03500000000000003,
           "interval": {
-            "low": 0.54,
-            "high": 0.68,
-            "mean": 0.61,
+            "low": 0.4525,
+            "high": 0.6175,
+            "mean": 0.535,
             "seed": 78,
             "samples": 10000,
             "confidence": 0.95
@@ -835,19 +829,19 @@
       },
       "completion": {
         "games": 200,
-        "actions": 246252,
-        "averageActions": 1231.26
+        "actions": 73844,
+        "averageActions": 369.22
       },
       "driveOutcomes": {
-        "total": 2818,
-        "touchdown": 668,
-        "extraPointGood": 473,
-        "extraPointMissed": 83,
-        "fieldGoalGood": 711,
-        "fieldGoalMissed": 786,
-        "twoPointFailed": 77,
-        "interception": 3,
-        "twoPointGood": 17
+        "total": 810,
+        "touchdown": 207,
+        "extraPointGood": 145,
+        "extraPointMissed": 31,
+        "fieldGoalGood": 197,
+        "fieldGoalMissed": 202,
+        "twoPointFailed": 23,
+        "interception": 1,
+        "twoPointGood": 4
       }
     },
     {
@@ -888,50 +882,50 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4225,
-          "high": 0.5275,
-          "mean": 0.475,
+          "low": 0.4575,
+          "high": 0.525,
+          "mean": 0.4925,
           "seed": 79,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -2.865,
-          "high": -0.065,
-          "mean": -1.445,
+          "low": -0.875,
+          "high": 0.29,
+          "mean": -0.28,
           "seed": 79,
           "samples": 10000,
           "confidence": 0.95
         },
-        "classification": "actionable"
+        "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 151,
-        "comparisonWins": 43,
-        "ties": 6,
+        "wins": 87,
+        "comparisonWins": 62,
+        "ties": 51,
         "winShareInterval": {
-          "low": 0.7075,
-          "high": 0.8275,
-          "mean": 0.77,
+          "low": 0.4875,
+          "high": 0.6375,
+          "mean": 0.5625,
           "seed": 79,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 5.665,
-          "high": 9.42,
-          "mean": 7.565,
+          "low": -0.385,
+          "high": 2.1,
+          "mean": 0.87,
           "seed": 79,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
-          "state": "supported",
-          "effect": 0.27,
+          "state": "inconclusive",
+          "effect": 0.0625,
           "interval": {
-            "low": 0.7075,
-            "high": 0.8275,
-            "mean": 0.77,
+            "low": 0.4875,
+            "high": 0.6375,
+            "mean": 0.5625,
             "seed": 79,
             "samples": 10000,
             "confidence": 0.95
@@ -940,20 +934,19 @@
       },
       "completion": {
         "games": 200,
-        "actions": 249598,
-        "averageActions": 1247.99
+        "actions": 71636,
+        "averageActions": 358.18
       },
       "driveOutcomes": {
-        "total": 2884,
-        "touchdown": 648,
-        "extraPointGood": 459,
-        "fieldGoalMissed": 774,
-        "fieldGoalGood": 772,
-        "twoPointFailed": 81,
-        "extraPointMissed": 81,
-        "interception": 62,
-        "safety": 2,
-        "twoPointGood": 5
+        "total": 780,
+        "touchdown": 194,
+        "extraPointGood": 139,
+        "fieldGoalMissed": 210,
+        "fieldGoalGood": 167,
+        "interception": 27,
+        "extraPointMissed": 31,
+        "twoPointFailed": 9,
+        "twoPointGood": 3
       }
     }
   ],
@@ -996,17 +989,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4985,
-          "high": 0.53,
-          "mean": 0.5145,
+          "low": 0.4945,
+          "high": 0.51475,
+          "mean": 0.5045,
           "seed": 91,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -0.1445,
-          "high": 0.727,
-          "mean": 0.2915,
+          "low": -0.042,
+          "high": 0.237,
+          "mean": 0.095,
           "seed": 91,
           "samples": 10000,
           "confidence": 0.95
@@ -1014,32 +1007,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 1478,
-        "comparisonWins": 460,
-        "ties": 62,
+        "wins": 1061,
+        "comparisonWins": 485,
+        "ties": 454,
         "winShareInterval": {
-          "low": 0.73325,
-          "high": 0.775,
-          "mean": 0.7545,
+          "low": 0.621,
+          "high": 0.6675,
+          "mean": 0.644,
           "seed": 91,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 7.7395,
-          "high": 9.074,
-          "mean": 8.4105,
+          "low": 2.0395,
+          "high": 2.786,
+          "mean": 2.411,
           "seed": 91,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "supported",
-          "effect": 0.25449999999999995,
+          "effect": 0.14400000000000002,
           "interval": {
-            "low": 0.73325,
-            "high": 0.775,
-            "mean": 0.7545,
+            "low": 0.621,
+            "high": 0.6675,
+            "mean": 0.644,
             "seed": 91,
             "samples": 10000,
             "confidence": 0.95
@@ -1048,20 +1041,20 @@
       },
       "completion": {
         "games": 2000,
-        "actions": 2448186,
-        "averageActions": 1224.093
+        "actions": 696915,
+        "averageActions": 348.4575
       },
       "driveOutcomes": {
-        "total": 28659,
-        "fieldGoalMissed": 7704,
-        "touchdown": 6295,
-        "twoPointGood": 90,
-        "fieldGoalGood": 7792,
-        "extraPointGood": 4379,
-        "twoPointFailed": 674,
-        "extraPointMissed": 934,
-        "interception": 780,
-        "safety": 11
+        "total": 7488,
+        "fieldGoalMissed": 1904,
+        "touchdown": 1756,
+        "extraPointGood": 1182,
+        "fieldGoalGood": 1936,
+        "twoPointFailed": 193,
+        "interception": 204,
+        "extraPointMissed": 293,
+        "twoPointGood": 14,
+        "safety": 6
       }
     },
     {
@@ -1102,17 +1095,17 @@
       "anomalyCount": 0,
       "symmetry": {
         "winShareInterval": {
-          "low": 0.4905,
-          "high": 0.52525,
-          "mean": 0.50775,
+          "low": 0.481,
+          "high": 0.50325,
+          "mean": 0.49225,
           "seed": 92,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": -0.3445,
-          "high": 0.4865,
-          "mean": 0.0695,
+          "low": -0.2845,
+          "high": 0.0565,
+          "mean": -0.1125,
           "seed": 92,
           "samples": 10000,
           "confidence": 0.95
@@ -1120,32 +1113,32 @@
         "classification": "inconclusive"
       },
       "primaryPlanEffect": {
-        "wins": 1217,
-        "comparisonWins": 706,
-        "ties": 77,
+        "wins": 902,
+        "comparisonWins": 697,
+        "ties": 401,
         "winShareInterval": {
-          "low": 0.60375,
-          "high": 0.651,
-          "mean": 0.62775,
+          "low": 0.52675,
+          "high": 0.57675,
+          "mean": 0.55125,
           "seed": 92,
           "samples": 10000,
           "confidence": 0.95
         },
         "scoreDeltaInterval": {
-          "low": 3.265,
-          "high": 4.653,
-          "mean": 3.9605,
+          "low": 0.6855,
+          "high": 1.453,
+          "mean": 1.0655,
           "seed": 92,
           "samples": 10000,
           "confidence": 0.95
         },
         "classification": {
           "state": "supported",
-          "effect": 0.12775000000000003,
+          "effect": 0.05125000000000002,
           "interval": {
-            "low": 0.60375,
-            "high": 0.651,
-            "mean": 0.62775,
+            "low": 0.52675,
+            "high": 0.57675,
+            "mean": 0.55125,
             "seed": 92,
             "samples": 10000,
             "confidence": 0.95
@@ -1154,20 +1147,20 @@
       },
       "completion": {
         "games": 2000,
-        "actions": 2633763,
-        "averageActions": 1316.8815
+        "actions": 827646,
+        "averageActions": 413.823
       },
       "driveOutcomes": {
-        "total": 28317,
-        "fieldGoalGood": 7266,
-        "touchdown": 7034,
-        "extraPointMissed": 1029,
-        "extraPointGood": 4967,
-        "fieldGoalMissed": 7145,
-        "twoPointFailed": 705,
-        "twoPointGood": 127,
-        "interception": 31,
-        "safety": 13
+        "total": 8214,
+        "touchdown": 2044,
+        "extraPointGood": 1382,
+        "fieldGoalMissed": 2098,
+        "twoPointFailed": 255,
+        "fieldGoalGood": 2081,
+        "extraPointMissed": 299,
+        "twoPointGood": 38,
+        "interception": 14,
+        "safety": 3
       }
     }
   ]
