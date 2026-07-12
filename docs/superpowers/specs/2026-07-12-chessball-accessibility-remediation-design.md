@@ -59,7 +59,7 @@ Do not introduce a component framework or new runtime dependency for these behav
 - History viewing remains non-mutating for pointer and keyboard activation.
 - Required flow-gate dialogs cannot be dismissed through Escape or backdrop interaction.
 - If a remembered trigger is removed, focus returns to the workspace heading through a stable ref. The heading must be programmatically focusable with `tabIndex={-1}` without entering normal Tab order.
-- New Game confirmation is bypassed only when no active match/history would be lost.
+- Utility-bar New Game bypasses confirmation only in pregame or when no nontrivial history would be discarded. The final-result dialog remains the explicit exception and starts a new game directly.
 
 ## Styling
 
