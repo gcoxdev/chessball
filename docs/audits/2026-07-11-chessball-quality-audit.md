@@ -37,11 +37,11 @@ The exact executable formation definitions are committed in `scripts/run-formati
 ```sh
 npm exec vite-node scripts/run-formation-audit.ts -- --mode screen
 npm exec vite-node scripts/run-formation-audit.ts -- --mode followups
-# or reproduce all eleven experiments in one compact JSON document
-npm exec vite-node scripts/run-formation-audit.ts -- --mode all
+# regenerate the canonical artifact byte-for-byte (same code, seeds, and config)
+npm exec vite-node scripts/run-formation-audit.ts -- --mode all > docs/audits/data/2026-07-11-formation-audit.json
 ```
 
-Compact preserved evidence is in `docs/audits/data/2026-07-11-formation-audit.json`. The full core action distributions and tactic screens are split by matchup in `docs/audits/data/2026-07-11-heuristic-vs-heuristic-screens.json`, `docs/audits/data/2026-07-11-random-vs-random-screens.json`, and `docs/audits/data/2026-07-11-heuristic-vs-random-screens.json`. Each artifact records its command, policy/team strata, seed range, max-actions limit, bootstrap seed/sample/confidence, and runtime.
+Compact preserved evidence is in `docs/audits/data/2026-07-11-formation-audit.json`. `--mode all` emits that canonical schema directly and deterministically; runtime and timestamps are intentionally excluded from canonical comparison. The full core action distributions and tactic screens are split by matchup in `docs/audits/data/2026-07-11-heuristic-vs-heuristic-screens.json`, `docs/audits/data/2026-07-11-random-vs-random-screens.json`, and `docs/audits/data/2026-07-11-heuristic-vs-random-screens.json`. Each core artifact records its command, policy/team strata, seed range, max-actions limit, bootstrap seed/sample/confidence, and runtime.
 
 ## Completion integrity
 
@@ -67,7 +67,7 @@ As controls, assigning the identical policy labels as “primary” produced nul
 
 The 100-pair balanced screen completed every cell. Against the fixed i-form/4-3 reference, the primary plan's tie-adjusted point shares were: i-form/4-3 47.75%; i-form/nickel 51.25%; i-form/goal-line 81.50%; shotgun/4-3 60.75%; shotgun/nickel 65.75%; shotgun/goal-line 80.75%; singleback/4-3 50.25%; singleback/nickel 61.00%; singleback/goal-line 77.00%. Because plan components combine additively and cells used different seed blocks, these are screening observations, not nine independent causal rankings.
 
-The controlled follow-ups confirmed two formation effects:
+The formation effects were replicated in controlled one-factor follow-ups:
 
 | One-factor plan comparison | Completed pairs | Primary wins / comparison wins / ties | Primary share, paired 95% CI | Score delta, paired 95% CI |
 |---|---:|---:|---:|---:|

@@ -1,21 +1,19 @@
 {
-  "schema": "chessball-formation-audit-v1",
+  "schema": "chessball-formation-audit-v2",
   "runner": "scripts/run-formation-audit.ts",
-  "commands": {
-    "screen": "npm exec vite-node scripts/run-formation-audit.ts -- --mode screen",
-    "followups": "npm exec vite-node scripts/run-formation-audit.ts -- --mode followups",
-    "all": "npm exec vite-node scripts/run-formation-audit.ts -- --mode all"
-  },
+  "command": "npm exec vite-node scripts/run-formation-audit.ts -- --mode all",
   "policy": {
     "primary": "heuristic",
     "comparison": "heuristic"
   },
   "screen": [
     {
+      "group": "screen",
       "name": "screen-i-form-4-3-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10001,
-      "bootstrapSeed": 71,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "i-form",
         "defense": "4-3"
@@ -26,22 +24,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 71,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10001,
         "last": 10100
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 67114,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4325,
+          "high": 0.5425,
+          "mean": 0.4875,
+          "seed": 71,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -1.53,
+          "high": 1.04,
+          "mean": -0.24,
+          "seed": 71,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 91,
         "comparisonWins": 100,
@@ -61,6 +81,18 @@
           "seed": 71,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "inconclusive",
+          "effect": -0.02250000000000002,
+          "interval": {
+            "low": 0.4,
+            "high": 0.555,
+            "mean": 0.4775,
+            "seed": 71,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -81,10 +113,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-i-form-nickel-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10101,
-      "bootstrapSeed": 72,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "i-form",
         "defense": "nickel"
@@ -95,22 +129,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 72,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10101,
         "last": 10200
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 63763,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.435,
+          "high": 0.5475,
+          "mean": 0.4925,
+          "seed": 72,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -2.14,
+          "high": 0.705,
+          "mean": -0.705,
+          "seed": 72,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 99,
         "comparisonWins": 94,
@@ -130,6 +186,18 @@
           "seed": 72,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "inconclusive",
+          "effect": 0.012499999999999956,
+          "interval": {
+            "low": 0.435,
+            "high": 0.5925,
+            "mean": 0.5125,
+            "seed": 72,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -150,10 +218,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-i-form-goal-line-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10201,
-      "bootstrapSeed": 73,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "i-form",
         "defense": "goal-line"
@@ -164,22 +234,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 73,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10201,
         "last": 10300
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 70712,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4525,
+          "high": 0.5375,
+          "mean": 0.495,
+          "seed": 73,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -1.145,
+          "high": 1.26,
+          "mean": 0.06,
+          "seed": 73,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 159,
         "comparisonWins": 33,
@@ -199,6 +291,18 @@
           "seed": 73,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.31499999999999995,
+          "interval": {
+            "low": 0.7525,
+            "high": 0.8725,
+            "mean": 0.815,
+            "seed": 73,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -220,10 +324,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-shotgun-4-3-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10301,
-      "bootstrapSeed": 74,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "shotgun",
         "defense": "4-3"
@@ -234,22 +340,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 74,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10301,
         "last": 10400
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 73395,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4475,
+          "high": 0.55,
+          "mean": 0.4975,
+          "seed": 74,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -1.93,
+          "high": 0.55,
+          "mean": -0.695,
+          "seed": 74,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 116,
         "comparisonWins": 73,
@@ -269,6 +397,18 @@
           "seed": 74,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.10750000000000004,
+          "interval": {
+            "low": 0.53,
+            "high": 0.6825,
+            "mean": 0.6075,
+            "seed": 74,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -290,10 +430,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-shotgun-nickel-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10401,
-      "bootstrapSeed": 75,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "shotgun",
         "defense": "nickel"
@@ -304,22 +446,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 75,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10401,
         "last": 10500
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 66346,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4575,
+          "high": 0.565,
+          "mean": 0.5125,
+          "seed": 75,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -1.13,
+          "high": 1.55,
+          "mean": 0.215,
+          "seed": 75,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 129,
         "comparisonWins": 66,
@@ -339,6 +503,18 @@
           "seed": 75,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.15749999999999997,
+          "interval": {
+            "low": 0.58,
+            "high": 0.7325,
+            "mean": 0.6575,
+            "seed": 75,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -359,10 +535,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-shotgun-goal-line-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10501,
-      "bootstrapSeed": 76,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "shotgun",
         "defense": "goal-line"
@@ -373,22 +551,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 76,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10501,
         "last": 10600
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 77000,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4675,
+          "high": 0.5375,
+          "mean": 0.5025,
+          "seed": 76,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -0.82,
+          "high": 1.425,
+          "mean": 0.3,
+          "seed": 76,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 159,
         "comparisonWins": 36,
@@ -408,6 +608,18 @@
           "seed": 76,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.3075,
+          "interval": {
+            "low": 0.74,
+            "high": 0.87,
+            "mean": 0.8075,
+            "seed": 76,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -429,10 +641,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-singleback-4-3-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10601,
-      "bootstrapSeed": 77,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "singleback",
         "defense": "4-3"
@@ -443,22 +657,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 77,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10601,
         "last": 10700
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 57299,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4575,
+          "high": 0.575,
+          "mean": 0.5175,
+          "seed": 77,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -0.08,
+          "high": 2.525,
+          "mean": 1.235,
+          "seed": 77,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 95,
         "comparisonWins": 94,
@@ -478,6 +714,18 @@
           "seed": 77,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "inconclusive",
+          "effect": 0.0024999999999999467,
+          "interval": {
+            "low": 0.4275,
+            "high": 0.5775,
+            "mean": 0.5025,
+            "seed": 77,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -498,10 +746,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-singleback-nickel-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10701,
-      "bootstrapSeed": 78,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "singleback",
         "defense": "nickel"
@@ -512,22 +762,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 78,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10701,
         "last": 10800
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 52685,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.405,
+          "high": 0.525,
+          "mean": 0.465,
+          "seed": 78,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -1.815,
+          "high": 0.84,
+          "mean": -0.5,
+          "seed": 78,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 117,
         "comparisonWins": 73,
@@ -547,6 +819,18 @@
           "seed": 78,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.10999999999999999,
+          "interval": {
+            "low": 0.54,
+            "high": 0.68,
+            "mean": 0.61,
+            "seed": 78,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -567,10 +851,12 @@
       }
     },
     {
+      "group": "screen",
       "name": "screen-singleback-goal-line-vs-i-form-4-3",
-      "pairs": 100,
-      "seed": 10801,
-      "bootstrapSeed": 79,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "singleback",
         "defense": "goal-line"
@@ -581,22 +867,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 79,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 10801,
         "last": 10900
       },
+      "requestedPairs": 100,
       "completedPairs": 100,
       "excludedPairs": 0,
+      "attemptedGames": 200,
       "statusCounts": {
         "completed": 200,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 46814,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4225,
+          "high": 0.5275,
+          "mean": 0.475,
+          "seed": 79,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -2.865,
+          "high": -0.065,
+          "mean": -1.445,
+          "seed": 79,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "actionable"
+      },
       "primaryPlanEffect": {
         "wins": 151,
         "comparisonWins": 43,
@@ -616,6 +924,18 @@
           "seed": 79,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.27,
+          "interval": {
+            "low": 0.7075,
+            "high": 0.8275,
+            "mean": 0.77,
+            "seed": 79,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -639,10 +959,12 @@
   ],
   "followups": [
     {
+      "group": "followups",
       "name": "followup-goal-line-vs-4-3",
-      "pairs": 1000,
-      "seed": 20001,
-      "bootstrapSeed": 91,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "i-form",
         "defense": "goal-line"
@@ -653,22 +975,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 91,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 20001,
         "last": 21000
       },
+      "requestedPairs": 1000,
       "completedPairs": 1000,
       "excludedPairs": 0,
+      "attemptedGames": 2000,
       "statusCounts": {
         "completed": 2000,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 397672,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4985,
+          "high": 0.53,
+          "mean": 0.5145,
+          "seed": 91,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -0.1445,
+          "high": 0.727,
+          "mean": 0.2915,
+          "seed": 91,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 1478,
         "comparisonWins": 460,
@@ -688,6 +1032,18 @@
           "seed": 91,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.25449999999999995,
+          "interval": {
+            "low": 0.73325,
+            "high": 0.775,
+            "mean": 0.7545,
+            "seed": 91,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
@@ -709,10 +1065,12 @@
       }
     },
     {
+      "group": "followups",
       "name": "followup-shotgun-vs-i-form",
-      "pairs": 1000,
-      "seed": 21001,
-      "bootstrapSeed": 92,
+      "matchup": {
+        "primary": "heuristic",
+        "comparison": "heuristic"
+      },
       "primaryPlan": {
         "offense": "shotgun",
         "defense": "4-3"
@@ -723,22 +1081,44 @@
       },
       "maxActions": 5000,
       "bootstrap": {
+        "seed": 92,
         "samples": 10000,
         "confidence": 0.95
       },
+      "seedConvention": "base-seed-plus-pair-index",
       "seedRange": {
         "first": 21001,
         "last": 22000
       },
+      "requestedPairs": 1000,
       "completedPairs": 1000,
       "excludedPairs": 0,
+      "attemptedGames": 2000,
       "statusCounts": {
         "completed": 2000,
         "stalled": 0,
         "crashed": 0
       },
       "anomalyCount": 0,
-      "runtimeMs": 395288,
+      "symmetry": {
+        "winShareInterval": {
+          "low": 0.4905,
+          "high": 0.52525,
+          "mean": 0.50775,
+          "seed": 92,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "scoreDeltaInterval": {
+          "low": -0.3445,
+          "high": 0.4865,
+          "mean": 0.0695,
+          "seed": 92,
+          "samples": 10000,
+          "confidence": 0.95
+        },
+        "classification": "inconclusive"
+      },
       "primaryPlanEffect": {
         "wins": 1217,
         "comparisonWins": 706,
@@ -758,6 +1138,18 @@
           "seed": 92,
           "samples": 10000,
           "confidence": 0.95
+        },
+        "classification": {
+          "state": "supported",
+          "effect": 0.12775000000000003,
+          "interval": {
+            "low": 0.60375,
+            "high": 0.651,
+            "mean": 0.62775,
+            "seed": 92,
+            "samples": 10000,
+            "confidence": 0.95
+          }
         }
       },
       "completion": {
