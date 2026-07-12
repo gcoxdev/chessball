@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame } from './rules';
-import { driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
+import { actingTeamFieldBand, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
 import type { PlayResult } from './types';
 import type { SimulationFormationPlan, SimulationOpening } from './simulator';
 
@@ -301,6 +301,54 @@ describe('headless simulator', () => {
 
     expect(driveOutcomeForTransition(positioned, after)).toBe('fieldGoalGood');
     expect(driveOutcomeForTransition(after, after)).toBeNull();
+  });
+
+  it('does not recount a persisted terminal result on a later transition', () => {
+    const before = createGame({
+      phase: 'betweenDowns',
+      play: { actions: [], result: { type: 'touchdown', team: 'home' } },
+    });
+    const after = { ...before, play: { ...before.play, actions: [{ type: 'startTwoPointTry', team: 'home' } as const] } };
+
+    expect(driveOutcomeForTransition(before, after)).toBeNull();
+  });
+
+  it('classifies a real touchdown transition once', () => {
+    const before = createGame({ phase: 'live', ball: { kind: 'controlled', pieceId: 'home-rb' } });
+    const positioned = {
+      ...before,
+      pieces: before.pieces.map((item) => item.id === 'home-rb' ? { ...item, coord: { x: 21, y: 4 } } : item),
+    };
+    const touchdown = applyAction(positioned, { type: 'move', pieceId: 'home-rb', to: { x: 22, y: 4 } });
+
+    expect(driveOutcomeForTransition(positioned, touchdown)).toBe('touchdown');
+    expect(driveOutcomeForTransition(touchdown, touchdown)).toBeNull();
+  });
+
+  it('mirrors field bands from each acting team perspective', () => {
+    const homeOwn = createGame({ lineOfScrimmage: 4, turn: 'home' });
+    const awayOwn = createGame({ lineOfScrimmage: homeOwn.board.width - 5, turn: 'away' });
+    const homeGoal = createGame({ lineOfScrimmage: homeOwn.board.width - 5, turn: 'home' });
+    const awayGoal = createGame({ lineOfScrimmage: 4, turn: 'away' });
+
+    expect(actingTeamFieldBand(homeOwn, 'home')).toBe('own');
+    expect(actingTeamFieldBand(awayOwn, 'away')).toBe('own');
+    expect(actingTeamFieldBand(homeGoal, 'home')).toBe('goal-to-go');
+    expect(actingTeamFieldBand(awayGoal, 'away')).toBe('goal-to-go');
+  });
+
+  it('retains applied-action telemetry when the resulting state fails invariants', () => {
+    const result = simulateGame({
+      seed: 42,
+      maxActions: 10,
+      validateState: () => ['forced invariant failure'],
+    });
+
+    expect(result.status).toBe('crashed');
+    expect(result.summary.actions).toBe(1);
+    expect(result.summary.actionTypes.total).toBe(1);
+    expect(result.summary.actionOpportunities.total).toBeGreaterThanOrEqual(1);
+    expect(result.anomalies[0]).toMatchObject({ type: 'invariant', actionIndex: 1 });
   });
 
   it.each<PlayResult>([

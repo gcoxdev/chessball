@@ -141,6 +141,7 @@ export type SimulateGameOptions = {
   repeatLimit?: number;
   opening?: SimulationOpening;
   formationPlan?: SimulationFormationPlan;
+  validateState?: (state: GameState) => string[];
 };
 
 type SimulateBatchOptions = {
@@ -163,6 +164,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
   const policies = normalizePolicies(options);
   const maxActions = options.maxActions ?? DEFAULT_MAX_ACTIONS;
   const repeatLimit = options.repeatLimit ?? DEFAULT_REPEAT_LIMIT;
+  const validateState = options.validateState ?? validateGameStateInvariants;
   const anomalies: SimulationAnomaly[] = [];
   const resultTypes = countMap();
   const actionTypes = countMap();
@@ -198,8 +200,12 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
     try {
       const legalActions = generateLegalActions(state);
+      const opportunityCounts = new Map<Action['type'], number>();
       for (const legalAction of legalActions) {
-        increment(actionOpportunities, actionContextKey(state, policies[state.turn], legalAction.type));
+        opportunityCounts.set(legalAction.type, (opportunityCounts.get(legalAction.type) ?? 0) + 1);
+      }
+      for (const [actionType, multiplicity] of opportunityCounts) {
+        incrementBy(actionOpportunities, actionContextKey(state, policies[state.turn], actionType), multiplicity);
       }
       const action = chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex, options.opening, options.formationPlan);
 
@@ -209,7 +215,9 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
           increment(actionOpportunities, contextKey);
           state = startNextDown(state);
           pushRecentAction(recentActions, `nextDown -> ${state.phase} ${state.possession} Q${state.quarter} D${state.down}`);
-          const invariantErrors = validateGameStateInvariants(state);
+          increment(actionTypes, contextKey);
+          actionIndex += 1;
+          const invariantErrors = validateState(state);
           if (invariantErrors.length > 0) {
             status = 'crashed';
             anomalies.push({
@@ -222,8 +230,6 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
             });
             break;
           }
-          increment(actionTypes, contextKey);
-          actionIndex += 1;
           continue;
         }
 
@@ -242,18 +248,29 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       const resolvedAction = withRandomResolution(action, rng, options.opening);
       const before = state;
       const selectedContextKey = actionContextKey(before, policies[before.turn], resolvedAction.type);
-      let formationChoiceKey: string | null = null;
+      let formationChoice: { key: string; team: Team; side: 'offense' | 'defense'; formationId: string } | null = null;
       if (resolvedAction.type === 'chooseFormation') {
         const team = resolvedAction.side === 'offense' ? before.possession : otherTeam(before.possession);
-        formationSelections[team][resolvedAction.side].push(resolvedAction.formationId);
-        formationChoiceKey = `team=${team}|side=${resolvedAction.side}|quarter=${before.quarter}|formation=${resolvedAction.formationId}`;
+        formationChoice = {
+          key: `team=${team}|side=${resolvedAction.side}|quarter=${before.quarter}|formation=${resolvedAction.formationId}`,
+          team,
+          side: resolvedAction.side,
+          formationId: resolvedAction.formationId,
+        };
       }
       state = applyAction(state, resolvedAction);
       pushRecentAction(recentActions, actionSummary(before, resolvedAction, state));
       const resultType = state.play.result?.type;
       if (resultType) increment(resultTypes, resultType);
       const driveOutcome = driveOutcomeForTransition(before, state);
-      const invariantErrors = validateGameStateInvariants(state);
+      increment(actionTypes, selectedContextKey);
+      if (formationChoice) {
+        formationSelections[formationChoice.team][formationChoice.side].push(formationChoice.formationId);
+        increment(formationChoices, formationChoice.key);
+      }
+      if (driveOutcome) increment(driveOutcomes, driveOutcome);
+      actionIndex += 1;
+      const invariantErrors = validateState(state);
       if (invariantErrors.length > 0) {
         status = 'crashed';
         anomalies.push({
@@ -266,11 +283,6 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
         });
         break;
       }
-
-      increment(actionTypes, selectedContextKey);
-      if (formationChoiceKey) increment(formationChoices, formationChoiceKey);
-      if (driveOutcome) increment(driveOutcomes, driveOutcome);
-      actionIndex += 1;
     } catch (error) {
       status = 'crashed';
       anomalies.push({
@@ -609,10 +621,10 @@ function otherTeam(team: Team): Team {
   return team === 'home' ? 'away' : 'home';
 }
 
-type FieldBand = 'own' | 'midfield' | 'opponent' | 'goal-to-go';
+export type FieldBand = 'own' | 'midfield' | 'opponent' | 'goal-to-go';
 
 /** Bins the line of scrimmage from the acting team's fixed attacking direction. */
-function actingTeamFieldBand(state: GameState, team: Team): FieldBand {
+export function actingTeamFieldBand(state: GameState, team: Team): FieldBand {
   const fieldStart = 2;
   const fieldEnd = state.board.width - 3;
   const attackingRight = team === 'home';
@@ -1099,8 +1111,12 @@ function countMap(): CountMap {
 }
 
 function increment(counts: CountMap, key: string): void {
-  counts[key] = (counts[key] ?? 0) + 1;
-  counts.total += 1;
+  incrementBy(counts, key, 1);
+}
+
+function incrementBy(counts: CountMap, key: string, amount: number): void {
+  counts[key] = (counts[key] ?? 0) + amount;
+  counts.total += amount;
 }
 
 function mergeCounts(target: CountMap, source: CountMap): void {
