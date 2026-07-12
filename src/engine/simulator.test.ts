@@ -11,6 +11,25 @@ describe('headless simulator', () => {
     expect(second.anomalies).toEqual(first.anomalies);
   });
 
+  it('selects policies independently for home and away', () => {
+    const result = simulateGame({
+      seed: 42,
+      policies: { home: 'heuristic', away: 'random' },
+      maxActions: 100,
+    });
+
+    expect(result.summary.policies).toEqual({ home: 'heuristic', away: 'random' });
+  });
+
+  it('normalizes a legacy random policy for both teams repeatably', () => {
+    const first = simulateGame({ seed: 42, policy: 'random', maxActions: 400 });
+    const second = simulateGame({ seed: 42, policy: 'random', maxActions: 400 });
+
+    expect(first.summary.policies).toEqual({ home: 'random', away: 'random' });
+    expect(second.summary).toEqual(first.summary);
+    expect(second.anomalies).toEqual(first.anomalies);
+  });
+
   it('splits batch simulations between heuristic and random policies', () => {
     const report = simulateBatch({ games: 12, seed: 7, maxActionsPerGame: 300 });
 

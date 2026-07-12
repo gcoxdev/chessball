@@ -12,6 +12,7 @@ import {
 import type { Action, Coord, DiceRoll, GameState, Piece, PlayResult, Team } from './types';
 
 export type SimulationPolicy = 'heuristic' | 'random';
+export type TeamPolicies = Record<Team, SimulationPolicy>;
 export type SimulationStatus = 'completed' | 'stalled' | 'crashed';
 
 export type SimulationAnomaly = {
@@ -26,6 +27,7 @@ export type SimulationAnomaly = {
 export type SimulationSummary = {
   seed: number;
   policy: SimulationPolicy;
+  policies: TeamPolicies;
   status: SimulationStatus;
   actions: number;
   finalPhase: GameState['phase'];
@@ -104,9 +106,10 @@ type BalanceAccumulator = {
   awayScore: number;
 };
 
-type SimulateGameOptions = {
+export type SimulateGameOptions = {
   seed: number;
-  policy: SimulationPolicy;
+  policy?: SimulationPolicy;
+  policies?: TeamPolicies;
   maxActions?: number;
   repeatLimit?: number;
 };
@@ -127,6 +130,7 @@ const DEFAULT_REPEAT_LIMIT = 80;
 
 export function simulateGame(options: SimulateGameOptions): SimulatedGame {
   const rng = seededRandom(options.seed);
+  const policies = normalizePolicies(options);
   const maxActions = options.maxActions ?? DEFAULT_MAX_ACTIONS;
   const repeatLimit = options.repeatLimit ?? DEFAULT_REPEAT_LIMIT;
   const anomalies: SimulationAnomaly[] = [];
@@ -156,7 +160,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
     try {
       const legalActions = generateLegalActions(state);
-      const action = chooseSimulationAction(state, legalActions, rng, options.policy, actionIndex);
+      const action = chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex);
 
       if (!action) {
         if (state.phase === 'betweenDowns') {
@@ -242,7 +246,8 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
     status,
     summary: {
       seed: options.seed,
-      policy: options.policy,
+      policy: options.policy ?? policies.home,
+      policies,
       status,
       actions: actionIndex,
       finalPhase: state.phase,
@@ -253,6 +258,11 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
     anomalies,
     finalState: state,
   };
+}
+
+function normalizePolicies(options: SimulateGameOptions): TeamPolicies {
+  const fallback = options.policy ?? 'heuristic';
+  return options.policies ?? { home: fallback, away: fallback };
 }
 
 export function validateGameStateInvariants(state: GameState): string[] {
