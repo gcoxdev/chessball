@@ -21,6 +21,42 @@ describe('headless simulator', () => {
     expect(result.summary.policies).toEqual({ home: 'heuristic', away: 'random' });
   });
 
+  it('uses the coin-toss winner policy for kickoff protocol choices', () => {
+    const homeActs = simulateGame({
+      seed: 1,
+      policies: { home: 'random', away: 'heuristic' },
+      maxActions: 2,
+    });
+    const awayActs = simulateGame({
+      seed: 682,
+      policies: { home: 'heuristic', away: 'random' },
+      maxActions: 2,
+    });
+
+    expect(homeActs.finalState.coinToss).toMatchObject({ winner: 'home', choice: 'kick' });
+    expect(awayActs.finalState.coinToss).toMatchObject({ winner: 'away', choice: 'kick' });
+  });
+
+  it('gives team policies precedence over the legacy scalar policy', () => {
+    const result = simulateGame({
+      seed: 1,
+      policy: 'random',
+      policies: { home: 'heuristic', away: 'random' },
+      maxActions: 2,
+    });
+
+    expect(result.summary.policies).toEqual({ home: 'heuristic', away: 'random' });
+    expect(result.summary.policy).toBe('heuristic');
+    expect(result.finalState.coinToss).toMatchObject({ winner: 'home', choice: 'receive' });
+  });
+
+  it('defaults both teams to the heuristic policy', () => {
+    const result = simulateGame({ seed: 42, maxActions: 2 });
+
+    expect(result.summary.policies).toEqual({ home: 'heuristic', away: 'heuristic' });
+    expect(result.summary.policy).toBe('heuristic');
+  });
+
   it('normalizes a legacy random policy for both teams repeatably', () => {
     const first = simulateGame({ seed: 42, policy: 'random', maxActions: 400 });
     const second = simulateGame({ seed: 42, policy: 'random', maxActions: 400 });

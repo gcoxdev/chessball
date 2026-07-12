@@ -246,7 +246,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
     status,
     summary: {
       seed: options.seed,
-      policy: options.policy ?? policies.home,
+      policy: policies.home,
       policies,
       status,
       actions: actionIndex,
