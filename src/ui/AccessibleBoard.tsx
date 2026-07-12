@@ -71,9 +71,16 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
   };
 
   return (
-    <div className="field" role="grid" aria-label="Chessball board">
-      {Array.from({ length: props.game.board.height }).flatMap((_, y) =>
-        Array.from({ length: props.game.board.width }).map((_, x) => {
+    <div
+      aria-colcount={props.game.board.width}
+      aria-label="Chessball board"
+      aria-rowcount={props.game.board.height}
+      className="field"
+      role="grid"
+    >
+      {Array.from({ length: props.game.board.height }).map((_, y) => (
+        <div aria-rowindex={y + 1} className="board-row" key={y} role="row">
+          {Array.from({ length: props.game.board.width }).map((_, x) => {
           const coord = { x, y };
           const piece = pieceAt(props.game, coord);
           const ballHere = props.showBallMarker && sameCoord(props.ballCoord, coord);
@@ -93,7 +100,7 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
           const kickPlacement = props.game.phase === 'kickPlacement' && props.legalActions.some((action) =>
             action.type === 'placeKick' && sameCoord(action.at, coord),
           );
-          const selected = piece?.id === props.selectedPiece?.id;
+          const selected = Boolean(piece && piece.id === props.selectedPiece?.id);
           const legal = legalMove || passTarget || kickPlacement;
           const name = describeBoardSquare({
             coord,
@@ -110,11 +117,16 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
           return (
             <button
               aria-disabled={props.readOnly || undefined}
+              aria-colindex={x + 1}
               aria-label={name}
+              aria-rowindex={y + 1}
               aria-selected={selected}
               className={props.squareClass(coord, piece, legal, powerMove, ballHere)}
               key={coordKey(coord)}
-              onClick={() => activate(coord)}
+              onClick={() => {
+                setActiveCoord(coord);
+                activate(coord);
+              }}
               onFocus={() => setActiveCoord(coord)}
               onKeyDown={(event) => onKeyDown(event, coord)}
               ref={(node) => {
@@ -132,8 +144,9 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
               {ballHere && <span className="football-marker" aria-label={props.ballLabel} />}
             </button>
           );
-        }),
-      )}
+          })}
+        </div>
+      ))}
     </div>
   );
 }

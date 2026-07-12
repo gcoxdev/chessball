@@ -8,8 +8,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AccessibleBoard } from './ui/AccessibleBoard';
 
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+
 afterEach(() => {
   vi.restoreAllMocks();
+  if (originalScrollIntoView) Object.defineProperty(Element.prototype, 'scrollIntoView', originalScrollIntoView);
+  else delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   cleanup();
 });
 
@@ -23,7 +27,12 @@ describe('Chessball UI interactions', () => {
     render(<App initialGame={createGame()} />);
 
     const grid = screen.getByRole('grid', { name: /chessball board/i });
+    const rows = within(grid).getAllByRole('row');
     const cells = within(grid).getAllByRole('gridcell');
+    expect(grid).toHaveAttribute('aria-rowcount', '11');
+    expect(grid).toHaveAttribute('aria-colcount', '24');
+    expect(rows).toHaveLength(11);
+    rows.forEach((row) => expect(within(row).getAllByRole('gridcell')).toHaveLength(24));
     expect(cells).toHaveLength(264);
     expect(cells.filter((cell) => cell.tabIndex === 0)).toEqual([screen.getByTitle('4,5')]);
     expect(cells.filter((cell) => cell.tabIndex === -1)).toHaveLength(263);
@@ -58,25 +67,27 @@ describe('Chessball UI interactions', () => {
     render(<App />);
 
     expect(screen.getByTitle('0,0')).toHaveAttribute('tabindex', '0');
+    expect(screen.getByTitle('0,0')).not.toHaveAccessibleName(/selected/i);
   });
 
   it('moves board focus with clamped arrow keys and preserves it across ordinary rerenders', () => {
-    Element.prototype.scrollIntoView = vi.fn();
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
     render(<App initialGame={createGame()} />);
     const ballSquare = screen.getByTitle('4,5');
     act(() => ballSquare.focus());
 
     fireEvent.keyDown(ballSquare, { key: 'ArrowRight' });
     expect(screen.getByTitle('5,5')).toHaveFocus();
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
-    vi.mocked(Element.prototype.scrollIntoView).mockClear();
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    scrollIntoView.mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     expect(screen.getByTitle('5,5')).toHaveAttribute('tabindex', '0');
-    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByTitle('6,5'));
-    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
 
     const leftEdge = screen.getByTitle('0,5');
     act(() => leftEdge.focus());
@@ -91,7 +102,17 @@ describe('Chessball UI interactions', () => {
     act(() => bottomEdge.focus());
     fireEvent.keyDown(bottomEdge, { key: 'ArrowDown' });
     expect(bottomEdge).toHaveFocus();
-    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('makes a clicked square the board tab stop without relying on browser focus behavior', () => {
+    render(<App initialGame={createGame()} />);
+    const target = screen.getByTitle('6,5');
+
+    fireEvent.click(target);
+
+    expect(target).toHaveAttribute('tabindex', '0');
+    expect(screen.getAllByRole('gridcell').filter((cell) => cell.tabIndex === 0)).toEqual([target]);
   });
 
   it('gives Enter and Space the same square behavior as pointer activation', () => {

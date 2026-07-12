@@ -525,6 +525,10 @@ h1 {
   background: var(--field);
 }
 
+.board-row {
+  display: contents;
+}
+
 .utility-bar {
   display: grid;
   gap: 10px;
