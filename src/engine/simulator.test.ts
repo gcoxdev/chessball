@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from './rules';
 import { simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
+import type { SimulationFormationPlan, SimulationOpening } from './simulator';
 
 describe('headless simulator', () => {
   it('produces repeatable game summaries from the same seed and policy', () => {
@@ -9,6 +10,94 @@ describe('headless simulator', () => {
 
     expect(second.summary).toEqual(first.summary);
     expect(second.anomalies).toEqual(first.anomalies);
+  });
+
+  it('forces either team to receive the opening kickoff without changing the seed', () => {
+    const homeReceives = simulateGame({
+      seed: 77,
+      policy: 'heuristic',
+      opening: { coinWinner: 'home', choice: 'receive' },
+      maxActions: 30,
+    });
+    const awayReceives = simulateGame({
+      seed: 77,
+      policy: 'heuristic',
+      opening: { coinWinner: 'away', choice: 'receive' },
+      maxActions: 30,
+    });
+
+    expect(homeReceives.summary.openingWinner).toBe('home');
+    expect(homeReceives.summary.openingKicker).toBe('away');
+    expect(homeReceives.summary.openingReceiver).toBe('home');
+    expect(awayReceives.summary.openingWinner).toBe('away');
+    expect(awayReceives.summary.openingKicker).toBe('home');
+    expect(awayReceives.summary.openingReceiver).toBe('away');
+    expect(homeReceives.summary.attackDirections).toEqual({ home: 'right', away: 'left' });
+    expect(awayReceives.summary.attackDirections).toEqual({ home: 'right', away: 'left' });
+  });
+
+  it('selects planned formations for the possessing offense and opposing defense', () => {
+    const result = simulateGame({
+      seed: 12,
+      policy: 'heuristic',
+      opening: { coinWinner: 'home', choice: 'receive' },
+      formationPlan: {
+        home: { offense: 'i-form', defense: '4-3' },
+        away: { offense: 'shotgun', defense: 'nickel' },
+      },
+      maxActions: 14,
+    });
+
+    expect(result.finalState.possession).toBe('home');
+    expect(result.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', side: 'offense', formationId: 'i-form' }),
+    );
+    expect(result.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', side: 'defense', formationId: 'nickel' }),
+    );
+  });
+
+  it('swaps planned offense and defense teams when away has possession', () => {
+    const result = simulateGame({
+      seed: 12,
+      policy: 'heuristic',
+      opening: { coinWinner: 'away', choice: 'receive' },
+      formationPlan: {
+        home: { offense: 'i-form', defense: '4-3' },
+        away: { offense: 'shotgun', defense: 'nickel' },
+      },
+      maxActions: 14,
+    });
+
+    expect(result.finalState.possession).toBe('away');
+    expect(result.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', side: 'offense', formationId: 'shotgun' }),
+    );
+    expect(result.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', side: 'defense', formationId: '4-3' }),
+    );
+  });
+
+  it('rejects unsupported opening values at runtime', () => {
+    const invalidWinner = { coinWinner: 'visitors', choice: 'receive' } as unknown as SimulationOpening;
+    const invalidChoice = { coinWinner: 'home', choice: 'defer' } as unknown as SimulationOpening;
+
+    expect(() => simulateGame({ seed: 1, opening: invalidWinner })).toThrow(/coin winner/i);
+    expect(() => simulateGame({ seed: 1, opening: invalidChoice })).toThrow(/kickoff choice/i);
+  });
+
+  it('rejects unknown and wrong-side formation IDs at runtime', () => {
+    const unknown = {
+      home: { offense: 'wishbone', defense: '4-3' },
+      away: { offense: 'shotgun', defense: 'nickel' },
+    } as unknown as SimulationFormationPlan;
+    const wrongSide = {
+      home: { offense: 'nickel', defense: '4-3' },
+      away: { offense: 'shotgun', defense: 'i-form' },
+    } as unknown as SimulationFormationPlan;
+
+    expect(() => simulateGame({ seed: 1, formationPlan: unknown })).toThrow(/unknown.*formation/i);
+    expect(() => simulateGame({ seed: 1, formationPlan: wrongSide })).toThrow(/offense.*nickel|defense.*i-form/i);
   });
 
   it('selects policies independently for home and away', () => {

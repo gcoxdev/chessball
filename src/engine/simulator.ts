@@ -13,6 +13,14 @@ import type { Action, Coord, DiceRoll, GameState, Piece, PlayResult, Team } from
 
 export type SimulationPolicy = 'heuristic' | 'random';
 export type TeamPolicies = Record<Team, SimulationPolicy>;
+export type SimulationOpening = {
+  coinWinner: Team;
+  choice: 'kick' | 'receive';
+};
+export type SimulationFormationPlan = Record<Team, {
+  offense: string;
+  defense: string;
+}>;
 export type SimulationStatus = 'completed' | 'stalled' | 'crashed';
 
 export type SimulationAnomaly = {
@@ -34,6 +42,10 @@ export type SimulationSummary = {
   finalScore: GameState['score'];
   quarter: GameState['quarter'];
   resultTypes: CountMap;
+  openingWinner: Team;
+  openingKicker: Team;
+  openingReceiver: Team;
+  attackDirections: Record<Team, 'left' | 'right'>;
 };
 
 export type SimulatedGame = {
@@ -112,6 +124,8 @@ export type SimulateGameOptions = {
   policies?: TeamPolicies;
   maxActions?: number;
   repeatLimit?: number;
+  opening?: SimulationOpening;
+  formationPlan?: SimulationFormationPlan;
 };
 
 type SimulateBatchOptions = {
@@ -129,6 +143,7 @@ const DEFAULT_MAX_ACTIONS = 2_000;
 const DEFAULT_REPEAT_LIMIT = 80;
 
 export function simulateGame(options: SimulateGameOptions): SimulatedGame {
+  validateSimulationOptions(options);
   const rng = seededRandom(options.seed);
   const policies = normalizePolicies(options);
   const maxActions = options.maxActions ?? DEFAULT_MAX_ACTIONS;
@@ -160,7 +175,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
     try {
       const legalActions = generateLegalActions(state);
-      const action = chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex);
+      const action = chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex, options.opening, options.formationPlan);
 
       if (!action) {
         if (state.phase === 'betweenDowns') {
@@ -195,7 +210,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
         break;
       }
 
-      const resolvedAction = withRandomResolution(action, rng);
+      const resolvedAction = withRandomResolution(action, rng, options.opening);
       const before = state;
       state = applyAction(state, resolvedAction);
       pushRecentAction(recentActions, actionSummary(before, resolvedAction, state));
@@ -254,10 +269,41 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       finalScore: state.score,
       quarter: state.quarter,
       resultTypes,
+      openingWinner: state.coinToss.winner ?? 'home',
+      openingKicker: state.openingKickoffTeam,
+      openingReceiver: otherTeam(state.openingKickoffTeam),
+      attackDirections: { home: 'right', away: 'left' },
     },
     anomalies,
     finalState: state,
   };
+}
+
+function validateSimulationOptions(options: SimulateGameOptions): void {
+  if (options.opening) {
+    if (options.opening.coinWinner !== 'home' && options.opening.coinWinner !== 'away') {
+      throw new Error(`Unsupported coin winner: ${String(options.opening.coinWinner)}`);
+    }
+    if (options.opening.choice !== 'kick' && options.opening.choice !== 'receive') {
+      throw new Error(`Unsupported kickoff choice: ${String(options.opening.choice)}`);
+    }
+  }
+  if (options.formationPlan) {
+    const offenseIds = new Set(offensiveFormations.map((formation) => formation.id));
+    const defenseIds = new Set(defensiveFormations.map((formation) => formation.id));
+    for (const team of ['home', 'away'] as const) {
+      for (const side of ['offense', 'defense'] as const) {
+        const formationId = options.formationPlan[team]?.[side];
+        const expectedIds = side === 'offense' ? offenseIds : defenseIds;
+        const oppositeIds = side === 'offense' ? defenseIds : offenseIds;
+        if (expectedIds.has(formationId)) continue;
+        if (oppositeIds.has(formationId)) {
+          throw new Error(`${team} ${side} formation ${String(formationId)} belongs to the wrong side`);
+        }
+        throw new Error(`Unknown ${side} formation ${String(formationId)} for ${team}`);
+      }
+    }
+  }
 }
 
 function normalizePolicies(options: SimulateGameOptions): TeamPolicies {
@@ -547,10 +593,12 @@ function chooseSimulationAction(
   rng: Random,
   policy: SimulationPolicy,
   actionIndex: number,
+  opening?: SimulationOpening,
+  formationPlan?: SimulationFormationPlan,
 ): Action | null {
   if (state.phase === 'betweenDowns' && state.play.result?.type !== 'touchdown') return null;
   if (legalActions.length === 0) return null;
-  const protocolAction = chooseProtocolAction(state, legalActions, rng, policy, actionIndex);
+  const protocolAction = chooseProtocolAction(state, legalActions, rng, policy, actionIndex, opening, formationPlan);
   if (protocolAction) return protocolAction;
   if (policy === 'random') return chooseBoundedRandomAction(state, legalActions, rng);
   return chooseHeuristicAction(state, legalActions, rng, actionIndex);
@@ -562,18 +610,21 @@ function chooseProtocolAction(
   rng: Random,
   policy: SimulationPolicy,
   actionIndex: number,
+  opening?: SimulationOpening,
+  formationPlan?: SimulationFormationPlan,
 ): Action | null {
   const coin = legalActions.find((action) => action.type === 'coinToss');
   if (coin) return coin;
 
   const kickoffChoice = legalActions.filter((action): action is Extract<Action, { type: 'chooseKickoffChoice' }> => action.type === 'chooseKickoffChoice');
   if (kickoffChoice.length > 0) {
+    if (opening) return kickoffChoice.find((action) => action.choice === opening.choice) ?? kickoffChoice[0];
     if (policy === 'heuristic') return kickoffChoice.find((action) => action.choice === 'receive') ?? kickoffChoice[0];
     return kickoffChoice[randomInt(rng, kickoffChoice.length)];
   }
 
   if (state.phase === 'formation') {
-    const formation = chooseFormationProtocolAction(state, legalActions, rng, policy, actionIndex);
+    const formation = chooseFormationProtocolAction(state, legalActions, rng, policy, actionIndex, formationPlan);
     if (formation) return formation;
   }
 
@@ -592,6 +643,7 @@ function chooseFormationProtocolAction(
   rng: Random,
   policy: SimulationPolicy,
   actionIndex: number,
+  formationPlan?: SimulationFormationPlan,
 ): Action | null {
   const chooseFormation = legalActions.filter((action): action is Extract<Action, { type: 'chooseFormation' }> => action.type === 'chooseFormation');
   const confirm = legalActions.filter((action): action is Extract<Action, { type: 'confirmFormation' }> => action.type === 'confirmFormation');
@@ -604,6 +656,11 @@ function chooseFormationProtocolAction(
 
     const sideChoices = chooseFormation.filter((action) => action.side === side);
     if (!sideChosen && sideChoices.length > 0) {
+      if (formationPlan) {
+        const actingTeam = side === 'offense' ? state.possession : otherTeam(state.possession);
+        const plannedId = formationPlan[actingTeam][side];
+        return sideChoices.find((action) => action.formationId === plannedId) ?? sideChoices[0];
+      }
       if (policy === 'random') return sideChoices[randomInt(rng, sideChoices.length)];
       const formations = side === 'offense' ? offensiveFormations : defensiveFormations;
       const preferred = formations[(state.down + actionIndex + randomInt(rng, formations.length)) % formations.length];
@@ -808,8 +865,10 @@ function topPasses(state: GameState, legalActions: Action[], carrier: Piece, lim
     .slice(0, limit);
 }
 
-function withRandomResolution(action: Action, rng: Random): Action {
-  if (action.type === 'coinToss') return { ...action, result: rng() < 0.5 ? 'heads' : 'tails' };
+function withRandomResolution(action: Action, rng: Random, opening?: SimulationOpening): Action {
+  if (action.type === 'coinToss') {
+    return { ...action, result: opening ? (opening.coinWinner === 'home' ? 'heads' : 'tails') : rng() < 0.5 ? 'heads' : 'tails' };
+  }
   if (action.type === 'kick' || action.type === 'pass' || action.type === 'tackle' || action.type === 'powerMove') {
     return { ...action, roll: roll2d6(rng) } as Action;
   }
