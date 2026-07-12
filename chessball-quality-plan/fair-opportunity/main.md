@@ -10,7 +10,7 @@ Home and away should have equivalent starting opportunities after accounting for
 
 ## Status
 
-confirmed
+in-progress
 
 ## Planning Depth
 
@@ -31,3 +31,4 @@ None.
 ## Activity Log
 
 - 2026-07-11: Confirmed symmetry across teams and starting conditions as the fairness standard.
+- 2026-07-12: Matched-policy and mirrored-condition evaluation started.

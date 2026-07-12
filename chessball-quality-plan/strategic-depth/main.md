@@ -10,7 +10,7 @@ Better decisions about formations, positioning, field position, and risk should 
 
 ## Status
 
-confirmed
+in-progress
 
 ## Planning Depth
 
@@ -31,3 +31,4 @@ None.
 ## Activity Log
 
 - 2026-07-11: Confirmed that balance must preserve a meaningful experienced-player advantage.
+- 2026-07-12: Independent home/away policy matchup support started.

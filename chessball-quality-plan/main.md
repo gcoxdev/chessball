@@ -6,7 +6,7 @@ Preserve Chessball's approachable hybrid of chess and American football while en
 
 ## Status
 
-confirmed
+in-progress
 
 ## Subgoals
 
@@ -32,3 +32,4 @@ confirmed
 
 - 2026-07-11: Confirmed a hybrid, moderate-luck direction and an evidence-led audit before rule changes.
 - 2026-07-11: Added physical-board viability as a design constraint and UI quality as an analysis-only branch.
+- 2026-07-12: Approved implementation plan entered subagent-driven execution.
