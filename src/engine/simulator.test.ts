@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from './rules';
-import { driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
+import { applyAction, createGame } from './rules';
+import { driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
 import type { PlayResult } from './types';
 import type { SimulationFormationPlan, SimulationOpening } from './simulator';
 
@@ -286,6 +286,33 @@ describe('headless simulator', () => {
       expect(key).toMatch(/^team=(home|away)\|policy=(heuristic|random)\|phase=[A-Za-z]+\|down=[1-4]\|field=(own|midfield|opponent|goal-to-go)\|action=[A-Za-z]+$/);
       expect(key).not.toMatch(/piece|coord|\bx=|\by=|\d+,\d+/i);
     }
+    for (const key of Object.keys(result.summary.actionTypes).filter((key) => key !== 'total')) {
+      expect(result.summary.actionOpportunities[key]).toBeGreaterThan(0);
+    }
+  });
+
+  it('records a real drive-ending action transition exactly once', () => {
+    const before = createGame({ phase: 'live', lineOfScrimmage: 17, ball: { kind: 'controlled', pieceId: 'home-qb' } });
+    const positioned = {
+      ...before,
+      pieces: before.pieces.map((item) => item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item),
+    };
+    const after = applyAction(positioned, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 4 } });
+
+    expect(driveOutcomeForTransition(positioned, after)).toBe('fieldGoalGood');
+    expect(driveOutcomeForTransition(after, after)).toBeNull();
+  });
+
+  it.each<PlayResult>([
+    { type: 'kickoff', team: 'home', receivingTeam: 'away', at: { x: 10, y: 4 } },
+    { type: 'tackle', at: { x: 10, y: 4 } },
+    { type: 'incomplete', at: { x: 10, y: 4 } },
+    { type: 'fumble', at: { x: 10, y: 4 } },
+  ])('does not record non-drive result $type as a drive outcome', (result) => {
+    const before = createGame({ phase: 'live' });
+    const after = { ...before, play: { ...before.play, result } };
+
+    expect(driveOutcomeForTransition(before, after)).toBeNull();
   });
 
   it('distinguishes successful and failed scoring drive outcomes', () => {
@@ -339,7 +366,11 @@ describe('headless simulator', () => {
     expect(report.formationChoices.total).toBeGreaterThan(0);
     expect(report.driveOutcomes.total).toBeLessThanOrEqual(report.resultTypes.total);
     if (report.completed > 0) {
-      expect(report.balance.homeWinRate + report.balance.awayWinRate + report.balance.tieRate).toBeCloseTo(1);
+      const { homeWinRate, awayWinRate, tieRate } = report.balance;
+      expect(homeWinRate).not.toBeNull();
+      expect(awayWinRate).not.toBeNull();
+      expect(tieRate).not.toBeNull();
+      expect((homeWinRate ?? 0) + (awayWinRate ?? 0) + (tieRate ?? 0)).toBeCloseTo(1);
     } else {
       expect(report.balance.homeWinRate).toBeNull();
     }
@@ -367,6 +398,29 @@ describe('headless simulator', () => {
     expect(report.balance.homeWinRate).toBeNull();
     expect(report.balanceByPolicy.heuristic.games).toBe(0);
     expect(report.byPolicy.heuristic.games).toBe(2);
+  });
+
+  it('uses only completed games in every estimate for a mixed-status batch', () => {
+    const report = simulateBatch({ games: 24, seed: 9, maxActionsPerGame: 1000 });
+    const completedGames = Array.from({ length: 24 }, (_, game) => simulateGame({
+      seed: 9 + game * 9_973,
+      policy: game < 12 ? 'heuristic' : 'random',
+      maxActions: 1000,
+    })).filter((game) => game.status === 'completed');
+    const expectedHomeAverage = completedGames.reduce((sum, game) => sum + game.summary.finalScore.home, 0) / completedGames.length;
+    const expectedAwayAverage = completedGames.reduce((sum, game) => sum + game.summary.finalScore.away, 0) / completedGames.length;
+
+    expect(report.completed).toBeGreaterThan(0);
+    expect(report.completed).toBeLessThan(report.games);
+    expect(report.completed + report.stalled + report.crashed).toBe(report.games);
+    expect(report.scoreDifferential.homeWins + report.scoreDifferential.awayWins + report.scoreDifferential.ties).toBe(report.completed);
+    expect(report.scoreDifferential.averageHomeScore).toBe(expectedHomeAverage);
+    expect(report.scoreDifferential.averageAwayScore).toBe(expectedAwayAverage);
+    expect(report.balance.games).toBe(report.completed);
+    expect(report.balanceByPolicy.heuristic.games + report.balanceByPolicy.random.games).toBe(report.completed);
+    expect(report.balanceByOpeningKickoff.home.games + report.balanceByOpeningKickoff.away.games).toBe(report.completed);
+    expect(report.balanceByOpeningReceiver.home.games + report.balanceByOpeningReceiver.away.games).toBe(report.completed);
+    expect(report.balanceByFinalDirection.left.games + report.balanceByFinalDirection.right.games).toBe(report.completed);
   });
 
   it('flags home-away imbalance when score or win thresholds are exceeded', () => {

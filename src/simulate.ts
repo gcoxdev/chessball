@@ -79,9 +79,9 @@ function printReport(report: ReturnType<typeof simulateBatch>): void {
   console.log(`Stalled: ${report.stalled}`);
   console.log(`Crashed: ${report.crashed}`);
   console.log(`Average actions: ${report.averageActions.toFixed(1)}`);
-  console.log(`Score: home ${report.scoreDifferential.averageHomeScore.toFixed(1)} avg, away ${report.scoreDifferential.averageAwayScore.toFixed(1)} avg`);
+  console.log(`Score: home ${formatMetric(report.scoreDifferential.averageHomeScore, 1)} avg, away ${formatMetric(report.scoreDifferential.averageAwayScore, 1)} avg`);
   console.log(`Record: home ${report.scoreDifferential.homeWins}, away ${report.scoreDifferential.awayWins}, ties ${report.scoreDifferential.ties}`);
-  console.log(`Balance: win delta ${formatPercent(report.balance.winRateDelta)}, score delta ${report.balance.averageScoreDelta.toFixed(2)}`);
+  console.log(`Balance: win delta ${formatPercent(report.balance.winRateDelta)}, score delta ${formatMetric(report.balance.averageScoreDelta, 2)}`);
   if (report.balance.warnings.length > 0) {
     console.log(`Balance warnings:`);
     for (const warning of report.balance.warnings) console.log(`  ${warning}`);
@@ -111,8 +111,8 @@ function printBalanceGroup(title: string, group: Record<string, BalanceBucket>):
   for (const [label, bucket] of Object.entries(group)) {
     console.log(
       `  ${label}: ${bucket.games} games, home ${bucket.homeWins}, away ${bucket.awayWins}, ties ${bucket.ties}, ` +
-        `avg ${bucket.averageHomeScore.toFixed(1)}-${bucket.averageAwayScore.toFixed(1)}, ` +
-        `win delta ${formatPercent(bucket.balance.winRateDelta)}, score delta ${bucket.balance.averageScoreDelta.toFixed(2)}`,
+        `avg ${formatMetric(bucket.averageHomeScore, 1)}-${formatMetric(bucket.averageAwayScore, 1)}, ` +
+        `win delta ${formatPercent(bucket.balance.winRateDelta)}, score delta ${formatMetric(bucket.balance.averageScoreDelta, 2)}`,
     );
     for (const warning of bucket.balance.warnings) console.log(`    ${warning}`);
   }
@@ -126,6 +126,10 @@ function formatCounts(counts: Record<string, number>): string {
     .join(', ') || 'none';
 }
 
-function formatPercent(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
+function formatMetric(value: number | null, digits: number): string {
+  return value === null ? 'n/a' : value.toFixed(digits);
+}
+
+function formatPercent(value: number | null): string {
+  return value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`;
 }

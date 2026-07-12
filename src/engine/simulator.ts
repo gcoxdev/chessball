@@ -92,8 +92,8 @@ export type SimulationBatchReport = {
     homeWins: number;
     awayWins: number;
     ties: number;
-    averageHomeScore: number;
-    averageAwayScore: number;
+    averageHomeScore: number | null;
+    averageAwayScore: number | null;
   };
   balance: BalanceReport;
   balanceByPolicy: Record<SimulationPolicy, BalanceBucket>;
@@ -104,11 +104,11 @@ export type SimulationBatchReport = {
 
 export type BalanceReport = {
   games: number;
-  homeWinRate: number;
-  awayWinRate: number;
-  tieRate: number;
-  winRateDelta: number;
-  averageScoreDelta: number;
+  homeWinRate: number | null;
+  awayWinRate: number | null;
+  tieRate: number | null;
+  winRateDelta: number | null;
+  averageScoreDelta: number | null;
   warnings: string[];
 };
 
@@ -117,8 +117,8 @@ export type BalanceBucket = {
   homeWins: number;
   awayWins: number;
   ties: number;
-  averageHomeScore: number;
-  averageAwayScore: number;
+  averageHomeScore: number | null;
+  averageAwayScore: number | null;
   balance: BalanceReport;
 };
 
@@ -242,19 +242,17 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       const resolvedAction = withRandomResolution(action, rng, options.opening);
       const before = state;
       const selectedContextKey = actionContextKey(before, policies[before.turn], resolvedAction.type);
+      let formationChoiceKey: string | null = null;
       if (resolvedAction.type === 'chooseFormation') {
         const team = resolvedAction.side === 'offense' ? before.possession : otherTeam(before.possession);
         formationSelections[team][resolvedAction.side].push(resolvedAction.formationId);
-        increment(formationChoices, `team=${team}|side=${resolvedAction.side}|quarter=${before.quarter}|formation=${resolvedAction.formationId}`);
+        formationChoiceKey = `team=${team}|side=${resolvedAction.side}|quarter=${before.quarter}|formation=${resolvedAction.formationId}`;
       }
       state = applyAction(state, resolvedAction);
       pushRecentAction(recentActions, actionSummary(before, resolvedAction, state));
       const resultType = state.play.result?.type;
       if (resultType) increment(resultTypes, resultType);
-      if (state.play.result !== before.play.result) {
-        const outcome = driveOutcomeKey(state.play.result);
-        if (outcome) increment(driveOutcomes, outcome);
-      }
+      const driveOutcome = driveOutcomeForTransition(before, state);
       const invariantErrors = validateGameStateInvariants(state);
       if (invariantErrors.length > 0) {
         status = 'crashed';
@@ -270,6 +268,8 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       }
 
       increment(actionTypes, selectedContextKey);
+      if (formationChoiceKey) increment(formationChoices, formationChoiceKey);
+      if (driveOutcome) increment(driveOutcomes, driveOutcome);
       actionIndex += 1;
     } catch (error) {
       status = 'crashed';
@@ -529,16 +529,16 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
       homeWins,
       awayWins,
       ties,
-      averageHomeScore: completed > 0 ? homeScore / completed : null as unknown as number,
-      averageAwayScore: completed > 0 ? awayScore / completed : null as unknown as number,
+      averageHomeScore: completed > 0 ? homeScore / completed : null,
+      averageAwayScore: completed > 0 ? awayScore / completed : null,
     },
     balance: balanceReport({
       games: completed,
       homeWins,
       awayWins,
       ties,
-      averageHomeScore: completed > 0 ? homeScore / completed : null as unknown as number,
-      averageAwayScore: completed > 0 ? awayScore / completed : null as unknown as number,
+      averageHomeScore: completed > 0 ? homeScore / completed : null,
+      averageAwayScore: completed > 0 ? awayScore / completed : null,
       winRateThreshold: options.balanceWinRateThreshold ?? 0.1,
       scoreThreshold: options.balanceScoreThreshold ?? 2,
     }),
@@ -563,8 +563,8 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
 
 function toBalanceBucket(accumulator: BalanceAccumulator, options: SimulateBatchOptions): BalanceBucket {
   const games = accumulator.games;
-  const averageHomeScore = games > 0 ? accumulator.homeScore / games : null as unknown as number;
-  const averageAwayScore = games > 0 ? accumulator.awayScore / games : null as unknown as number;
+  const averageHomeScore = games > 0 ? accumulator.homeScore / games : null;
+  const averageAwayScore = games > 0 ? accumulator.awayScore / games : null;
   return {
     games: accumulator.games,
     homeWins: accumulator.homeWins,
@@ -642,20 +642,25 @@ export function driveOutcomeKey(result: PlayResult | undefined): string | null {
   return null;
 }
 
+export function driveOutcomeForTransition(before: GameState, after: GameState): string | null {
+  if (before.play.result === after.play.result) return null;
+  return driveOutcomeKey(after.play.result);
+}
+
 function balanceReport(input: {
   games: number;
   homeWins: number;
   awayWins: number;
   ties: number;
-  averageHomeScore: number;
-  averageAwayScore: number;
+  averageHomeScore: number | null;
+  averageAwayScore: number | null;
   winRateThreshold: number;
   scoreThreshold: number;
 }): BalanceReport {
   if (input.games === 0) {
-    const unavailable = null as unknown as number;
-    return { games: 0, homeWinRate: unavailable, awayWinRate: unavailable, tieRate: unavailable, winRateDelta: unavailable, averageScoreDelta: unavailable, warnings: [] };
+    return { games: 0, homeWinRate: null, awayWinRate: null, tieRate: null, winRateDelta: null, averageScoreDelta: null, warnings: [] };
   }
+  if (input.averageHomeScore === null || input.averageAwayScore === null) throw new Error('Completed balance samples require score averages');
   const homeWinRate = input.homeWins / input.games;
   const awayWinRate = input.awayWins / input.games;
   const tieRate = input.ties / input.games;
