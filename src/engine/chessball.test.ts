@@ -1427,8 +1427,10 @@ describe('play resolution', () => {
       const state = stoppedFor(receivingTeam, { type: 'touchback', team: receivingTeam, at: { x: 17, y: 5 } }, {
         pendingKick: { kind: 'kickoff', kickingTeam, receivingTeam, from: { x: 10, y: 5 }, distance: 12, roll: { die1: 6, die2: 6 } },
       });
+      const next = startNextDown(state);
 
-      expect(startNextDown(state).drivesThisQuarter).toEqual({ home: 0, away: 0 });
+      expect(next.drivesThisQuarter).toEqual({ home: 0, away: 0 });
+      expect(next.pendingKick).toBeUndefined();
     });
 
     it('does not count a kickoff ended by coverage touching the loose kick', () => {
@@ -1447,8 +1449,18 @@ describe('play resolution', () => {
       const state = stoppedFor('away', result, {
         pendingKick: { kind: 'punt', kickingTeam: 'home', receivingTeam: 'away', from: { x: 8, y: 5 }, distance: 10, roll: { die1: 5, die2: 5 } },
       });
+      const next = startNextDown(state);
 
-      expect(startNextDown(state).drivesThisQuarter).toEqual({ home: 1, away: 0 });
+      expect(next.drivesThisQuarter).toEqual({ home: 1, away: 0 });
+      expect(next.pendingKick).toBeUndefined();
+    });
+
+    it('credits away when away punts to a home touchback', () => {
+      const state = stoppedFor('home', { type: 'touchback', team: 'home', at: { x: 6, y: 5 } }, {
+        pendingKick: { kind: 'punt', kickingTeam: 'away', receivingTeam: 'home', from: { x: 15, y: 5 }, distance: 10, roll: { die1: 5, die2: 5 } },
+      });
+
+      expect(startNextDown(state).drivesThisQuarter).toEqual({ home: 0, away: 1 });
     });
 
     it.each([
@@ -1463,7 +1475,9 @@ describe('play resolution', () => {
     it.each([
       ['made field goal', { type: 'fieldGoal', team: 'home', good: true }],
       ['made extra point after touchdown', { type: 'extraPoint', team: 'home', good: true }],
+      ['missed extra point after touchdown', { type: 'extraPoint', team: 'home', good: false }],
       ['made two-point try after touchdown', { type: 'twoPoint', team: 'home', good: true }],
+      ['failed two-point try after touchdown', { type: 'twoPoint', team: 'home', good: false }],
     ] as const)('keeps counting the correct offense exactly once for a %s', (_label, result) => {
       expect(startNextDown(stoppedFor('home', result)).drivesThisQuarter).toEqual({ home: 1, away: 0 });
     });
