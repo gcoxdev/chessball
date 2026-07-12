@@ -22,6 +22,22 @@ describe('parseArgs', () => {
   });
 
   it.each([
+    ['--games', '0x10'], ['--games', '1e3'], ['--games', '+2'], ['--games', '2.0'],
+    ['--seed', '0x10'], ['--seed', '1e3'], ['--seed', '+2'], ['--seed', '2.0'],
+    ['--balance-win-threshold', '0x1'], ['--balance-win-threshold', '1e-1'], ['--balance-win-threshold', '+0.5'], ['--balance-win-threshold', '1.'],
+  ])('rejects non-decimal lexical syntax %s %s', (flag, value) => {
+    expect(() => parseArgs([flag, value])).toThrow(flag);
+  });
+
+  it.each([
+    [['--games', '12', '--seed', '0'], { games: 12, seed: 0 }],
+    [['--balance-win-threshold', '0.5', '--balance-score-threshold', '2.25'], { balanceWinRateThreshold: .5, balanceScoreThreshold: 2.25 }],
+    [['--balance-win-threshold', '.5'], { balanceWinRateThreshold: .5 }],
+  ])('accepts conventional unsigned decimal syntax %#', (args, expected) => {
+    expect(parseArgs(args)).toMatchObject(expected);
+  });
+
+  it.each([
     [['--unknown'], '--unknown'],
     [['--games'], '--games'],
     [['--games', '1.5'], '--games'],
@@ -65,6 +81,12 @@ describe('parseArgs', () => {
 });
 
 describe('runCli', () => {
+  it('returns one and emits parseable JSON for invalid JSON-mode arguments', () => {
+    const lines: string[] = [];
+    expect(runCli(['--games', 'nope', '--json'], { write: line => lines.push(line) })).toBe(1);
+    expect(JSON.parse(lines.join('\n'))).toEqual({ error: expect.stringContaining('--games') });
+  });
+
   it('keeps the ordinary games path compatible and reports completed balance samples', () => {
     const report = batchReport({ games: 4, completed: 3, stalled: 1, balance: { games: 3, homeWinRate: .5, awayWinRate: .5, tieRate: 0, winRateDelta: 0, averageScoreDelta: 0, warnings: [] } });
     const simulateBatch = vi.fn(() => report);
@@ -83,6 +105,14 @@ describe('runCli', () => {
     expect(runCli([], { simulateBatch: () => report, runMatchedAudit: vi.fn(), write: line => lines.push(line) })).toBe(1);
     expect(lines.join('\n')).toContain('n/a');
     expect(exitCodeForBatchReport(batchReport({ stalled: 2 }))).toBe(0);
+  });
+
+  it.each([false, true])('returns one when ordinary simulation throws (json=%s)', json => {
+    const lines: string[] = [];
+    const args = json ? ['--json'] : [];
+    expect(runCli(args, { simulateBatch: () => { throw new Error('batch exploded'); }, write: line => lines.push(line) })).toBe(1);
+    if (json) expect(JSON.parse(lines.join('\n'))).toEqual({ error: 'batch exploded' });
+    else expect(lines.join('\n')).toBe('Simulation failed: batch exploded');
   });
 
   it('runs a complete audit successfully even when evidence is inconclusive', () => {

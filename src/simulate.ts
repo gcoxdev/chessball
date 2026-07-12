@@ -77,34 +77,45 @@ const knownValueFlags = new Set([
 ]);
 
 function numericValue(flag: string, value: string): number {
-  if (value.trim() === '') throw new Error(`${flag} requires a numeric value; received an empty value`);
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) throw new Error(`${flag} requires a finite numeric value; received ${JSON.stringify(value)}`);
   return parsed;
 }
 
 function positiveInteger(flag: string, value: string): number {
+  requireIntegerSyntax(flag, value);
   const parsed = numericValue(flag, value);
   if (!Number.isInteger(parsed) || parsed <= 0) throw new Error(`${flag} requires a positive integer; received ${JSON.stringify(value)}`);
   return parsed;
 }
 
 function uint32(flag: string, value: string): number {
+  requireIntegerSyntax(flag, value);
   const parsed = numericValue(flag, value);
   if (!Number.isInteger(parsed) || parsed < 0 || parsed > 0xffff_ffff) throw new Error(`${flag} requires a uint32 integer; received ${JSON.stringify(value)}`);
   return parsed;
 }
 
 function boundedNumber(flag: string, value: string, minimum: number, maximum: number): number {
+  requireDecimalSyntax(flag, value);
   const parsed = numericValue(flag, value);
   if (parsed < minimum || parsed > maximum) throw new Error(`${flag} must be between ${minimum} and ${maximum}; received ${JSON.stringify(value)}`);
   return parsed;
 }
 
 function minimumNumber(flag: string, value: string, minimum: number): number {
+  requireDecimalSyntax(flag, value);
   const parsed = numericValue(flag, value);
   if (parsed < minimum) throw new Error(`${flag} must be at least ${minimum}; received ${JSON.stringify(value)}`);
   return parsed;
+}
+
+function requireIntegerSyntax(flag: string, value: string): void {
+  if (!/^\d+$/.test(value)) throw new Error(`${flag} requires decimal digits only; received ${JSON.stringify(value)}`);
+}
+
+function requireDecimalSyntax(flag: string, value: string): void {
+  if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(value)) throw new Error(`${flag} requires an unsigned decimal value; received ${JSON.stringify(value)}`);
 }
 
 function policy(flag: string, value: string): SimulationPolicy {
@@ -121,7 +132,8 @@ export function exitCodeForAuditReport(report: Pick<MatchedAuditReport, 'exclude
 }
 
 export function runCli(args: string[], dependencies: Partial<CliDependencies> = {}): number {
-  const options = parseArgs(args);
+  const jsonIntent = args.includes('--json');
+  const operation = args.includes('--audit') ? 'Audit' : 'Simulation';
   const deps: CliDependencies = {
     simulateBatch,
     runMatchedAudit,
@@ -129,20 +141,21 @@ export function runCli(args: string[], dependencies: Partial<CliDependencies> = 
     ...dependencies,
   };
 
-  if (!options.audit) {
-    const report = deps.simulateBatch({
-      games: options.games,
-      seed: options.seed,
-      maxActionsPerGame: options.maxActions,
-      repeatLimit: options.repeatLimit,
-      balanceWinRateThreshold: options.balanceWinRateThreshold,
-      balanceScoreThreshold: options.balanceScoreThreshold,
-    });
-    deps.write(options.json ? JSON.stringify(report, null, 2) : formatBatchReport(report));
-    return exitCodeForBatchReport(report);
-  }
-
   try {
+    const options = parseArgs(args);
+    if (!options.audit) {
+      const report = deps.simulateBatch({
+        games: options.games,
+        seed: options.seed,
+        maxActionsPerGame: options.maxActions,
+        repeatLimit: options.repeatLimit,
+        balanceWinRateThreshold: options.balanceWinRateThreshold,
+        balanceScoreThreshold: options.balanceScoreThreshold,
+      });
+      deps.write(options.json ? JSON.stringify(report, null, 2) : formatBatchReport(report));
+      return exitCodeForBatchReport(report);
+    }
+
     const report = deps.runMatchedAudit({
       pairs: options.pairs,
       seed: options.seed,
@@ -155,7 +168,7 @@ export function runCli(args: string[], dependencies: Partial<CliDependencies> = 
     return exitCodeForAuditReport(report);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    deps.write(options.json ? JSON.stringify({ error: message }) : `Audit failed: ${message}`);
+    deps.write(jsonIntent ? JSON.stringify({ error: message }) : `${operation} failed: ${message}`);
     return 1;
   }
 }
