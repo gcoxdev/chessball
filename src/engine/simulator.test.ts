@@ -37,6 +37,64 @@ describe('headless simulator', () => {
     expect(awayActs.finalState.coinToss).toMatchObject({ winner: 'away', choice: 'kick' });
   });
 
+  it('uses only the home policy for a home formation turn', () => {
+    const heuristic = simulateGame({
+      seed: 12,
+      policies: { home: 'heuristic', away: 'heuristic' },
+      maxActions: 10,
+    });
+    const actingTeamChanged = simulateGame({
+      seed: 12,
+      policies: { home: 'random', away: 'heuristic' },
+      maxActions: 10,
+    });
+    const otherTeamChanged = simulateGame({
+      seed: 12,
+      policies: { home: 'heuristic', away: 'random' },
+      maxActions: 10,
+    });
+
+    expect(heuristic.finalState.turn).toBe('home');
+    expect(heuristic.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
+    );
+    expect(actingTeamChanged.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'i-form' }),
+    );
+    expect(otherTeamChanged.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
+    );
+  });
+
+  it('uses only the away policy for an away formation turn', () => {
+    const heuristic = simulateGame({
+      seed: 100,
+      policies: { home: 'heuristic', away: 'heuristic' },
+      maxActions: 28,
+    });
+    const actingTeamChanged = simulateGame({
+      seed: 100,
+      policies: { home: 'heuristic', away: 'random' },
+      maxActions: 28,
+    });
+    const otherTeamChanged = simulateGame({
+      seed: 100,
+      policies: { home: 'random', away: 'heuristic' },
+      maxActions: 28,
+    });
+
+    expect(heuristic.finalState.turn).toBe('away');
+    expect(heuristic.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
+    );
+    expect(actingTeamChanged.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
+    );
+    expect(otherTeamChanged.finalState.play.actions).toContainEqual(
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
+    );
+  });
+
   it('gives team policies precedence over the legacy scalar policy', () => {
     const result = simulateGame({
       seed: 1,
@@ -64,6 +122,19 @@ describe('headless simulator', () => {
     expect(first.summary.policies).toEqual({ home: 'random', away: 'random' });
     expect(second.summary).toEqual(first.summary);
     expect(second.anomalies).toEqual(first.anomalies);
+  });
+
+  it('runs a legacy random policy like an explicit all-random matchup', () => {
+    const legacy = simulateGame({ seed: 42, policy: 'random', maxActions: 400 });
+    const explicit = simulateGame({
+      seed: 42,
+      policies: { home: 'random', away: 'random' },
+      maxActions: 400,
+    });
+
+    expect(explicit.summary).toEqual(legacy.summary);
+    expect(explicit.anomalies).toEqual(legacy.anomalies);
+    expect(explicit.finalState).toEqual(legacy.finalState);
   });
 
   it('splits batch simulations between heuristic and random policies', () => {
