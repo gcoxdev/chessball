@@ -449,12 +449,20 @@ describe('headless simulator', () => {
   });
 
   it('uses only completed games in every estimate for a mixed-status batch', () => {
-    const report = simulateBatch({ games: 24, seed: 9, maxActionsPerGame: 1000 });
-    const completedGames = Array.from({ length: 24 }, (_, game) => simulateGame({
-      seed: 9 + game * 9_973,
-      policy: game < 12 ? 'heuristic' : 'random',
-      maxActions: 1000,
-    })).filter((game) => game.status === 'completed');
+    const captured = [] as ReturnType<typeof simulateGame>[];
+    const report = simulateBatch({
+      games: 12,
+      seed: 9,
+      simulate: (options) => {
+        const result = simulateGame({
+          ...options,
+          maxActions: captured.length % 3 === 0 ? 1 : 5000,
+        });
+        captured.push(result);
+        return result;
+      },
+    });
+    const completedGames = captured.filter((game) => game.status === 'completed');
     const expectedHomeAverage = completedGames.reduce((sum, game) => sum + game.summary.finalScore.home, 0) / completedGames.length;
     const expectedAwayAverage = completedGames.reduce((sum, game) => sum + game.summary.finalScore.away, 0) / completedGames.length;
 
@@ -469,6 +477,15 @@ describe('headless simulator', () => {
     expect(report.balanceByOpeningKickoff.home.games + report.balanceByOpeningKickoff.away.games).toBe(report.completed);
     expect(report.balanceByOpeningReceiver.home.games + report.balanceByOpeningReceiver.away.games).toBe(report.completed);
     expect(report.balanceByFinalDirection.left.games + report.balanceByFinalDirection.right.games).toBe(report.completed);
+  });
+
+  it('uses the real game simulator by default', () => {
+    const expected = simulateGame({ seed: 19, policy: 'heuristic', maxActions: 5000 });
+    const report = simulateBatch({ games: 1, seed: 19, maxActionsPerGame: 5000 });
+
+    expect(report.completed).toBe(expected.status === 'completed' ? 1 : 0);
+    expect(report.scoreDifferential.averageHomeScore).toBe(expected.status === 'completed' ? expected.summary.finalScore.home : null);
+    expect(report.scoreDifferential.averageAwayScore).toBe(expected.status === 'completed' ? expected.summary.finalScore.away : null);
   });
 
   it('flags home-away imbalance when score or win thresholds are exceeded', () => {

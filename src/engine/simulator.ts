@@ -151,6 +151,7 @@ type SimulateBatchOptions = {
   repeatLimit?: number;
   balanceWinRateThreshold?: number;
   balanceScoreThreshold?: number;
+  simulate?: typeof simulateGame;
 };
 
 type Random = () => number;
@@ -438,6 +439,7 @@ export function validateGameStateInvariants(state: GameState): string[] {
 export function simulateBatch(options: SimulateBatchOptions): SimulationBatchReport {
   const games = Math.max(1, Math.floor(options.games));
   const seed = options.seed ?? 1;
+  const simulate = options.simulate ?? simulateGame;
   const phases = countMap();
   const resultTypes = countMap();
   const actionTypes = countMap();
@@ -478,7 +480,7 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
   for (let game = 0; game < games; game += 1) {
     const policy: SimulationPolicy = game < Math.ceil(games / 2) ? 'heuristic' : 'random';
     const gameSeed = seed + game * 9_973;
-    const result = simulateGame({
+    const result = simulate({
       seed: gameSeed,
       policy,
       maxActions: options.maxActionsPerGame,
