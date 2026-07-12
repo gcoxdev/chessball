@@ -10,7 +10,7 @@ import {
   startNextDown,
   gridDistance,
 } from './rules';
-import type { Action, Coord, Piece } from './types';
+import type { Action, Coord, GameState, Piece, PlayResult, Team } from './types';
 
 const piece = (state: ReturnType<typeof createGame>, id: string): Piece => {
   const found = state.pieces.find((item) => item.id === id);
@@ -23,6 +23,20 @@ const readyFormation = (state = createGame()) => applyAction(
   { type: 'confirmFormation', side: 'defense' },
 );
 const liveGame = (state = createGame()) => applyAction(readyFormation(state), { type: 'snap' });
+
+const stoppedFor = (
+  possession: Team,
+  result: PlayResult,
+  overrides: Partial<GameState> = {},
+) => createGame({
+  phase: 'betweenDowns',
+  possession,
+  direction: possession === 'home' ? 1 : -1,
+  turn: possession,
+  drivesThisQuarter: { home: 0, away: 0 },
+  play: { actions: [], result },
+  ...overrides,
+});
 
 describe('field geometry', () => {
   it('counts distance as diagonals first, then straight squares', () => {
@@ -1140,6 +1154,7 @@ describe('play resolution', () => {
 
     expect(touchback.play.result).toEqual({ type: 'touchback', team: 'away', at: { x: 17, y: 5 } });
     expect(startNextDown(touchback).lineOfScrimmage).toBe(17);
+    expect(startNextDown(touchback).drivesThisQuarter).toEqual({ home: 0, away: 0 });
 
     let puntState = liveGame(createGame({ lineOfScrimmage: 17, firstDownLine: 19 }));
     puntState = {
@@ -1150,6 +1165,7 @@ describe('play resolution', () => {
     const puntTouchback = applyAction(punt, { type: 'placeKick', at: { x: 23, y: 5 } });
 
     expect(puntTouchback.play.result).toEqual({ type: 'touchback', team: 'away', at: { x: 17, y: 5 } });
+    expect(startNextDown(puntTouchback).drivesThisQuarter).toEqual({ home: 1, away: 0 });
   });
 
   it('lets a receiving player collect a loose kickoff by moving onto the landing square', () => {
@@ -1198,6 +1214,13 @@ describe('play resolution', () => {
     expect(touched.lineOfScrimmage).toBe(11);
     expect(touched.ball).toEqual({ kind: 'controlled', pieceId: 'away-qb' });
     expect(touched.play.result).toEqual({ type: 'kickTouched', team: 'home', receivingTeam: 'away', at: { x: 11, y: 5 } });
+    expect(startNextDown(touched).drivesThisQuarter).toEqual({ home: 0, away: 0 });
+
+    const puntTouched = applyAction({
+      ...returned,
+      pendingKick: { ...returned.pendingKick, kind: 'punt' as const },
+    }, { type: 'move', pieceId: 'home-wr1', to: { x: 11, y: 5 } });
+    expect(startNextDown(puntTouched).drivesThisQuarter).toEqual({ home: 1, away: 0 });
   });
 
   it('restricts return-team movement to two squares and coverage-team movement to three', () => {
@@ -1273,6 +1296,10 @@ describe('play resolution', () => {
     expect(next.phase).toBe('formation');
     expect(next.lineOfScrimmage).toBe(12);
     expect(next.possession).toBe('away');
+
+    const puntReturn = { ...returned, pendingKick: { ...returned.pendingKick, kind: 'punt' as const } };
+    const puntTackled = applyAction(puntReturn, { type: 'tackle', defenderId: 'home-rb', targetId: 'away-wr1', roll: { die1: 3, die2: 4 } });
+    expect(startNextDown(puntTackled).drivesThisQuarter).toEqual({ home: 1, away: 0 });
   });
 
   it('lets any coverage player tackle within the three-square kick return range', () => {
@@ -1390,6 +1417,92 @@ describe('play resolution', () => {
     expect(next.phase).toBe('final');
     expect(next.quarter).toBe(4);
     expect(next.drivesThisQuarter).toEqual({ home: 2, away: 2 });
+  });
+
+  describe('completed drive ownership', () => {
+    it.each([
+      ['home', 'away'],
+      ['away', 'home'],
+    ] as const)('does not count a %s kickoff touchback received by %s', (kickingTeam, receivingTeam) => {
+      const state = stoppedFor(receivingTeam, { type: 'touchback', team: receivingTeam, at: { x: 17, y: 5 } }, {
+        pendingKick: { kind: 'kickoff', kickingTeam, receivingTeam, from: { x: 10, y: 5 }, distance: 12, roll: { die1: 6, die2: 6 } },
+      });
+
+      expect(startNextDown(state).drivesThisQuarter).toEqual({ home: 0, away: 0 });
+    });
+
+    it('does not count a kickoff ended by coverage touching the loose kick', () => {
+      const state = stoppedFor('away', { type: 'kickTouched', team: 'home', receivingTeam: 'away', at: { x: 11, y: 5 } }, {
+        pendingKick: { kind: 'kickoff', kickingTeam: 'home', receivingTeam: 'away', from: { x: 4, y: 5 }, distance: 7, roll: { die1: 3, die2: 4 } },
+      });
+
+      expect(startNextDown(state).drivesThisQuarter).toEqual({ home: 0, away: 0 });
+    });
+
+    it.each([
+      ['touchback', { type: 'touchback', team: 'away', at: { x: 17, y: 5 } }],
+      ['coverage touch', { type: 'kickTouched', team: 'home', receivingTeam: 'away', at: { x: 12, y: 5 } }],
+      ['fielded return tackle', { type: 'tackle', at: { x: 12, y: 5 }, roll: { roll: { die1: 5, die2: 5 }, total: 10, required: 5, distance: 1 } }],
+    ] as const)('credits the punting team after a punt %s', (_label, result) => {
+      const state = stoppedFor('away', result, {
+        pendingKick: { kind: 'punt', kickingTeam: 'home', receivingTeam: 'away', from: { x: 8, y: 5 }, distance: 10, roll: { die1: 5, die2: 5 } },
+      });
+
+      expect(startNextDown(state).drivesThisQuarter).toEqual({ home: 1, away: 0 });
+    });
+
+    it.each([
+      ['interception', { type: 'interception', team: 'away' }],
+      ['turnover on downs', { type: 'turnoverOnDowns', team: 'away' }],
+      ['missed field goal', { type: 'fieldGoal', team: 'home', good: false }],
+      ['opponent-recovered fumble', { type: 'fumble', at: { x: 10, y: 5 }, recoveredBy: 'away' }],
+    ] as const)('credits the former offense after %s', (_label, result) => {
+      expect(startNextDown(stoppedFor('away', result)).drivesThisQuarter).toEqual({ home: 1, away: 0 });
+    });
+
+    it.each([
+      ['made field goal', { type: 'fieldGoal', team: 'home', good: true }],
+      ['made extra point after touchdown', { type: 'extraPoint', team: 'home', good: true }],
+      ['made two-point try after touchdown', { type: 'twoPoint', team: 'home', good: true }],
+    ] as const)('keeps counting the correct offense exactly once for a %s', (_label, result) => {
+      expect(startNextDown(stoppedFor('home', result)).drivesThisQuarter).toEqual({ home: 1, away: 0 });
+    });
+
+    it('credits the offense that conceded a safety', () => {
+      const safety = stoppedFor('away', { type: 'safety', team: 'home' });
+
+      expect(startNextDown(safety).drivesThisQuarter).toEqual({ home: 0, away: 1 });
+    });
+
+    it.each([
+      { type: 'tackle', at: { x: 8, y: 5 } },
+      { type: 'incomplete', at: { x: 8, y: 5 } },
+    ] as PlayResult[])('does not count nonterminal $type results', (result) => {
+      expect(startNextDown(stoppedFor('home', result)).drivesThisQuarter).toEqual({ home: 0, away: 0 });
+    });
+
+    it('uses corrected ownership before deciding quarter and final boundaries', () => {
+      const quarter = stoppedFor('away', { type: 'interception', team: 'away' }, {
+        quarter: 1,
+        drivesThisQuarter: { home: 1, away: 2 },
+      });
+      const final = stoppedFor('away', { type: 'turnoverOnDowns', team: 'away' }, {
+        quarter: 4,
+        drivesThisQuarter: { home: 1, away: 2 },
+      });
+
+      expect(startNextDown(quarter).quarter).toBe(2);
+      expect(startNextDown(final).phase).toBe('final');
+    });
+
+    it('does not let halftime or opening kickoff resolution consume a drive', () => {
+      const halftimeTouchback = stoppedFor('home', { type: 'touchback', team: 'home', at: { x: 6, y: 5 } }, {
+        quarter: 3,
+        pendingKick: { kind: 'kickoff', kickingTeam: 'away', receivingTeam: 'home', from: { x: 19, y: 5 }, distance: 12, roll: { die1: 6, die2: 6 } },
+      });
+
+      expect(startNextDown(halftimeTouchback).drivesThisQuarter).toEqual({ home: 0, away: 0 });
+    });
   });
 });
 

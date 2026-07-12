@@ -359,8 +359,9 @@ export function startNextDown(state: GameState): GameState {
     result?.type === 'safety' ||
     result?.type === 'interception' ||
     result?.type === 'turnoverOnDowns';
-  const completedDriveState = driveCompletes(result) ? markDriveComplete(state) : state;
-  const quarterState = maybeAdvanceQuarter(completedDriveState);
+  const driveOwner = completedDriveOwner(state, result);
+  const completedDriveState = driveOwner ? markDriveComplete(state, driveOwner) : state;
+  const quarterState = maybeAdvanceQuarter({ ...completedDriveState, pendingKick: undefined });
   if (quarterState.phase === 'kickoff' || quarterState.phase === 'final') return quarterState;
   const postScoreKickingTeam = nextKickoffTeam(result);
   if (postScoreKickingTeam) {
@@ -1247,12 +1248,12 @@ function legalKickPlacements(state: GameState): Coord[] {
   return placements;
 }
 
-function markDriveComplete(state: GameState): GameState {
+function markDriveComplete(state: GameState, owner: Team): GameState {
   return {
     ...state,
     drivesThisQuarter: {
       ...state.drivesThisQuarter,
-      [state.possession]: Math.min(DRIVES_PER_TEAM_PER_QUARTER, state.drivesThisQuarter[state.possession] + 1),
+      [owner]: Math.min(DRIVES_PER_TEAM_PER_QUARTER, state.drivesThisQuarter[owner] + 1),
     },
   };
 }
@@ -1299,20 +1300,21 @@ function nextKickoffTeam(result: PlayResult | undefined): Team | undefined {
   return undefined;
 }
 
-function driveCompletes(result: PlayResult | undefined): boolean {
-  if (!result) return false;
-  return result.type === 'touchdown' ||
+function completedDriveOwner(state: GameState, result: PlayResult | undefined): Team | undefined {
+  if (!result) return undefined;
+  if (state.pendingKick?.kind === 'kickoff') return undefined;
+  if (state.pendingKick?.kind === 'punt') return state.pendingKick.kickingTeam;
+
+  if (result.type === 'touchdown' ||
     result.type === 'fieldGoal' ||
     result.type === 'extraPoint' ||
     result.type === 'twoPoint' ||
-    result.type === 'punt' ||
-    result.type === 'safety' ||
-    result.type === 'interception' ||
-    result.type === 'turnoverOnDowns' ||
-    result.type === 'touchback' ||
-    result.type === 'kickOutOfBounds' ||
-    result.type === 'kickTouched' ||
-    result.type === 'fumble' && result.recoveredBy !== undefined;
+    result.type === 'punt') return result.team;
+  if (result.type === 'safety' || result.type === 'interception' || result.type === 'turnoverOnDowns') {
+    return otherTeam(result.team);
+  }
+  if (result.type === 'fumble' && result.recoveredBy !== undefined) return otherTeam(result.recoveredBy);
+  return undefined;
 }
 
 function touchbackSpot(team: Team): number {
@@ -1490,7 +1492,6 @@ function endPlay(state: GameState, result: PlayResult): GameState {
   return {
     ...state,
     phase: 'betweenDowns',
-    pendingKick: undefined,
     play: { ...state.play, result },
   };
 }
