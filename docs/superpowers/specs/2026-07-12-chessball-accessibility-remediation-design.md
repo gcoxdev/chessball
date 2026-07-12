@@ -29,7 +29,7 @@ Implement the high-confidence P1/P2 UI findings from the Chessball quality audit
 - Preserve the desktop board layout and complete board information.
 - At 390×844, keep the board in a viewport-width horizontal scroll container with no page-level horizontal overflow. Preserve the board container's manual scroll position across ordinary renders. When roving keyboard focus moves to an off-screen square, scroll only enough to reveal that square using nearest block/inline alignment; pointer activation and unrelated state updates must not recenter the board. Do not make status/actions sticky, reposition major panels, or replace the board with a reduced game mode in this pass.
 - Increase primary interactive controls toward a 44px robust touch-target heuristic, add `touch-action: manipulation`, and choose an intentional tap-highlight treatment.
-- Add confirmation when the utility-bar New Game action would abandon an in-progress match (`phase` is neither `pregame` nor `final`) or nontrivial navigable history. Pregame reset/start remains direct. The final-result dialog's explicit New Game action remains direct because the match is complete and the dialog itself is the required end-of-match decision; do not stack a confirmation dialog on the final dialog.
+- Add confirmation for the utility-bar New Game action whenever `phase !== 'pregame'`. Pregame reset/start remains direct. The final-result dialog's explicit New Game action remains direct because the match is complete and the dialog itself is the required end-of-match decision; do not stack a confirmation dialog on the final dialog.
 - Expose history mode visibly and programmatically as read-only; board cells may remain navigable for inspection but must not appear actionable.
 - Retain useful focus after responsive scrolling and dialog interactions.
 
@@ -59,7 +59,7 @@ Do not introduce a component framework or new runtime dependency for these behav
 - History viewing remains non-mutating for pointer and keyboard activation.
 - Required flow-gate dialogs cannot be dismissed through Escape or backdrop interaction.
 - If a remembered trigger is removed, focus returns to the workspace heading through a stable ref. The heading must be programmatically focusable with `tabIndex={-1}` without entering normal Tab order.
-- Utility-bar New Game bypasses confirmation only in pregame or when no nontrivial history would be discarded. The final-result dialog remains the explicit exception and starts a new game directly.
+- Utility-bar New Game bypasses confirmation only when `phase === 'pregame'`. The final-result dialog remains the explicit exception and starts a new game directly.
 
 ## Styling
 
