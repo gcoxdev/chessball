@@ -2,9 +2,9 @@
   "schema": "chessball-accessibility-rendered-verification-v1",
   "verified_at_local_date": "2026-07-13",
   "source": {
-    "implementation_commit": "307bc2756769d773630dbd20fc0fa8c824fac96a",
-    "implementation_commit_short": "307bc27",
-    "documentation_parent_commit": "a43523405fba2e112788b5badc5cf8b791243f03",
+    "implementation_commit": "2b8ae781b7ae63ceb8aca7266063de43c149b35f",
+    "implementation_commit_short": "2b8ae78",
+    "documentation_parent_commit": "f35dd987ba416e29ff9263fd19a85a5c80af7c88",
     "historical_ui_audit_baseline_commit": "60ac1d4",
     "working_directory": "/home/drpepper/Desktop/CodexProjects/chessball/.worktrees/accessibility-remediation"
   },
@@ -44,31 +44,31 @@
         "exit_code": 0,
         "test_files_passed": 8,
         "test_files_total": 8,
-        "tests_passed": 342,
-        "tests_total": 342,
-        "vitest_duration_seconds": 31.53
+        "tests_passed": 344,
+        "tests_total": 344,
+        "vitest_duration_seconds": 23.87
       },
       {
         "command": "npm run build",
         "result": "pass",
         "exit_code": 0,
         "modules_transformed": 1583,
-        "vite_build_seconds": 5.79,
+        "vite_build_seconds": 3.4,
         "outputs": [
           {
             "path": "dist/index.html",
             "kilobytes": 0.39,
-            "gzip_kilobytes": 0.26
+            "gzip_kilobytes": 0.27
           },
           {
-            "path": "dist/assets/index-6PEta-2n.css",
-            "kilobytes": 17.65,
+            "path": "dist/assets/index-CQz-H6dT.css",
+            "kilobytes": 17.64,
             "gzip_kilobytes": 4.54
           },
           {
-            "path": "dist/assets/index-D70cRNcy.js",
-            "kilobytes": 278.19,
-            "gzip_kilobytes": 84.59
+            "path": "dist/assets/index-CkLHk4LP.js",
+            "kilobytes": 278.6,
+            "gzip_kilobytes": 84.74
           }
         ]
       }
@@ -79,7 +79,7 @@
       "port": 4387
     },
     "browser_launch": {
-      "command": "chromium --headless --disable-gpu --no-sandbox --remote-debugging-port=9333 --user-data-dir=/tmp/chessball-cdp-9333-final about:blank",
+      "command": "chromium --headless --disable-gpu --no-sandbox --remote-debugging-port=9333 --user-data-dir=/tmp/chessball-cdp-9333-integration about:blank",
       "remote_debugging_port": 9333
     },
     "rendered_verification": {
@@ -92,7 +92,8 @@
         "Navigate the built preview at desktop 1440x900 DPR 1 and measure document geometry.",
         "Dispatch Tab, Enter, ArrowRight, forward/reverse Tab, Escape, and CDP mouse events through the built app; inspect focus, modal, board, cue, history, coin, kickoff, placement, and return state through Runtime.evaluate.",
         "Navigate temporary controlled power/final initialGame harness states at desktop 1440x900 and inspect computed cues and required final-modal behavior.",
-        "Navigate a fresh built preview at mobile 390x844 DPR 1; measure overflow, board/cell/scroller geometry and controls, set scrollLeft values, trigger unrelated render and pointer activation, compare direct nearest scroll with actual ArrowRight, and inspect mobile modal containment.",
+        "Navigate a temporary controlled stacked-modal harness; verify the lower backdrop is inert and aria-hidden, its dialog is non-modal, only the top dialog owns focus/modal semantics, then close each layer and verify restoration.",
+        "Navigate a fresh built preview at mobile 390x844 DPR 1; measure overflow, board/cell/board-scroller geometry and controls, verify toolbar and utility remain fixed outside the scroller, set scrollLeft values, trigger unrelated render and pointer activation, compare direct nearest scroll with actual ArrowRight, and inspect mobile modal containment.",
         "Capture viewport PNG data through Page.captureScreenshot, record only base64 character counts, then discard the image data."
       ]
     }
@@ -141,6 +142,9 @@
         "forward_wrap": "Close rules",
         "reverse_wrap": "Close rules",
         "app_inert_while_open": true,
+        "app_contains_skip_link": true,
+        "skip_link_inert_ancestor_is_app": true,
+        "app_contains_portaled_dialog": false,
         "body_overflow_while_open": "hidden",
         "escape_closed": true,
         "restored_focus": "Rules"
@@ -149,7 +153,7 @@
         "name": "coin_gate_and_pointer_flow",
         "pass": true,
         "escape_resisted": true,
-        "observed_result": "Coin landed heads",
+        "observed_result": "Coin landed tails",
         "resolved_phase": "Kickoff",
         "pieces_after_resolution": 22
       },
@@ -164,7 +168,7 @@
       {
         "name": "pointer_selection_and_legal_cue",
         "pass": true,
-        "selected_cell": "9,1",
+        "selected_cell": "14,1",
         "aria_selected": true,
         "move_targets": 17,
         "selected_outline": "rgb(213, 166, 58) double 3px",
@@ -173,16 +177,16 @@
       {
         "name": "keyboard_enter_space_action",
         "pass": true,
-        "enter_selected": "5,2",
-        "space_target": "3,0",
+        "enter_selected": "14,2",
+        "space_target": "12,0",
         "event_count_before": 5,
         "event_count_after": 6
       },
       {
         "name": "pointer_action_parity",
         "pass": true,
-        "piece": "16,0",
-        "target": "13,0",
+        "piece": "7,0",
+        "target": "4,0",
         "event_count_before": 6,
         "event_count_after": 7
       },
@@ -215,6 +219,39 @@
         "focus_after_action": "game-workspace",
         "app_inert_after_action": false,
         "body_overflow_after_action": ""
+      },
+      {
+        "name": "stacked_lower_dialog_hidden_inert_and_non_modal",
+        "pass": true,
+        "dialog_count": 2,
+        "lower_backdrop_inert": true,
+        "lower_backdrop_aria_hidden": "true",
+        "lower_dialog_aria_modal": null,
+        "upper_backdrop_inert": false,
+        "upper_backdrop_aria_hidden": null,
+        "upper_dialog_aria_modal": "true",
+        "active_element": "Second action",
+        "app_inert": true,
+        "body_overflow": "hidden"
+      },
+      {
+        "name": "closing_top_stacked_dialog_restores_lower_layer_and_focus",
+        "pass": true,
+        "dialog_count": 1,
+        "lower_backdrop_inert": false,
+        "lower_backdrop_aria_hidden": null,
+        "lower_dialog_aria_modal": "true",
+        "active_element": "First action",
+        "app_inert": true,
+        "body_overflow": "hidden"
+      },
+      {
+        "name": "closing_final_stacked_dialog_restores_workspace_and_isolation",
+        "pass": true,
+        "dialog_count": 0,
+        "active_element_id": "stack-workspace",
+        "app_inert": false,
+        "body_overflow": ""
       }
     ],
     "mobile": [
@@ -226,15 +263,28 @@
         "scroll_left": 0
       },
       {
-        "name": "field_scroller_and_complete_dense_board",
+        "name": "board_scroller_and_complete_dense_board",
         "pass": true,
-        "wrapper": {
+        "field_wrapper": {
+          "left": 18,
+          "right": 372,
+          "width": 354,
+          "overflow_x": "visible"
+        },
+        "board_scroller": {
           "left": 18,
           "right": 372,
           "width": 354,
           "client_width": 354,
           "scroll_width": 860,
           "overflow_x": "auto"
+        },
+        "structure": {
+          "board_parent_class": "board-scroller",
+          "toolbar_parent_class": "field-wrap",
+          "utility_parent_class": "field-wrap",
+          "scroller_contains_toolbar": false,
+          "scroller_contains_utility": false
         },
         "board": {
           "width": 860,
@@ -244,12 +294,32 @@
         "representative_regular_cell": {
           "title": "10,5",
           "width": 35.671875,
-          "observed_first_row_width_range": {
-            "minimum": 35.65625,
-            "maximum": 35.671875
-          },
+          "height": 35.46875,
           "min_width": "0px",
           "class_includes": "field-zone"
+        }
+      },
+      {
+        "name": "toolbar_and_utility_fixed_while_board_scrolls",
+        "pass": true,
+        "board_scroll_left": 240,
+        "board_left_before": 18,
+        "board_left_after": -222,
+        "toolbar_rect_before": {
+          "left": 18,
+          "right": 372
+        },
+        "toolbar_rect_after": {
+          "left": 18,
+          "right": 372
+        },
+        "utility_rect_before": {
+          "left": 18,
+          "right": 372
+        },
+        "utility_rect_after": {
+          "left": 18,
+          "right": 372
         }
       },
       {
@@ -260,7 +330,7 @@
         "render_trigger": "Programmatic click of Away Human player control in pregame"
       },
       {
-        "name": "arrow_matches_direct_nearest_and_owns_only_field_scroll",
+        "name": "arrow_matches_direct_nearest_and_owns_only_board_scroll",
         "pass": true,
         "from_cell": "10,5",
         "to_cell": "11,5",
@@ -279,7 +349,7 @@
         }
       },
       {
-        "name": "pointer_activation_does_not_recenter",
+        "name": "pointer_activation_does_not_recenter_board_scroller",
         "pass": true,
         "cell": "9,0",
         "scroll_left_before": 300,
@@ -342,7 +412,7 @@
     ]
   },
   "controlled_harness": {
-    "purpose": "Exercise power-target rendering and the otherwise impractical final required-flow dialog without changing production source.",
+    "purpose": "Exercise power-target rendering, the otherwise impractical final required-flow dialog, and stacked modal-layer semantics without changing production source.",
     "tracked": false,
     "port": 4388,
     "url": "http://127.0.0.1:4388/chessball-final-harness.html",
@@ -355,13 +425,15 @@
     "recreation": {
       "html": "Create a page with <div id=\"harness-root\"></div> and load /chessball-final-harness.tsx as a module; do not create #root, preventing src/main.tsx's normal auto-mount.",
       "typescript_imports": [
-        "React and createRoot",
+        "React, createRoot, useRef, and useState",
         "App from the implementation worktree src/main.tsx",
-        "applyAction and createGame from src/engine/rules.ts"
+        "applyAction and createGame from src/engine/rules.ts",
+        "Modal from src/ui/Modal.tsx"
       ],
       "final_state": "createGame({ phase: 'final', quarter: 4, score: { home: 21, away: 17 }, drivesThisQuarter: { home: 2, away: 2 }, drivesRemaining: { home: 0, away: 0 }, formationConfirmed: { offense: true, defense: true } })",
       "power_state": "Confirm both default formations, snap, hand off home-qb to home-rb, restore turn='home', move home-qb to 3,4, home-ol3 to 5,4, away-rb to 4,5, and other away pieces to x=18. Render this state when ?mode=power is present.",
-      "render": "createRoot(document.getElementById('harness-root')).render(<App initialGame={game} initialPlayers={{ home: 'human', away: 'human' }} />)",
+      "stacked_state": "When ?mode=stacked is present, render a #chessball-app main with focusable #stack-workspace plus two simultaneously mounted Modal components labelled First modal and Second modal. Each contains one action that unmounts its own layer; the second modal is mounted last and is topmost.",
+      "render": "Read mode from URLSearchParams. For mode=stacked render <StackedModals />; otherwise createRoot(document.getElementById('harness-root')).render(<App initialGame={game} initialPlayers={{ home: 'human', away: 'human' }} />).",
       "vite_config": "Use root /tmp, host 127.0.0.1, strict port 4388, and server.fs.allow for /tmp plus the implementation worktree."
     },
     "production_changes": "none"
@@ -369,8 +441,8 @@
   "screenshots": {
     "retained": false,
     "disposition": "Ephemeral Page.captureScreenshot PNG data was inspected in memory and discarded. No screenshot file or hash was retained or committed.",
-    "desktop_base64_character_count": 507780,
-    "mobile_base64_character_count": 49668
+    "desktop_base64_character_count": 510060,
+    "mobile_base64_character_count": 61800
   },
   "limitations": [
     "No real screen reader was used; announcement behavior and platform certification remain unvalidated.",
