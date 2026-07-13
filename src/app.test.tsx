@@ -301,11 +301,15 @@ describe('Chessball UI interactions', () => {
     Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
     render(<App initialGame={createGame()} />);
     const ballSquare = screen.getByTitle('4,5');
+    const nextSquare = screen.getByTitle('5,5');
+    const focus = vi.spyOn(nextSquare, 'focus');
     act(() => ballSquare.focus());
 
     fireEvent.keyDown(ballSquare, { key: 'ArrowRight' });
-    expect(screen.getByTitle('5,5')).toHaveFocus();
+    expect(nextSquare).toHaveFocus();
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    expect(focus.mock.invocationCallOrder[0]).toBeLessThan(scrollIntoView.mock.invocationCallOrder[0]);
     scrollIntoView.mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));

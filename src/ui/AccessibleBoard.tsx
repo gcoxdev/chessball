@@ -60,7 +60,7 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
       setActiveCoord(next);
       if (next.x !== coord.x || next.y !== coord.y) {
         const button = refs.current.get(coordKey(next));
-        button?.focus();
+        button?.focus({ preventScroll: true });
         button?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
       }
       return;
