@@ -810,6 +810,14 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/\.football-marker\s*{[^}]*z-index:\s*3;/s);
   });
 
+  it('keeps the read-only cue legible in the open bottom-right corner', () => {
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+
+    expect(cssText).toMatch(
+      /\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO";[^}]*left:\s*auto;[^}]*top:\s*auto;[^}]*right:\s*1px;[^}]*bottom:\s*1px;[^}]*min-width:\s*16px;[^}]*width:\s*16px;[^}]*font-size:\s*0\.45rem;[^}]*line-height:\s*10px;/s,
+    );
+  });
+
   it('defines touch-safe controls, contained dialogs, and viewport-contained mobile field scrolling', () => {
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 

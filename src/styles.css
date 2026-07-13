@@ -917,9 +917,14 @@ h1 {
 
 .field[aria-readonly="true"] .square[tabindex="0"]::before {
   content: "RO";
-  top: 1px;
+  left: auto;
+  top: auto;
   right: 1px;
-  bottom: auto;
+  bottom: 1px;
+  min-width: 16px;
+  width: 16px;
+  font-size: 0.45rem;
+  line-height: 10px;
   border-style: dashed;
   opacity: 0.72;
 }
