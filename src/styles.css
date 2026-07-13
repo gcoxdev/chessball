@@ -17,6 +17,11 @@
   box-sizing: border-box;
 }
 
+:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -49,7 +54,9 @@
 body {
   margin: 0;
   min-width: 1120px;
+  max-width: 100%;
   min-height: 100vh;
+  overflow-x: clip;
   background:
     linear-gradient(135deg, rgba(213, 166, 58, 0.12), transparent 35%),
     radial-gradient(circle at 85% 10%, rgba(60, 120, 168, 0.18), transparent 28%),
@@ -58,6 +65,8 @@ body {
 
 button {
   font: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(213, 166, 58, 0.3);
 }
 
 .app-shell {
@@ -509,6 +518,7 @@ h1 {
 
 .field-wrap {
   min-width: 0;
+  max-width: 100%;
 }
 
 .field-toolbar {
@@ -841,6 +851,72 @@ h1 {
   background: rgba(217, 75, 66, 0.18);
 }
 
+.square.is-selected {
+  box-shadow: inset 0 0 0 3px var(--gold), var(--yard-line-shadow, none);
+}
+
+.square.move-target::after {
+  border-radius: 50%;
+}
+
+.square.power-target::after {
+  border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.square.pass-target::before,
+.square.tackle-target::before,
+.square.kick-target::before,
+.field[aria-readonly="true"] .square[tabindex="0"]::before {
+  position: absolute;
+  z-index: 4;
+  right: 2px;
+  bottom: 1px;
+  min-width: 1.15em;
+  border: 1px solid currentColor;
+  background: rgba(7, 17, 13, 0.86);
+  color: #fff;
+  font-size: 0.52rem;
+  font-weight: 900;
+  line-height: 1.1;
+  pointer-events: none;
+  text-align: center;
+}
+
+.square.pass-target::before {
+  content: "P";
+  border-radius: 50%;
+}
+
+.square.tackle-target::before {
+  content: "T";
+  border-radius: 0;
+}
+
+.square.kick-target::before {
+  content: "K";
+  border-radius: 999px 999px 2px 2px;
+}
+
+.field[aria-readonly="true"] .square {
+  cursor: default;
+  background-image: repeating-linear-gradient(135deg, transparent 0 7px, rgba(244, 240, 222, 0.07) 7px 9px);
+}
+
+.field[aria-readonly="true"] .square[tabindex="0"]::before {
+  content: "RO";
+  top: 1px;
+  right: 1px;
+  bottom: auto;
+  border-style: dashed;
+  opacity: 0.72;
+}
+
+.square:focus-visible {
+  z-index: 5;
+  outline-offset: -4px;
+}
+
 .piece {
   position: absolute;
   z-index: 2;
@@ -1095,6 +1171,24 @@ h1 {
   }
 
   .field-wrap {
+    min-width: 0;
+    max-width: 100%;
     overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  :is(
+    .button-grid button,
+    .action-list button,
+    .formation-options button,
+    .confirm-button,
+    .segmented-control button,
+    .history-controls button,
+    .utility-actions button,
+    .rules-close,
+    .final-dialog button
+  ) {
+    min-height: 44px;
   }
 }

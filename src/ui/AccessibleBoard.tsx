@@ -105,6 +105,14 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
           );
           const selected = Boolean(piece && piece.id === props.selectedPiece?.id);
           const legal = legalMove || passTarget || kickPlacement;
+          const stateClasses = [
+            selected && 'is-selected',
+            legalMove && 'move-target',
+            powerMove && 'power-target',
+            passTarget && 'pass-target',
+            tackleTarget && 'tackle-target',
+            kickPlacement && 'kick-target',
+          ].filter(Boolean).join(' ');
           const name = describeBoardSquare({
             coord,
             occupant: piece ? { team: piece.team, activeRole: activeRoleCode(props.displayGame, piece) } : undefined,
@@ -124,7 +132,7 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
               aria-label={name}
               aria-rowindex={y + 1}
               aria-selected={selected}
-              className={props.squareClass(coord, piece, legal, powerMove, ballHere)}
+              className={`${props.squareClass(coord, piece, legal, powerMove, ballHere)} ${stateClasses}`.trim()}
               key={coordKey(coord)}
               onClick={() => {
                 setActiveCoord(coord);

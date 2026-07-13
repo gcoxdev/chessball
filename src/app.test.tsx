@@ -749,6 +749,37 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/\.utility-players\s*{\s*display: flex;/);
   });
 
+  it('defines distinct focus, selection, and non-color board state cues', () => {
+    const { container } = render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
+    fireEvent.click(screen.getByTitle('4,1'));
+    expect(container.querySelector('.square[aria-selected="true"]')).toHaveClass('is-selected');
+    expect(container.querySelector('.square.legal')).toHaveClass('move-target');
+
+    expect(cssText).toMatch(/:focus-visible\s*{[^}]*outline:\s*3px solid #fff[^}]*outline-offset:\s*3px/s);
+    expect(cssText).toMatch(/\.square\.is-selected\s*{[^}]*box-shadow:[^}]*inset/s);
+    expect(cssText).toMatch(/\.square\.move-target::after\s*{[^}]*border-radius:\s*50%/s);
+    expect(cssText).toMatch(/\.square\.power-target::after\s*{[^}]*transform:[^}]*rotate\(45deg\)/s);
+    expect(cssText).toMatch(/\.square\.pass-target::before\s*{[^}]*content:\s*"P"/s);
+    expect(cssText).toMatch(/\.square\.tackle-target::before\s*{[^}]*content:\s*"T"/s);
+    expect(cssText).toMatch(/\.square\.kick-target::before\s*{[^}]*content:\s*"K"/s);
+    expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO"/s);
+  });
+
+  it('defines touch-safe controls, contained dialogs, and viewport-contained mobile field scrolling', () => {
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+
+    expect(cssText).toMatch(/button\s*{[^}]*touch-action:\s*manipulation[^}]*-webkit-tap-highlight-color:/s);
+    expect(cssText).toMatch(/\.rules-backdrop\s*{[^}]*overscroll-behavior:\s*contain/s);
+    expect(cssText).toMatch(/\.rules-dialog\s*{[^}]*overscroll-behavior:\s*contain/s);
+    expect(cssText).toMatch(/body\s*{[^}]*overflow-x:\s*clip/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*900px\)[\s\S]*?\.field-wrap\s*{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*900px\)[\s\S]*?\.field\s*{[^}]*min-width:\s*860px/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*900px\)[\s\S]*?:(?:button|is\([^}]+\))[^}]*{[^}]*min-height:\s*44px/s);
+  });
+
   it('renders history controls as one icon-only row with accessible labels', () => {
     render(<App initialGame={createGame()} />);
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
