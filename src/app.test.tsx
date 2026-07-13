@@ -1348,16 +1348,25 @@ describe('Chessball UI interactions', () => {
     expect(logText).not.toMatch(/Computer home: Pass:.*Computer home: Snap:/i);
   });
 
-  it('computer versus computer does not open with a pass immediately followed by a tackle', async () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
-    fireEvent.click(screen.getByRole('button', { name: /play auto/i }));
+  it('computer versus computer does not open with a pass immediately followed by a tackle', () => {
+    vi.useFakeTimers();
+    const view = render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
+    try {
+      fireEvent.click(screen.getByRole('button', { name: /play auto/i }));
+      for (let transition = 0; transition < 7; transition += 1) {
+        act(() => vi.advanceTimersByTime(120));
+      }
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/computer away:/i).length).toBeGreaterThan(0);
-    }, { timeout: 2200 });
-
-    const logText = screen.getByRole('log', { name: /event log/i }).textContent ?? '';
-    expect(logText).not.toMatch(/Computer away: Tackle:.*Computer home: Pass:/i);
+      const logText = screen.getByRole('log', { name: /event log/i }).textContent ?? '';
+      expect(logText).toMatch(/Computer home: Snap:/i);
+      expect(logText).toMatch(/Computer home: (Move|Handoff):/i);
+      expect(logText).toMatch(/Computer away:/i);
+      expect(logText).not.toMatch(/Computer away: Tackle:.*Computer home: Pass:/i);
+    } finally {
+      view.unmount();
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
   });
 
   it('computer-controlled teams attempt the extra point after a touchdown', async () => {
