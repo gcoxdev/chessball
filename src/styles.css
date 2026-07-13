@@ -828,6 +828,7 @@ h1 {
 .square.legal::after {
   content: "";
   position: absolute;
+  z-index: 1;
   top: 50%;
   left: 50%;
   width: 38%;
@@ -841,6 +842,7 @@ h1 {
 .square.power-legal::after {
   content: "";
   position: absolute;
+  z-index: 1;
   top: 50%;
   left: 50%;
   width: 38%;
@@ -869,7 +871,7 @@ h1 {
 .square.kick-target::before,
 .field[aria-readonly="true"] .square[tabindex="0"]::before {
   position: absolute;
-  z-index: 4;
+  z-index: 1;
   right: 2px;
   bottom: 1px;
   min-width: 1.15em;
@@ -900,7 +902,8 @@ h1 {
 
 .field[aria-readonly="true"] .square {
   cursor: default;
-  background-image: repeating-linear-gradient(135deg, transparent 0 7px, rgba(244, 240, 222, 0.07) 7px 9px);
+  outline: 1px dashed rgba(244, 240, 222, 0.46);
+  outline-offset: -3px;
 }
 
 .field[aria-readonly="true"] .square[tabindex="0"]::before {

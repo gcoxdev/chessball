@@ -766,6 +766,11 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/\.square\.tackle-target::before\s*{[^}]*content:\s*"T"/s);
     expect(cssText).toMatch(/\.square\.kick-target::before\s*{[^}]*content:\s*"K"/s);
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO"/s);
+    expect(cssText).not.toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*(?:background|background-image):/s);
+    expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*outline:\s*1px dashed/s);
+    expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*1;/s);
+    expect(cssText).toMatch(/\.piece\s*{[^}]*z-index:\s*2;/s);
+    expect(cssText).toMatch(/\.football-marker\s*{[^}]*z-index:\s*3;/s);
   });
 
   it('defines touch-safe controls, contained dialogs, and viewport-contained mobile field scrolling', () => {
