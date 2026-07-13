@@ -254,6 +254,41 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByTitle('4,5')).toHaveAttribute('tabindex', '-1');
   });
 
+  it('maps power, pass, tackle, and kick actions to distinct semantic cell classes', () => {
+    const game = { ...createGame(), phase: 'kickPlacement' as const };
+    const qb = game.pieces.find((piece) => piece.id === 'home-qb');
+    const receiver = game.pieces.find((piece) => piece.id === 'home-wr1');
+    const tackleTarget = game.pieces.find((piece) => piece.id === 'away-wr1');
+    render(
+      <AccessibleBoard
+        game={game}
+        displayGame={game}
+        legalActions={[
+          { type: 'powerMove', pieceId: 'home-qb', to: { x: 6, y: 5 } },
+          { type: 'pass', passerId: 'home-qb', receiverId: 'home-wr1' },
+          { type: 'tackle', defenderId: 'home-qb', targetId: 'away-wr1' },
+          { type: 'placeKick', at: { x: 8, y: 5 } },
+        ]}
+        selectedPiece={qb}
+        selectedBallCarrier={qb}
+        targetMode="pass"
+        ballCoord={{ x: 4, y: 5 }}
+        showBallMarker
+        readOnly={false}
+        onSquareClick={vi.fn()}
+        squareClass={() => 'square'}
+        renderYardTicks={() => null}
+        renderYardMarker={() => null}
+        ballLabel="Ball"
+      />,
+    );
+
+    expect(screen.getByTitle('6,5')).toHaveClass('power-target');
+    expect(screen.getByTitle(`${receiver?.coord.x},${receiver?.coord.y}`)).toHaveClass('pass-target');
+    expect(screen.getByTitle(`${tackleTarget?.coord.x},${tackleTarget?.coord.y}`)).toHaveClass('tackle-target');
+    expect(screen.getByTitle('8,5')).toHaveClass('kick-target');
+  });
+
   it('falls back to the first square when neither a selection nor visible ball exists', () => {
     render(<App />);
 
@@ -759,7 +794,8 @@ describe('Chessball UI interactions', () => {
     expect(container.querySelector('.square.legal')).toHaveClass('move-target');
 
     expect(cssText).toMatch(/:focus-visible\s*{[^}]*outline:\s*3px solid #fff[^}]*outline-offset:\s*3px/s);
-    expect(cssText).toMatch(/\.square\.is-selected\s*{[^}]*box-shadow:[^}]*inset/s);
+    expect(cssText).toMatch(/\.square\.is-selected\s*{[^}]*outline:\s*3px double/s);
+    expect(cssText).not.toMatch(/\.square\.is-selected\s*{[^}]*box-shadow:/s);
     expect(cssText).toMatch(/\.square\.move-target::after\s*{[^}]*border-radius:\s*50%/s);
     expect(cssText).toMatch(/\.square\.power-target::after\s*{[^}]*transform:[^}]*rotate\(45deg\)/s);
     expect(cssText).toMatch(/\.square\.pass-target::before\s*{[^}]*content:\s*"P"/s);
@@ -768,7 +804,8 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO"/s);
     expect(cssText).not.toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*(?:background|background-image):/s);
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*outline:\s*1px dashed/s);
-    expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*1;/s);
+    expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*3;[^}]*left:\s*1px;[^}]*width:\s*10px;[^}]*height:\s*10px;/s);
+    expect(cssText).toMatch(/\.square:is\(\.pass-target, \.tackle-target\) \.piece\s*{[^}]*inset:\s*3px 3px 3px 12px/s);
     expect(cssText).toMatch(/\.piece\s*{[^}]*z-index:\s*2;/s);
     expect(cssText).toMatch(/\.football-marker\s*{[^}]*z-index:\s*3;/s);
   });
@@ -780,9 +817,11 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/\.rules-backdrop\s*{[^}]*overscroll-behavior:\s*contain/s);
     expect(cssText).toMatch(/\.rules-dialog\s*{[^}]*overscroll-behavior:\s*contain/s);
     expect(cssText).toMatch(/body\s*{[^}]*overflow-x:\s*clip/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*900px\)[\s\S]*?\.field-wrap\s*{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*900px\)[\s\S]*?\.field\s*{[^}]*min-width:\s*860px/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*900px\)[\s\S]*?:(?:button|is\([^}]+\))[^}]*{[^}]*min-height:\s*44px/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?body\s*{[^}]*min-width:\s*0/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field-wrap\s*{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field\s*{[^}]*min-width:\s*860px/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?:is\([\s\S]*?\.rules-close[\s\S]*?\)\s*{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s);
+    expect(cssText).toMatch(/\.square\s*{[^}]*min-inline-size:\s*0;/s);
   });
 
   it('renders history controls as one icon-only row with accessible labels', () => {

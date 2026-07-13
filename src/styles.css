@@ -664,6 +664,8 @@ h1 {
   width: 100%;
   height: 100%;
   min-width: 0;
+  /* Dense-grid exception: all 24 columns remain available inside the scroller. */
+  min-inline-size: 0;
   min-height: 0;
   border: 0;
   padding: 0;
@@ -854,7 +856,8 @@ h1 {
 }
 
 .square.is-selected {
-  box-shadow: inset 0 0 0 3px var(--gold), var(--yard-line-shadow, none);
+  outline: 3px double var(--gold);
+  outline-offset: -4px;
 }
 
 .square.move-target::after {
@@ -871,10 +874,12 @@ h1 {
 .square.kick-target::before,
 .field[aria-readonly="true"] .square[tabindex="0"]::before {
   position: absolute;
-  z-index: 1;
-  right: 2px;
+  z-index: 3;
+  left: 1px;
+  right: auto;
   bottom: 1px;
-  min-width: 1.15em;
+  width: 10px;
+  height: 10px;
   border: 1px solid currentColor;
   background: rgba(7, 17, 13, 0.86);
   color: #fff;
@@ -883,6 +888,10 @@ h1 {
   line-height: 1.1;
   pointer-events: none;
   text-align: center;
+}
+
+.square:is(.pass-target, .tackle-target) .piece {
+  inset: 3px 3px 3px 12px;
 }
 
 .square.pass-target::before {
@@ -1159,7 +1168,7 @@ h1 {
   font-weight: 900;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1119px) {
   body {
     min-width: 0;
   }
@@ -1192,6 +1201,7 @@ h1 {
     .rules-close,
     .final-dialog button
   ) {
+    min-width: 44px;
     min-height: 44px;
   }
 }
