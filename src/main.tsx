@@ -377,9 +377,9 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players, showNewGameConfirmation]);
 
   return (
-    <>
-    <a className="skip-link" href="#game-workspace" onClick={() => workspaceHeadingRef.current?.focus()}>Skip to game workspace</a>
-    <main className="app-shell" id="chessball-app">
+    <div id="chessball-app">
+      <a className="skip-link" href="#game-workspace" onClick={() => workspaceHeadingRef.current?.focus()}>Skip to game workspace</a>
+      <main className="app-shell">
       <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <section className="score-strip" aria-label="Game status">
         <div>
@@ -520,23 +520,25 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               <span>{isViewingHistory ? `Viewing history ${historyIndex + 1}/${history.length}` : `${game.turn.toUpperCase()} to act`}</span>
             </div>
           </div>
-          <AccessibleBoard
-            game={game}
-            displayGame={boardGame}
-            legalActions={legalActions}
-            selectedPiece={selectedPiece}
-            selectedBallCarrier={selectedBallCarrier}
-            targetMode={targetMode}
-            ballCoord={ballCoord(game)}
-            showBallMarker={showBallMarker}
-            readOnly={isViewingHistory}
-            describedBy={isViewingHistory ? 'history-read-only' : undefined}
-            onSquareClick={onSquareClick}
-            squareClass={(coord, piece, legal, power, ball) => squareClass(game, coord, piece, legal, power, ball)}
-            renderYardTicks={(coord) => yardTicks(game, coord)}
-            renderYardMarker={(coord) => yardMarker(game, coord)}
-            ballLabel={ballLabel(boardGame)}
-          />
+          <div className="board-scroller">
+            <AccessibleBoard
+              game={game}
+              displayGame={boardGame}
+              legalActions={legalActions}
+              selectedPiece={selectedPiece}
+              selectedBallCarrier={selectedBallCarrier}
+              targetMode={targetMode}
+              ballCoord={ballCoord(game)}
+              showBallMarker={showBallMarker}
+              readOnly={isViewingHistory}
+              describedBy={isViewingHistory ? 'history-read-only' : undefined}
+              onSquareClick={onSquareClick}
+              squareClass={(coord, piece, legal, power, ball) => squareClass(game, coord, piece, legal, power, ball)}
+              renderYardTicks={(coord) => yardTicks(game, coord)}
+              renderYardMarker={(coord) => yardMarker(game, coord)}
+              ballLabel={ballLabel(boardGame)}
+            />
+          </div>
           <section className="utility-bar" aria-label="Game setup">
             <div className="utility-control-row">
               <div className="utility-actions">
@@ -613,8 +615,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
         </Modal>
       )}
       {game.phase === 'final' && <FinalResultModal game={game} progress={progress} fallbackFocus={workspaceHeadingRef} onNewGame={reset} />}
-    </main>
-    </>
+      </main>
+    </div>
   );
 }
 

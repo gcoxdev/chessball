@@ -18,6 +18,7 @@ type ModalProps = AccessibleName & {
 
 type ModalEntry = {
   token: symbol;
+  backdrop: HTMLElement;
   dialog: HTMLElement;
   trigger: HTMLElement | null;
   fallbackFocus: RefObject<HTMLElement | null>;
@@ -33,6 +34,18 @@ type IsolationState = {
 
 const modalStack: ModalEntry[] = [];
 let isolationState: IsolationState | null = null;
+
+function syncModalLayers() {
+  const top = modalStack[modalStack.length - 1];
+  for (const entry of modalStack) {
+    const isTop = entry === top;
+    entry.backdrop.toggleAttribute('inert', !isTop);
+    if (isTop) entry.backdrop.removeAttribute('aria-hidden');
+    else entry.backdrop.setAttribute('aria-hidden', 'true');
+    if (isTop) entry.dialog.setAttribute('aria-modal', 'true');
+    else entry.dialog.removeAttribute('aria-modal');
+  }
+}
 
 function beginIsolation() {
   if (isolationState) return;
@@ -73,6 +86,7 @@ function focusable(dialog: HTMLElement) {
 }
 
 export function Modal({ children, titleId, label, dismissible = false, initialFocus, fallbackFocus, onClose, backdropClassName = '', dialogClassName = '' }: ModalProps) {
+  const backdropRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const tokenRef = useRef(Symbol('modal'));
   const triggerRef = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
@@ -82,11 +96,13 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
   dismissibleRef.current = dismissible;
 
   useEffect(() => {
+    const backdrop = backdropRef.current;
     const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!backdrop || !dialog) return;
     beginIsolation();
-    const entry: ModalEntry = { token: tokenRef.current, dialog, trigger: triggerRef.current, fallbackFocus, lastFocused: null };
+    const entry: ModalEntry = { token: tokenRef.current, backdrop, dialog, trigger: triggerRef.current, fallbackFocus, lastFocused: null };
     modalStack.push(entry);
+    syncModalLayers();
     const initialTarget = initialFocus?.current;
     const focusTarget = initialTarget && dialog.contains(initialTarget) && isTabbable(initialTarget, dialog)
       ? initialTarget
@@ -137,6 +153,7 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
       const index = modalStack.findIndex((item) => item.token === entry.token);
       const wasTopmost = index === modalStack.length - 1;
       if (index >= 0) modalStack.splice(index, 1);
+      syncModalLayers();
       endIsolation();
       if (wasTopmost) {
         const exposed = modalStack[modalStack.length - 1];
@@ -153,7 +170,7 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
   }, []);
 
   return createPortal(
-    <div className={`rules-backdrop ${backdropClassName}`.trim()}>
+    <div ref={backdropRef} className={`rules-backdrop ${backdropClassName}`.trim()}>
       <section ref={dialogRef} className={`rules-dialog ${dialogClassName}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-label={label} tabIndex={-1}>
         {children}
       </section>

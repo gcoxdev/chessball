@@ -57,7 +57,7 @@ describe('Modal lifecycle', () => {
     render(<ModalTestShell initiallyInert={closeFirstFirst} />);
     const closingAction = closeFirstFirst ? 'First action' : 'Second action';
     const remainingName = closeFirstFirst ? /second modal/i : /first modal/i;
-    fireEvent.click(screen.getByRole('button', { name: closingAction }));
+    fireEvent.click(screen.getByRole('button', { name: closingAction, hidden: true }));
     expect(screen.queryByRole('button', { name: closingAction })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: remainingName })).toBeInTheDocument();
     expect(document.getElementById('chessball-app')).toHaveAttribute('inert');
@@ -71,10 +71,35 @@ describe('Modal lifecycle', () => {
 
   it('lets only the topmost modal own keyboard trapping', () => {
     render(<ModalTestShell />);
-    const lowerAction = screen.getByRole('button', { name: 'First action' });
+    const lowerAction = screen.getByRole('button', { name: 'First action', hidden: true });
     lowerAction.focus();
     fireEvent.keyDown(lowerAction, { key: 'Tab' });
     expect(screen.getByRole('button', { name: 'Second action' })).toHaveFocus();
+  });
+
+  it('exposes only the topmost modal to assistive technology and restores the lower modal on close', () => {
+    render(<ModalTestShell />);
+    const lowerDialog = screen.getByRole('dialog', { name: 'First modal', hidden: true });
+    const upperDialog = screen.getByRole('dialog', { name: 'Second modal' });
+    const lowerBackdrop = lowerDialog.parentElement;
+
+    expect(lowerBackdrop).toHaveAttribute('inert');
+    expect(lowerBackdrop).toHaveAttribute('aria-hidden', 'true');
+    expect(lowerDialog).not.toHaveAttribute('aria-modal', 'true');
+    expect(upperDialog).toHaveAttribute('aria-modal', 'true');
+    expect(upperDialog.parentElement).not.toHaveAttribute('inert');
+    expect(upperDialog.parentElement).not.toHaveAttribute('aria-hidden');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Second action' }));
+
+    expect(lowerBackdrop).not.toHaveAttribute('inert');
+    expect(lowerBackdrop).not.toHaveAttribute('aria-hidden');
+    expect(lowerDialog).toHaveAttribute('aria-modal', 'true');
+    expect(screen.getByRole('button', { name: 'First action' })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: 'First action' }));
+    expect(document.getElementById('chessball-app')).not.toHaveAttribute('inert');
+    expect(document.body.style.overflow).toBe('');
   });
 
   it('moves focus into the remaining modal when the topmost modal closes with no usable trigger', () => {
@@ -109,8 +134,10 @@ describe('Chessball UI interactions', () => {
     const { container } = render(<App initialGame={createGame()} />);
 
     const links = screen.getAllByRole('link');
+    const appRoot = document.getElementById('chessball-app');
     expect(links[0]).toHaveAccessibleName('Skip to game workspace');
     expect(links[0]).toHaveAttribute('href', '#game-workspace');
+    expect(appRoot).toContainElement(links[0]);
     const workspaceHeading = screen.getByRole('heading', { name: 'Chessball', level: 1 });
     expect(workspaceHeading).toHaveAttribute('id', 'game-workspace');
     expect(workspaceHeading).toHaveAttribute('tabindex', '-1');
@@ -830,10 +857,28 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/\.rules-dialog\s*{[^}]*overscroll-behavior:\s*contain/s);
     expect(cssText).toMatch(/body\s*{[^}]*overflow-x:\s*clip/s);
     expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?body\s*{[^}]*min-width:\s*0/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field-wrap\s*{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.board-scroller\s*{[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain[^}]*-webkit-overflow-scrolling:\s*touch/s);
+    expect(cssText).not.toMatch(/\.field-wrap\s*{[^}]*overflow-x:\s*auto/s);
     expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field\[role="grid"\]\s*{[^}]*min-width:\s*860px/s);
     expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?:is\([\s\S]*?\.rules-close[\s\S]*?\)\s*{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s);
     expect(cssText).toMatch(/\.square\s*{[^}]*min-inline-size:\s*0;/s);
+  });
+
+  it('scrolls only the board while keeping the field toolbar and setup utility outside the scroller', () => {
+    const { container } = render(<App initialGame={createGame()} />);
+    const field = screen.getByRole('grid', { name: /chessball board/i });
+    const scroller = field.parentElement;
+    const fieldWrap = screen.getByRole('region', { name: /chessball field/i });
+    const toolbar = container.querySelector<HTMLElement>('.field-toolbar');
+    const utility = screen.getByRole('region', { name: /game setup/i });
+
+    expect(scroller).toHaveClass('board-scroller');
+    expect(scroller).toContainElement(field);
+    expect(fieldWrap).toContainElement(scroller);
+    expect(toolbar?.parentElement).toBe(fieldWrap);
+    expect(utility.parentElement).toBe(fieldWrap);
+    expect(scroller).not.toContainElement(toolbar);
+    expect(scroller).not.toContainElement(utility);
   });
 
   it('keeps the field container class off playable gridcells', () => {
@@ -1199,9 +1244,13 @@ describe('Chessball UI interactions', () => {
 
     const dialog = screen.getByRole('dialog', { name: /rules and how to play/i });
     const appRoot = document.getElementById('chessball-app');
+    const skipLink = screen.getByRole('link', { name: /skip to game workspace/i, hidden: true });
     const close = within(dialog).getByRole('button', { name: /close rules/i });
     expect(dialog.parentElement?.parentElement).toBe(document.body);
     expect(appRoot).toHaveAttribute('inert');
+    expect(appRoot).toContainElement(skipLink);
+    expect(skipLink.closest('[inert]')).toBe(appRoot);
+    expect(appRoot).not.toContainElement(dialog);
     expect(document.body.style.overflow).toBe('hidden');
     expect(close).toHaveFocus();
 
