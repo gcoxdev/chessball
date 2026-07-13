@@ -21,6 +21,7 @@ type ModalEntry = {
   dialog: HTMLElement;
   trigger: HTMLElement | null;
   fallbackFocus: RefObject<HTMLElement | null>;
+  lastFocused: HTMLElement | null;
 };
 
 type IsolationState = {
@@ -84,10 +85,21 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
     const dialog = dialogRef.current;
     if (!dialog) return;
     beginIsolation();
-    const entry = { token: tokenRef.current, dialog, trigger: triggerRef.current, fallbackFocus };
+    const entry: ModalEntry = { token: tokenRef.current, dialog, trigger: triggerRef.current, fallbackFocus, lastFocused: null };
     modalStack.push(entry);
     const initialTarget = initialFocus?.current;
-    (initialTarget && isTabbable(initialTarget, dialog) ? initialTarget : focusable(dialog)[0] ?? dialog).focus();
+    const focusTarget = initialTarget && dialog.contains(initialTarget) && isTabbable(initialTarget, dialog)
+      ? initialTarget
+      : focusable(dialog)[0] ?? dialog;
+    focusTarget.focus();
+    entry.lastFocused = focusTarget;
+
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (modalStack[modalStack.length - 1]?.token === entry.token && target instanceof HTMLElement && dialog.contains(target)) {
+        entry.lastFocused = target;
+      }
+    };
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (modalStack[modalStack.length - 1]?.token !== entry.token) return;
@@ -117,15 +129,24 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
         first.focus();
       }
     };
+    document.addEventListener('focusin', onFocusIn);
     document.addEventListener('keydown', onKeyDown);
     return () => {
+      document.removeEventListener('focusin', onFocusIn);
       document.removeEventListener('keydown', onKeyDown);
       const index = modalStack.findIndex((item) => item.token === entry.token);
       const wasTopmost = index === modalStack.length - 1;
       if (index >= 0) modalStack.splice(index, 1);
       endIsolation();
       if (wasTopmost) {
-        if (entry.trigger?.isConnected && entry.trigger !== document.body) entry.trigger.focus();
+        const exposed = modalStack[modalStack.length - 1];
+        if (exposed) {
+          const remembered = exposed.lastFocused;
+          const target = remembered?.isConnected && exposed.dialog.contains(remembered) && (remembered === exposed.dialog || isTabbable(remembered, exposed.dialog))
+            ? remembered
+            : focusable(exposed.dialog)[0] ?? exposed.dialog;
+          target.focus();
+        } else if (entry.trigger?.isConnected && entry.trigger !== document.body) entry.trigger.focus();
         else entry.fallbackFocus.current?.focus();
       }
     };

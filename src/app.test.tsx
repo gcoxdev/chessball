@@ -44,6 +44,13 @@ function CandidateFilteringModal() {
   return <><main id="chessball-app"><h1 ref={fallback} tabIndex={-1}>Workspace</h1></main><Modal label="Filtered modal" fallbackFocus={fallback}><button type="button" hidden>Hidden</button><div aria-hidden="true"><button type="button">Aria hidden</button></div><div inert><button type="button">Inert</button></div><button type="button" style={{ display: 'none' }}>Not rendered</button><button type="button" tabIndex={-1}>Negative</button><button type="button">Available</button></Modal></>;
 }
 
+function InvalidInitialFocusModal({ target }: { target: 'outside' | 'disabled' }) {
+  const fallback = useRef<HTMLHeadingElement>(null);
+  const outside = useRef<HTMLButtonElement>(null);
+  const disabled = useRef<HTMLButtonElement>(null);
+  return <><main id="chessball-app"><h1 ref={fallback} tabIndex={-1}>Workspace</h1></main><button ref={outside} type="button">Outside</button><Modal label="Initial focus modal" fallbackFocus={fallback} initialFocus={target === 'outside' ? outside : disabled}><button ref={disabled} type="button" disabled>Disabled target</button><button type="button">Available target</button></Modal></>;
+}
+
 describe('Modal lifecycle', () => {
   it.each([true, false])('keeps shared isolation until the final modal closes (close first modal first: %s)', (closeFirstFirst) => {
     document.body.style.overflow = 'clip';
@@ -70,6 +77,12 @@ describe('Modal lifecycle', () => {
     expect(screen.getByRole('button', { name: 'Second action' })).toHaveFocus();
   });
 
+  it('moves focus into the remaining modal when the topmost modal closes with no usable trigger', () => {
+    render(<ModalTestShell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Second action' }));
+    expect(screen.getByRole('button', { name: 'First action' })).toHaveFocus();
+  });
+
   it('does not restart modal lifecycle when an onClose identity changes during rerender', () => {
     render(<RerenderingModalShell />);
     const rerender = screen.getByRole('button', { name: /rerender 0/i });
@@ -83,6 +96,11 @@ describe('Modal lifecycle', () => {
   it('focuses only currently visible, non-inert, tabbable candidates', () => {
     render(<CandidateFilteringModal />);
     expect(screen.getByRole('button', { name: 'Available' })).toHaveFocus();
+  });
+
+  it.each(['outside', 'disabled'] as const)('rejects an %s initial-focus target', (target) => {
+    render(<InvalidInitialFocusModal target={target} />);
+    expect(screen.getByRole('button', { name: 'Available target' })).toHaveFocus();
   });
 });
 
