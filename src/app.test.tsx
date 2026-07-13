@@ -105,6 +105,59 @@ describe('Modal lifecycle', () => {
 });
 
 describe('Chessball UI interactions', () => {
+  it('provides one main landmark and a first-link skip target for the named game workspace', () => {
+    const { container } = render(<App initialGame={createGame()} />);
+
+    const links = screen.getAllByRole('link');
+    expect(links[0]).toHaveAccessibleName('Skip to game workspace');
+    expect(links[0]).toHaveAttribute('href', '#game-workspace');
+    const workspaceHeading = screen.getByRole('heading', { name: 'Chessball', level: 1 });
+    expect(workspaceHeading).toHaveAttribute('id', 'game-workspace');
+    expect(workspaceHeading).toHaveAttribute('tabindex', '-1');
+    expect(container.querySelectorAll('main')).toHaveLength(1);
+    expect(screen.getByRole('complementary', { name: /game controls/i })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /chessball field/i })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /game setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /game history/i })).toBeInTheDocument();
+  });
+
+  it('uses one concise polite status without copying the event log', () => {
+    const { container } = render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+
+    confirmBothFormations();
+    fireEvent.click(screen.getByRole('button', { name: /snap/i }));
+    const statuses = screen.getAllByRole('status');
+    expect(statuses).toHaveLength(1);
+    expect(container.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
+    expect(statuses[0]).toHaveTextContent(/snap: home started the play/i);
+    expect(statuses[0]).toHaveTextContent(/live.*home to act/i);
+    expect(statuses[0]).toHaveTextContent(/home 0.*away 0/i);
+    expect(statuses[0]).not.toHaveTextContent(/offense formation confirmed.*defense formation confirmed/i);
+    expect(statuses[0].contains(screen.getByRole('log', { name: /event log/i }))).toBe(false);
+  });
+
+  it('announces and exposes read-only history, then restores actionable latest state', () => {
+    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    confirmBothFormations();
+    fireEvent.click(screen.getByRole('button', { name: /snap/i }));
+    fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
+
+    const field = screen.getByRole('region', { name: /chessball field/i });
+    const historyRegion = screen.getByRole('region', { name: /game history/i });
+    expect(within(historyRegion).getByText(/viewing history.*read-only/i)).toBeInTheDocument();
+    expect(field).toHaveAttribute('aria-readonly', 'true');
+    expect(field).toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('status')).toHaveTextContent(/viewing history.*read-only.*history position \d+ of \d+/i);
+    expect(screen.getByRole('button', { name: /snap/i })).toBeDisabled();
+    expect(screen.getAllByRole('gridcell', { name: /read-only history/i }).some((cell) => cell.tabIndex === 0)).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: /latest move/i }));
+    expect(field).not.toHaveAttribute('aria-readonly');
+    expect(within(historyRegion).queryByText(/viewing history.*read-only/i)).not.toBeInTheDocument();
+    expect(screen.getByTitle('4,5')).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByRole('status')).toHaveTextContent(/latest position/i);
+  });
+
   it('exposes the field as one labelled roving-tab-stop grid', () => {
     render(<App initialGame={createGame()} />);
 

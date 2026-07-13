@@ -84,6 +84,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   }, [game]);
   const selectedBallCarrier = selectedPiece && ballCarrier && selectedPiece.id === ballCarrier.id ? selectedPiece : undefined;
   const lastRoll = useMemo(() => lastDiceRoll(game), [game]);
+  const historyAnnouncement = isViewingHistory
+    ? `Viewing history. Read-only. History position ${historyIndex + 1} of ${history.length}.`
+    : 'Latest position.';
+  const announcement = `${message} ${phaseLabel(game.phase)}. ${capitalize(game.turn)} to act. Home ${game.score.home}, Away ${game.score.away}. ${historyAnnouncement}`;
 
   const pushEvent = (text: string) => {
     const entry = { id: eventId.current, text };
@@ -355,10 +359,13 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players, showNewGameConfirmation]);
 
   return (
+    <>
+    <a className="skip-link" href="#game-workspace">Skip to game workspace</a>
     <main className="app-shell" id="chessball-app">
+      <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <section className="score-strip" aria-label="Game status">
         <div>
-          <h1 ref={workspaceHeadingRef} tabIndex={-1}>Chessball</h1>
+          <h1 id="game-workspace" ref={workspaceHeadingRef} tabIndex={-1}>Chessball</h1>
         </div>
         <ScoreCard label="Home" score={game.score.home} active={game.possession === 'home'} />
         <ScoreCard label="Away" score={game.score.away} active={game.possession === 'away'} />
@@ -383,7 +390,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       </section>
 
       <section className="workspace">
-        <aside className="control-rail">
+        <aside className="control-rail" aria-label="Game controls">
           {showFormationPanel && (
             <div className="panel formation-panel">
               <h2>Formations</h2>
@@ -454,12 +461,12 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                   .filter((action) => action.type !== 'move' && action.type !== 'shift' && action.type !== 'tackle' && action.type !== 'pass')
                   .slice(0, 8)
                   .map((action, index) => (
-                    <button key={`${action.type}-${index}`} type="button" onClick={() => runAction(action)}>
+                    <button key={`${action.type}-${index}`} type="button" disabled={isViewingHistory} onClick={() => runAction(action)}>
                       <Zap size={15} /> {actionLabel(game, action)}
                     </button>
                   ))}
                 {selectedPiece && (game.phase === 'live' || game.phase === 'kickReturn') && tackleActions(game, selectedPiece, legalActions).map((action) => (
-                  <button key={`${action.defenderId}-${action.targetId}`} type="button" onClick={() => runAction(action)}>
+                  <button key={`${action.defenderId}-${action.targetId}`} type="button" disabled={isViewingHistory} onClick={() => runAction(action)}>
                     <Shield size={15} /> {tackleLabel(game, action)}
                   </button>
                 ))}
@@ -479,7 +486,12 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           />
         </aside>
 
-        <section className="field-wrap" aria-label="Chessball field">
+        <section
+          className="field-wrap"
+          aria-label="Chessball field"
+          aria-describedby={isViewingHistory ? 'history-read-only' : undefined}
+          aria-readonly={isViewingHistory || undefined}
+        >
           <div className="field-toolbar">
             <DicePanel roll={lastRoll} />
             <div className="field-meta">
@@ -583,6 +595,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       )}
       {game.phase === 'final' && <FinalResultModal game={game} progress={progress} fallbackFocus={workspaceHeadingRef} onNewGame={reset} />}
     </main>
+    </>
   );
 }
 
@@ -754,11 +767,12 @@ function HistoryPanel({
   const isLatest = historyIndex === history.length - 1;
 
   return (
-    <div className="panel history-panel">
+    <section className="panel history-panel" aria-labelledby="history-heading">
       <div className="panel-heading">
-        <h2>History</h2>
+        <h2 id="history-heading">Game history</h2>
         {!isLatest && <span>Viewing history</span>}
       </div>
+      {!isLatest && <p className="history-read-only" id="history-read-only">Viewing history — Read-only</p>}
       <div className="history-controls" role="group" aria-label="History controls">
         <button type="button" onClick={onFirst} disabled={historyIndex === 0} aria-label="First move" title="First move">
           <ChevronsLeft size={16} aria-hidden="true" />
@@ -779,7 +793,7 @@ function HistoryPanel({
           <p key={event.id}>{event.text}</p>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
