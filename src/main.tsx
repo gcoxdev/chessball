@@ -282,6 +282,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   };
 
   const reset = () => {
+    if (isViewingHistory) return;
     const pregame = createPregameGame();
     const label = 'Pregame: choose player types, then press Start Game.';
     setHistory([{ id: 0, game: pregame, label }]);
@@ -300,6 +301,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   };
 
   const startGame = () => {
+    if (isViewingHistory) return;
     if (game.phase !== 'pregame' && game.phase !== 'final') return;
     const opening = createOpeningGame();
     const automaticCoinToss = bothComputers ? applyAction(opening, { type: 'coinToss' }) : opening;
@@ -322,12 +324,13 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   };
 
   const setPlayerKind = (team: Team, kind: PlayerKind) => {
-    if (playerSelectionLocked) return;
+    if (isViewingHistory || playerSelectionLocked) return;
     setPlayers((current) => ({ ...current, [team]: kind }));
     pushEvent(`${capitalize(team)} is now ${kind}.`);
   };
 
   const startComputerMatch = () => {
+    if (isViewingHistory) return;
     setComputerMatchStarted(true);
     setAutoPaused(false);
     pushEvent('Computer match started.');
@@ -524,11 +527,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
             <div className="utility-control-row">
               <div className="utility-actions">
                 {game.phase === 'pregame' ? (
-                  <button type="button" onClick={startGame}>
+                  <button type="button" disabled={isViewingHistory} onClick={startGame}>
                     <Play size={17} /> Start Game
                   </button>
                 ) : (
-                  <button type="button" onClick={() => setShowNewGameConfirmation(true)}>
+                  <button type="button" disabled={isViewingHistory} onClick={() => setShowNewGameConfirmation(true)}>
                     <RotateCcw size={17} /> New Game
                   </button>
                 )}
@@ -536,7 +539,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                   <BookOpen size={17} /> Rules
                 </button>
                 {bothComputers && !computerMatchStarted && (
-                  <button type="button" onClick={startComputerMatch}>
+                  <button type="button" disabled={isViewingHistory} onClick={startComputerMatch}>
                     <Play size={17} /> Play Auto
                   </button>
                 )}
@@ -544,7 +547,9 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                   <button
                     className={autoPaused ? 'warning-button' : ''}
                     type="button"
+                    disabled={isViewingHistory}
                     onClick={() => {
+                      if (isViewingHistory) return;
                       setAutoPaused((paused) => !paused);
                       pushEvent(autoPaused ? 'Computer loop resumed.' : 'Computer loop paused.');
                     }}
@@ -554,8 +559,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                 )}
               </div>
               <div className="utility-players">
-                <PlayerToggle team="home" players={players} disabled={playerSelectionLocked} onChange={setPlayerKind} />
-                <PlayerToggle team="away" players={players} disabled={playerSelectionLocked} onChange={setPlayerKind} />
+                <PlayerToggle team="home" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
+                <PlayerToggle team="away" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
               </div>
             </div>
             <div className="utility-status-row">

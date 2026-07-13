@@ -158,6 +158,41 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/latest position/i);
   });
 
+  it('keeps utility mutations disabled in history while Rules and Latest remain available', () => {
+    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    confirmBothFormations();
+    fireEvent.click(screen.getByRole('button', { name: /snap/i }));
+    fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
+
+    const newGame = screen.getByRole('button', { name: /new game/i });
+    expect(newGame).toBeDisabled();
+    expect(screen.getByRole('button', { name: /rules/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /latest move/i })).toBeEnabled();
+    fireEvent.click(newGame);
+    expect(screen.queryByRole('dialog', { name: /new game/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /latest move/i }));
+    expect(newGame).toBeEnabled();
+  });
+
+  it('cannot resume computer automation from history and restores it at Latest', async () => {
+    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /play auto/i }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /previous move/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: /pause auto/i }));
+    const log = screen.getByRole('log', { name: /event log/i });
+    const logBefore = log.textContent;
+    fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
+
+    const resume = screen.getByRole('button', { name: /resume auto/i });
+    expect(resume).toBeDisabled();
+    fireEvent.click(resume);
+    expect(log).toHaveTextContent(logBefore ?? '');
+
+    fireEvent.click(screen.getByRole('button', { name: /latest move/i }));
+    expect(resume).toBeEnabled();
+  });
+
   it('exposes the field as one labelled roving-tab-stop grid', () => {
     render(<App initialGame={createGame()} />);
 
@@ -338,7 +373,6 @@ describe('Chessball UI interactions', () => {
     render(<App initialGame={createGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     fireEvent.click(screen.getByTitle('4,1'));
-    fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
 
     const historyBefore = screen.getByText(/move \d+ of \d+/i).textContent;
     const newGame = screen.getByRole('button', { name: /new game/i });
@@ -359,7 +393,7 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText(/WR\/CB · 4,1/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /home human/i })).toHaveClass('active');
     expect(screen.getByRole('button', { name: /away human/i })).toHaveClass('active');
-    expect(screen.getByRole('button', { name: /next move/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /next move/i })).toBeDisabled();
     expect(newGame).toHaveFocus();
   });
 
