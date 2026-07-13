@@ -288,7 +288,9 @@ describe('Chessball UI interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
 
     const historyBefore = screen.getByText(/move \d+ of \d+/i).textContent;
-    fireEvent.click(screen.getByRole('button', { name: /new game/i }));
+    const newGame = screen.getByRole('button', { name: /new game/i });
+    newGame.focus();
+    fireEvent.click(newGame);
 
     const confirmation = screen.getByRole('dialog', { name: /new game/i });
     expect(within(confirmation).getByRole('button', { name: /cancel/i })).toHaveFocus();
@@ -305,15 +307,41 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('button', { name: /home human/i })).toHaveClass('active');
     expect(screen.getByRole('button', { name: /away human/i })).toHaveClass('active');
     expect(screen.getByRole('button', { name: /next move/i })).toBeEnabled();
+    expect(newGame).toHaveFocus();
+  });
+
+  it('pauses computer automation while New Game confirmation is open', () => {
+    vi.useFakeTimers();
+    try {
+      render(<App initialGame={createGame({ phase: 'live' })} initialPlayers={{ home: 'computer', away: 'computer' }} />);
+      fireEvent.click(screen.getByRole('button', { name: /play auto/i }));
+      fireEvent.click(screen.getByRole('button', { name: /new game/i }));
+
+      act(() => vi.advanceTimersByTime(500));
+
+      expect(screen.getByRole('dialog', { name: /new game/i })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: /final result/i })).not.toBeInTheDocument();
+      expect(screen.getByText(/move 1 of 1/i)).toBeInTheDocument();
+      expect(screen.getByText('Live')).toBeInTheDocument();
+
+      fireEvent.click(within(screen.getByRole('dialog', { name: /new game/i })).getByRole('button', { name: /cancel/i }));
+      act(() => vi.advanceTimersByTime(500));
+      expect(screen.queryByText(/move 1 of 1/i)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('only resets an active match after New Game is confirmed', () => {
     render(<App initialGame={createGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.click(screen.getByTitle('4,1'));
-    fireEvent.click(screen.getByRole('button', { name: /new game/i }));
+    const newGame = screen.getByRole('button', { name: /new game/i });
+    const rules = screen.getByRole('button', { name: /rules/i });
+    fireEvent.click(rules);
+    fireEvent.click(newGame);
     fireEvent.click(within(screen.getByRole('dialog', { name: /new game/i })).getByRole('button', { name: /^confirm$/i }));
 
-    expect(screen.queryByRole('dialog', { name: /new game/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('No piece selected.')).toBeInTheDocument();
     expect(screen.getByText('Choose player types, then press Start Game.')).toBeInTheDocument();
     expect(screen.getByText(/move 1 of 1/i)).toBeInTheDocument();

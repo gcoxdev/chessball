@@ -290,6 +290,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setSelectedPieceId(null);
     setTargetMode(null);
     setShowCoinToss(false);
+    setShowRules(false);
     setShowNewGameConfirmation(false);
     setMessage('Choose player types, then press Start Game.');
   };
@@ -332,7 +333,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   useEffect(() => {
     if (game.phase === 'final') return;
     if (bothComputers && !computerMatchStarted) return;
-    if (autoPaused || isViewingHistory) return;
+    if (autoPaused || isViewingHistory || showNewGameConfirmation) return;
     if (game.phase !== 'formation' && players[controlTeam] !== 'computer') return;
 
     const timer = window.setTimeout(() => {
@@ -351,7 +352,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     }, COMPUTER_ACTION_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players]);
+  }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players, showNewGameConfirmation]);
 
   return (
     <main className="app-shell" id="chessball-app">
