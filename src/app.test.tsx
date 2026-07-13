@@ -358,6 +358,35 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('button', { name: /kickoff/i })).toBeEnabled();
   });
 
+  it('traps forward and reverse focus in the coin toss when focused controls become unavailable', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /away human/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start game/i }));
+    const dialog = screen.getByRole('dialog', { name: /coin toss/i });
+    const flip = within(dialog).getByRole('button', { name: /flip coin/i });
+    flip.focus();
+    fireEvent.click(flip);
+
+    const kick = within(dialog).getByRole('button', { name: /^kick$/i });
+    const receive = within(dialog).getByRole('button', { name: /^receive$/i });
+    expect(flip).toBeDisabled();
+    expect(flip).toHaveFocus();
+
+    const reverseFromDisabled = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+    fireEvent(flip, reverseFromDisabled);
+    expect(reverseFromDisabled.defaultPrevented).toBe(true);
+    expect(receive).toHaveFocus();
+
+    fireEvent.keyDown(receive, { key: 'Tab' });
+    expect(kick).toHaveFocus();
+    fireEvent.keyDown(kick, { key: 'Tab', shiftKey: true });
+    expect(receive).toHaveFocus();
+
+    screen.getByRole('heading', { name: 'Chessball' }).focus();
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Tab' });
+    expect(kick).toHaveFocus();
+  });
+
   it('shows kickoff labels without scrimmage or first-down overlays', () => {
     const tossed = applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
     const kickoff = applyAction(tossed, { type: 'chooseKickoffChoice', team: 'home', choice: 'receive' });
