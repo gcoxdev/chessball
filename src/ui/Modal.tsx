@@ -2,12 +2,12 @@ import { useEffect, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+type AccessibleName =
+  | { label: string; titleId?: never }
+  | { label?: never; titleId: string };
 
-type ModalProps = {
+type ModalProps = AccessibleName & {
   children: ReactNode;
-  titleId?: string;
-  label?: string;
   dismissible?: boolean;
   initialFocus?: RefObject<HTMLElement | null>;
   fallbackFocus: RefObject<HTMLElement | null>;
@@ -16,32 +16,91 @@ type ModalProps = {
   dialogClassName?: string;
 };
 
+type ModalEntry = {
+  token: symbol;
+  dialog: HTMLElement;
+  trigger: HTMLElement | null;
+  fallbackFocus: RefObject<HTMLElement | null>;
+};
+
+type IsolationState = {
+  appRoot: HTMLElement | null;
+  hadInert: boolean;
+  inertValue: string | null;
+  overflow: string;
+};
+
+const modalStack: ModalEntry[] = [];
+let isolationState: IsolationState | null = null;
+
+function beginIsolation() {
+  if (isolationState) return;
+  const appRoot = document.getElementById('chessball-app');
+  isolationState = {
+    appRoot,
+    hadInert: appRoot?.hasAttribute('inert') ?? false,
+    inertValue: appRoot?.getAttribute('inert') ?? null,
+    overflow: document.body.style.overflow,
+  };
+  appRoot?.setAttribute('inert', '');
+  document.body.style.overflow = 'hidden';
+}
+
+function endIsolation() {
+  if (!isolationState || modalStack.length) return;
+  const { appRoot, hadInert, inertValue, overflow } = isolationState;
+  document.body.style.overflow = overflow;
+  if (appRoot) {
+    if (hadInert) appRoot.setAttribute('inert', inertValue ?? '');
+    else appRoot.removeAttribute('inert');
+  }
+  isolationState = null;
+}
+
+function isTabbable(element: HTMLElement, dialog: HTMLElement) {
+  if (element.tabIndex < 0 || element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+  if ('disabled' in element && element.disabled) return false;
+  for (let current: HTMLElement | null = element; current && current !== dialog; current = current.parentElement) {
+    const style = getComputedStyle(current);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+  }
+  return true;
+}
+
+function focusable(dialog: HTMLElement) {
+  return Array.from(dialog.querySelectorAll<HTMLElement>('*')).filter((element) => isTabbable(element, dialog));
+}
+
 export function Modal({ children, titleId, label, dismissible = false, initialFocus, fallbackFocus, onClose, backdropClassName = '', dialogClassName = '' }: ModalProps) {
   const dialogRef = useRef<HTMLElement>(null);
+  const tokenRef = useRef(Symbol('modal'));
   const triggerRef = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  const onCloseRef = useRef(onClose);
+  const dismissibleRef = useRef(dismissible);
+  onCloseRef.current = onClose;
+  dismissibleRef.current = dismissible;
 
   useEffect(() => {
-    const appRoot = document.getElementById('chessball-app');
-    const hadInert = appRoot?.hasAttribute('inert') ?? false;
-    const inertValue = appRoot?.getAttribute('inert');
-    const previousOverflow = document.body.style.overflow;
-    appRoot?.setAttribute('inert', '');
-    document.body.style.overflow = 'hidden';
     const dialog = dialogRef.current;
-    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
-    (initialFocus?.current ?? focusable()[0] ?? dialog)?.focus();
+    if (!dialog) return;
+    beginIsolation();
+    const entry = { token: tokenRef.current, dialog, trigger: triggerRef.current, fallbackFocus };
+    modalStack.push(entry);
+    const initialTarget = initialFocus?.current;
+    (initialTarget && isTabbable(initialTarget, dialog) ? initialTarget : focusable(dialog)[0] ?? dialog).focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && dismissible) {
+      if (modalStack[modalStack.length - 1]?.token !== entry.token) return;
+      if (event.key === 'Escape' && dismissibleRef.current) {
         event.preventDefault();
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
       if (event.key !== 'Tab') return;
-      const items = focusable();
+      const items = focusable(dialog);
       if (!items.length) {
         event.preventDefault();
-        dialog?.focus();
+        dialog.focus();
         return;
       }
       const first = items[0];
@@ -61,16 +120,16 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      if (appRoot) {
-        if (hadInert) appRoot.setAttribute('inert', inertValue ?? '');
-        else appRoot.removeAttribute('inert');
+      const index = modalStack.findIndex((item) => item.token === entry.token);
+      const wasTopmost = index === modalStack.length - 1;
+      if (index >= 0) modalStack.splice(index, 1);
+      endIsolation();
+      if (wasTopmost) {
+        if (entry.trigger?.isConnected && entry.trigger !== document.body) entry.trigger.focus();
+        else entry.fallbackFocus.current?.focus();
       }
-      const trigger = triggerRef.current;
-      if (trigger?.isConnected && trigger !== document.body) trigger.focus();
-      else fallbackFocus.current?.focus();
     };
-  }, [dismissible, fallbackFocus, initialFocus, onClose]);
+  }, []);
 
   return createPortal(
     <div className={`rules-backdrop ${backdropClassName}`.trim()}>

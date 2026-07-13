@@ -7,6 +7,8 @@ import { applyAction, createGame, generateLegalActions } from './engine/rules';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AccessibleBoard } from './ui/AccessibleBoard';
+import { Modal } from './ui/Modal';
+import { useRef, useState } from 'react';
 
 const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
 
@@ -21,6 +23,68 @@ const confirmBothFormations = () => {
   fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
   fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
 };
+
+function ModalTestShell({ initiallyInert = false }: { initiallyInert?: boolean }) {
+  const [firstOpen, setFirstOpen] = useState(true);
+  const [secondOpen, setSecondOpen] = useState(true);
+  const fallback = useRef<HTMLHeadingElement>(null);
+  const first = firstOpen ? <Modal label="First modal" fallbackFocus={fallback} dismissible onClose={() => setFirstOpen(false)}><button type="button" onClick={() => setFirstOpen(false)}>First action</button></Modal> : null;
+  const second = secondOpen ? <Modal label="Second modal" fallbackFocus={fallback} dismissible onClose={() => setSecondOpen(false)}><button type="button" onClick={() => setSecondOpen(false)}>Second action</button></Modal> : null;
+  return <><main id="chessball-app" inert={initiallyInert || undefined}><h1 ref={fallback} tabIndex={-1}>Workspace</h1></main>{first}{second}</>;
+}
+
+function RerenderingModalShell() {
+  const [count, setCount] = useState(0);
+  const fallback = useRef<HTMLHeadingElement>(null);
+  return <><main id="chessball-app"><h1 ref={fallback} tabIndex={-1}>Workspace</h1></main><Modal label="Rerender modal" fallbackFocus={fallback} dismissible onClose={() => undefined}><button type="button">First</button><button type="button" onClick={() => setCount((value) => value + 1)}>Rerender {count}</button></Modal></>;
+}
+
+function CandidateFilteringModal() {
+  const fallback = useRef<HTMLHeadingElement>(null);
+  return <><main id="chessball-app"><h1 ref={fallback} tabIndex={-1}>Workspace</h1></main><Modal label="Filtered modal" fallbackFocus={fallback}><button type="button" hidden>Hidden</button><div aria-hidden="true"><button type="button">Aria hidden</button></div><div inert><button type="button">Inert</button></div><button type="button" style={{ display: 'none' }}>Not rendered</button><button type="button" tabIndex={-1}>Negative</button><button type="button">Available</button></Modal></>;
+}
+
+describe('Modal lifecycle', () => {
+  it.each([true, false])('keeps shared isolation until the final modal closes (close first modal first: %s)', (closeFirstFirst) => {
+    document.body.style.overflow = 'clip';
+    render(<ModalTestShell initiallyInert={closeFirstFirst} />);
+    const closingAction = closeFirstFirst ? 'First action' : 'Second action';
+    const remainingName = closeFirstFirst ? /second modal/i : /first modal/i;
+    fireEvent.click(screen.getByRole('button', { name: closingAction }));
+    expect(screen.queryByRole('button', { name: closingAction })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: remainingName })).toBeInTheDocument();
+    expect(document.getElementById('chessball-app')).toHaveAttribute('inert');
+    expect(document.body.style.overflow).toBe('hidden');
+    fireEvent.keyDown(screen.getByRole('dialog', { name: remainingName }), { key: 'Escape' });
+    if (closeFirstFirst) expect(document.getElementById('chessball-app')).toHaveAttribute('inert');
+    else expect(document.getElementById('chessball-app')).not.toHaveAttribute('inert');
+    expect(document.body.style.overflow).toBe('clip');
+    document.body.style.overflow = '';
+  });
+
+  it('lets only the topmost modal own keyboard trapping', () => {
+    render(<ModalTestShell />);
+    const lowerAction = screen.getByRole('button', { name: 'First action' });
+    lowerAction.focus();
+    fireEvent.keyDown(lowerAction, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'Second action' })).toHaveFocus();
+  });
+
+  it('does not restart modal lifecycle when an onClose identity changes during rerender', () => {
+    render(<RerenderingModalShell />);
+    const rerender = screen.getByRole('button', { name: /rerender 0/i });
+    rerender.focus();
+    fireEvent.click(rerender);
+    expect(screen.getByRole('button', { name: /rerender 1/i })).toHaveFocus();
+    expect(document.getElementById('chessball-app')).toHaveAttribute('inert');
+    expect(document.body.style.overflow).toBe('hidden');
+  });
+
+  it('focuses only currently visible, non-inert, tabbable candidates', () => {
+    render(<CandidateFilteringModal />);
+    expect(screen.getByRole('button', { name: 'Available' })).toHaveFocus();
+  });
+});
 
 describe('Chessball UI interactions', () => {
   it('exposes the field as one labelled roving-tab-stop grid', () => {
