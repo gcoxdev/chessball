@@ -15,6 +15,7 @@ export type AccessibleBoardProps = {
   ballCoord: Coord;
   showBallMarker: boolean;
   readOnly: boolean;
+  describedBy?: string;
   onSquareClick: (coord: Coord) => void;
   squareClass: (coord: Coord, piece: Piece | undefined, legal: boolean, power: boolean, ball: boolean) => string;
   renderYardTicks: (coord: Coord) => ReactNode;
@@ -73,7 +74,9 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
   return (
     <div
       aria-colcount={props.game.board.width}
+      aria-describedby={props.describedBy}
       aria-label="Chessball board"
+      aria-readonly={props.readOnly || undefined}
       aria-rowcount={props.game.board.height}
       className="field"
       role="grid"

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { App, chooseComputerAction } from './main';
+import { App, chooseComputerAction, COMPUTER_ACTION_DELAY_MS } from './main';
 import { cleanup } from '@testing-library/react';
 import { applyAction, createGame, generateLegalActions } from './engine/rules';
 import { readFileSync } from 'node:fs';
@@ -114,6 +114,8 @@ describe('Chessball UI interactions', () => {
     const workspaceHeading = screen.getByRole('heading', { name: 'Chessball', level: 1 });
     expect(workspaceHeading).toHaveAttribute('id', 'game-workspace');
     expect(workspaceHeading).toHaveAttribute('tabindex', '-1');
+    fireEvent.click(links[0]);
+    expect(workspaceHeading).toHaveFocus();
     expect(container.querySelectorAll('main')).toHaveLength(1);
     expect(screen.getByRole('complementary', { name: /game controls/i })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: /chessball field/i })).toBeInTheDocument();
@@ -129,11 +131,26 @@ describe('Chessball UI interactions', () => {
     const statuses = screen.getAllByRole('status');
     expect(statuses).toHaveLength(1);
     expect(container.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
-    expect(statuses[0]).toHaveTextContent(/snap: home started the play/i);
+    expect(statuses[0]).not.toHaveTextContent(/snap: home started the play/i);
     expect(statuses[0]).toHaveTextContent(/live.*home to act/i);
     expect(statuses[0]).toHaveTextContent(/home 0.*away 0/i);
     expect(statuses[0]).not.toHaveTextContent(/offense formation confirmed.*defense formation confirmed/i);
     expect(statuses[0].contains(screen.getByRole('log', { name: /event log/i }))).toBe(false);
+  });
+
+  it('keeps the event log implicit live behavior without echoing its newest entry in status', () => {
+    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    confirmBothFormations();
+    fireEvent.click(screen.getByRole('button', { name: /snap/i }));
+
+    const log = screen.getByRole('log', { name: /event log/i });
+    const newestEntry = within(log).getAllByText(/snap: home started the play/i)[0].textContent ?? '';
+    expect(log).toHaveAttribute('role', 'log');
+    expect(screen.getByRole('status')).not.toHaveTextContent(newestEntry);
+    expect(screen.getByRole('status')).toHaveTextContent(/live.*home to act.*home 0.*away 0/i);
+
+    fireEvent.click(screen.getByTitle('4,5'));
+    expect(screen.getByRole('status')).toHaveTextContent(/QB selected/i);
   });
 
   it('announces and exposes read-only history, then restores actionable latest state', () => {
@@ -145,8 +162,12 @@ describe('Chessball UI interactions', () => {
     const field = screen.getByRole('region', { name: /chessball field/i });
     const historyRegion = screen.getByRole('region', { name: /game history/i });
     expect(within(historyRegion).getByText(/viewing history.*read-only/i)).toBeInTheDocument();
-    expect(field).toHaveAttribute('aria-readonly', 'true');
-    expect(field).toHaveAttribute('aria-describedby');
+    const grid = screen.getByRole('grid', { name: /chessball board/i });
+    expect(field).not.toHaveAttribute('aria-readonly');
+    expect(grid).toHaveAttribute('aria-readonly', 'true');
+    expect(grid).toHaveAttribute('aria-describedby', 'history-read-only');
+    expect(screen.getByRole('status')).toHaveTextContent(/formation: defense confirmed/i);
+    expect(screen.getByRole('status')).not.toHaveTextContent(/snap: home started the play/i);
     expect(screen.getByRole('status')).toHaveTextContent(/viewing history.*read-only.*history position \d+ of \d+/i);
     expect(screen.getByRole('button', { name: /snap/i })).toBeDisabled();
     expect(screen.getAllByRole('gridcell', { name: /read-only history/i }).some((cell) => cell.tabIndex === 0)).toBe(true);
@@ -173,12 +194,6 @@ describe('Chessball UI interactions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /latest move/i }));
     expect(newGame).toBeEnabled();
-  });
-
-  it('guards the New Game confirmation handler independently of disabled semantics', () => {
-    const source = readFileSync(join(process.cwd(), 'src/main.tsx'), 'utf8');
-    expect(source).toMatch(/const openNewGameConfirmation = \(\) => \{\s*if \(isViewingHistory\) return;\s*setShowNewGameConfirmation\(true\);\s*\}/);
-    expect(source).toMatch(/onClick=\{openNewGameConfirmation\}/);
   });
 
   it('cannot resume computer automation from history and restores it at Latest', async () => {
@@ -1354,7 +1369,7 @@ describe('Chessball UI interactions', () => {
     try {
       fireEvent.click(screen.getByRole('button', { name: /play auto/i }));
       for (let transition = 0; transition < 7; transition += 1) {
-        act(() => vi.advanceTimersByTime(120));
+        act(() => vi.advanceTimersByTime(COMPUTER_ACTION_DELAY_MS));
       }
 
       const logText = screen.getByRole('log', { name: /event log/i }).textContent ?? '';

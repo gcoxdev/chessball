@@ -38,7 +38,7 @@ type MatchProgress = {
   remaining: number;
 };
 
-const COMPUTER_ACTION_DELAY_MS = 120;
+export const COMPUTER_ACTION_DELAY_MS = 120;
 
 export function App({ initialGame, initialPlayers }: { initialGame?: GameState; initialPlayers?: PlayerControl } = {}) {
   const initialEntry = useMemo<HistoryEntry>(() => ({
@@ -87,7 +87,17 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const historyAnnouncement = isViewingHistory
     ? `Viewing history. Read-only. History position ${historyIndex + 1} of ${history.length}.`
     : 'Latest position.';
-  const announcement = `${message} ${phaseLabel(game.phase)}. ${capitalize(game.turn)} to act. Home ${game.score.home}, Away ${game.score.away}. ${historyAnnouncement}`;
+  const latestEventText = events[0]?.text;
+  const announcementLead = isViewingHistory
+    ? history[historyIndex]?.label
+    : message !== latestEventText ? message : undefined;
+  const announcement = [
+    announcementLead,
+    `${phaseLabel(game.phase)}.`,
+    `${capitalize(game.turn)} to act.`,
+    `Home ${game.score.home}, Away ${game.score.away}.`,
+    historyAnnouncement,
+  ].filter(Boolean).join(' ');
 
   const pushEvent = (text: string) => {
     const entry = { id: eventId.current, text };
@@ -368,7 +378,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
 
   return (
     <>
-    <a className="skip-link" href="#game-workspace">Skip to game workspace</a>
+    <a className="skip-link" href="#game-workspace" onClick={() => workspaceHeadingRef.current?.focus()}>Skip to game workspace</a>
     <main className="app-shell" id="chessball-app">
       <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <section className="score-strip" aria-label="Game status">
@@ -497,8 +507,6 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
         <section
           className="field-wrap"
           aria-label="Chessball field"
-          aria-describedby={isViewingHistory ? 'history-read-only' : undefined}
-          aria-readonly={isViewingHistory || undefined}
         >
           <div className="field-toolbar">
             <DicePanel roll={lastRoll} />
@@ -522,6 +530,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
             ballCoord={ballCoord(game)}
             showBallMarker={showBallMarker}
             readOnly={isViewingHistory}
+            describedBy={isViewingHistory ? 'history-read-only' : undefined}
             onSquareClick={onSquareClick}
             squareClass={(coord, piece, legal, power, ball) => squareClass(game, coord, piece, legal, power, ball)}
             renderYardTicks={(coord) => yardTicks(game, coord)}
