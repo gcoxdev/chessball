@@ -337,6 +337,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setMessage('Computer match started.');
   };
 
+  const openNewGameConfirmation = () => {
+    if (isViewingHistory) return;
+    setShowNewGameConfirmation(true);
+  };
+
   useEffect(() => {
     if (game.phase === 'final') return;
     if (bothComputers && !computerMatchStarted) return;
@@ -531,7 +536,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     <Play size={17} /> Start Game
                   </button>
                 ) : (
-                  <button type="button" disabled={isViewingHistory} onClick={() => setShowNewGameConfirmation(true)}>
+                  <button type="button" disabled={isViewingHistory} onClick={openNewGameConfirmation}>
                     <RotateCcw size={17} /> New Game
                   </button>
                 )}

@@ -175,6 +175,12 @@ describe('Chessball UI interactions', () => {
     expect(newGame).toBeEnabled();
   });
 
+  it('guards the New Game confirmation handler independently of disabled semantics', () => {
+    const source = readFileSync(join(process.cwd(), 'src/main.tsx'), 'utf8');
+    expect(source).toMatch(/const openNewGameConfirmation = \(\) => \{\s*if \(isViewingHistory\) return;\s*setShowNewGameConfirmation\(true\);\s*\}/);
+    expect(source).toMatch(/onClick=\{openNewGameConfirmation\}/);
+  });
+
   it('cannot resume computer automation from history and restores it at Latest', async () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
     fireEvent.click(screen.getByRole('button', { name: /play auto/i }));
