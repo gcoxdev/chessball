@@ -281,17 +281,44 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText('No piece selected.')).toBeInTheDocument();
   });
 
-  it('has a New Game command that resets to editable pregame setup', () => {
-    render(<App initialGame={createGame()} />);
-
+  it.each(['Cancel', 'Escape'])('asks before New Game and %s preserves the complete active match state', (dismissal) => {
+    render(<App initialGame={createGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     fireEvent.click(screen.getByTitle('4,1'));
+    fireEvent.click(screen.getByRole('button', { name: /previous move/i }));
+
+    const historyBefore = screen.getByText(/move \d+ of \d+/i).textContent;
     fireEvent.click(screen.getByRole('button', { name: /new game/i }));
 
+    const confirmation = screen.getByRole('dialog', { name: /new game/i });
+    expect(within(confirmation).getByRole('button', { name: /cancel/i })).toHaveFocus();
+    if (dismissal === 'Cancel') fireEvent.click(within(confirmation).getByRole('button', { name: /cancel/i }));
+    else fireEvent.keyDown(confirmation, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog', { name: /new game/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/move \d+ of \d+/i)).toHaveTextContent(historyBefore ?? '');
+    const gameStatus = screen.getByRole('region', { name: /game status/i });
+    expect(within(gameStatus).getByText('7')).toBeInTheDocument();
+    expect(within(gameStatus).getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('Formation')).toBeInTheDocument();
+    expect(screen.getByText(/WR\/CB · 4,1/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /home human/i })).toHaveClass('active');
+    expect(screen.getByRole('button', { name: /away human/i })).toHaveClass('active');
+    expect(screen.getByRole('button', { name: /next move/i })).toBeEnabled();
+  });
+
+  it('only resets an active match after New Game is confirmed', () => {
+    render(<App initialGame={createGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    fireEvent.click(screen.getByTitle('4,1'));
+    fireEvent.click(screen.getByRole('button', { name: /new game/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /new game/i })).getByRole('button', { name: /^confirm$/i }));
+
+    expect(screen.queryByRole('dialog', { name: /new game/i })).not.toBeInTheDocument();
     expect(screen.getByText('No piece selected.')).toBeInTheDocument();
     expect(screen.getByText('Choose player types, then press Start Game.')).toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: /coin toss/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /home computer/i })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /away human/i })).toBeEnabled();
+    expect(screen.getByText(/move 1 of 1/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /home human/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /away computer/i })).toBeEnabled();
   });
 
   it('shows Start Game before a match and New Game once a match is active', () => {
@@ -525,11 +552,21 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('dialog', { name: /final result/i })).toBeInTheDocument();
   });
 
-  it('focuses the stable workspace heading when a dialog trigger is no longer connected', () => {
-    render(<App initialGame={createGame({ phase: 'final' })} />);
+  it('resets directly from the Final Result New Game action without stacking confirmation', () => {
+    const finalGame = createGame({
+      phase: 'final',
+      score: { home: 21, away: 17 },
+      quarter: 4,
+      drivesThisQuarter: { home: 2, away: 2 },
+      drivesRemaining: { home: 0, away: 0 },
+    });
+    render(<App initialGame={finalGame} initialPlayers={{ home: 'computer', away: 'human' }} />);
 
     fireEvent.click(within(screen.getByRole('dialog', { name: /final result/i })).getByRole('button', { name: /new game/i }));
 
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start game/i })).toBeInTheDocument();
+    expect(screen.getByText('Choose player types, then press Start Game.')).toBeInTheDocument();
     const heading = screen.getByRole('heading', { name: 'Chessball' });
     expect(heading).toHaveAttribute('tabindex', '-1');
     expect(heading).toHaveFocus();

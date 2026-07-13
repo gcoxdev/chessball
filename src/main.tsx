@@ -57,8 +57,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const [message, setMessage] = useState(initialGame ? 'Choose formations, shift up to two pieces per side, then snap.' : 'Choose player types, then press Start Game.');
   const [showRules, setShowRules] = useState(false);
   const [showCoinToss, setShowCoinToss] = useState(false);
+  const [showNewGameConfirmation, setShowNewGameConfirmation] = useState(false);
   const eventId = useRef(1);
   const workspaceHeadingRef = useRef<HTMLHeadingElement>(null);
+  const cancelNewGameRef = useRef<HTMLButtonElement>(null);
   const game = history[historyIndex]?.game ?? initialEntry.game;
   const isViewingHistory = historyIndex !== history.length - 1;
   const bothComputers = players.home === 'computer' && players.away === 'computer';
@@ -288,6 +290,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setSelectedPieceId(null);
     setTargetMode(null);
     setShowCoinToss(false);
+    setShowNewGameConfirmation(false);
     setMessage('Choose player types, then press Start Game.');
   };
 
@@ -512,7 +515,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     <Play size={17} /> Start Game
                   </button>
                 ) : (
-                  <button type="button" onClick={reset}>
+                  <button type="button" onClick={() => setShowNewGameConfirmation(true)}>
                     <RotateCcw size={17} /> New Game
                   </button>
                 )}
@@ -561,6 +564,22 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
         />
       )}
       {showRules && <RulesDialog fallbackFocus={workspaceHeadingRef} onClose={() => setShowRules(false)} />}
+      {showNewGameConfirmation && game.phase !== 'pregame' && (
+        <Modal
+          label="New Game"
+          dismissible
+          initialFocus={cancelNewGameRef}
+          fallbackFocus={workspaceHeadingRef}
+          onClose={() => setShowNewGameConfirmation(false)}
+        >
+          <h2>New Game</h2>
+          <p>Start a new game? Your current match and history will be lost.</p>
+          <div className="button-grid">
+            <button ref={cancelNewGameRef} type="button" onClick={() => setShowNewGameConfirmation(false)}>Cancel</button>
+            <button type="button" onClick={reset}>Confirm</button>
+          </div>
+        </Modal>
+      )}
       {game.phase === 'final' && <FinalResultModal game={game} progress={progress} fallbackFocus={workspaceHeadingRef} onNewGame={reset} />}
     </main>
   );
