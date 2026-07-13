@@ -1037,7 +1037,8 @@ function otherTeamForUi(team: Team): Team {
 }
 
 function squareClass(game: GameState, coord: Coord, piece: Piece | undefined, legalMove: boolean | undefined, legalPowerMove: boolean | undefined, ballHere: boolean) {
-  const classes = ['square', fieldZone(coord)];
+  const zone = fieldZone(coord);
+  const classes = ['square', zone === 'field' ? 'field-zone' : zone];
   if (showsScrimmageMarkers(game) && coord.x === game.lineOfScrimmage) classes.push('scrimmage', game.direction === 1 ? 'scrimmage-forward' : 'scrimmage-backward');
   if (showsScrimmageMarkers(game) && coord.x === game.firstDownLine) classes.push('first-down', game.direction === 1 ? 'first-down-forward' : 'first-down-backward');
   if (coord.x === 12) classes.push('midfield');

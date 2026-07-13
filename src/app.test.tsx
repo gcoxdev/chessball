@@ -827,9 +827,33 @@ describe('Chessball UI interactions', () => {
     expect(cssText).toMatch(/body\s*{[^}]*overflow-x:\s*clip/s);
     expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?body\s*{[^}]*min-width:\s*0/s);
     expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field-wrap\s*{[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field\s*{[^}]*min-width:\s*860px/s);
+    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field\[role="grid"\]\s*{[^}]*min-width:\s*860px/s);
     expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?:is\([\s\S]*?\.rules-close[\s\S]*?\)\s*{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s);
     expect(cssText).toMatch(/\.square\s*{[^}]*min-inline-size:\s*0;/s);
+  });
+
+  it('keeps the field container class off playable gridcells', () => {
+    const { container } = render(<App />);
+    const field = screen.getByRole('grid', { name: /chessball board/i });
+    const regularTurf = screen.getByTitle('2,0');
+
+    expect(field).toHaveClass('field');
+    expect(container.querySelectorAll('.field')).toHaveLength(1);
+    expect(container.querySelector('[role="gridcell"].field')).not.toBeInTheDocument();
+    expect(regularTurf).toHaveClass('field-zone');
+    expect(screen.getByTitle('0,0')).toHaveClass('leftEndZone');
+    expect(screen.getByTitle('23,0')).toHaveClass('rightEndZone');
+  });
+
+  it('targets only the mobile field container width and overrides utility player controls at matching specificity', () => {
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+    const mobileCss = cssText.match(/@media \(max-width:\s*1119px\)\s*{([\s\S]*)}\s*$/)?.[1] ?? '';
+
+    expect(mobileCss).toMatch(/\.field\[role="grid"\]\s*{[^}]*min-width:\s*860px/s);
+    expect(mobileCss).not.toMatch(/(^|})\s*\.field\s*{[^}]*min-width:\s*860px/s);
+    expect(mobileCss).toMatch(
+      /\.utility-bar \.segmented-control button\s*{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s,
+    );
   });
 
   it('renders history controls as one icon-only row with accessible labels', () => {

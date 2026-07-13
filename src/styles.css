@@ -1183,7 +1183,7 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .field {
+  .field[role="grid"] {
     min-width: 860px;
   }
 
@@ -1206,6 +1206,11 @@ h1 {
     .rules-close,
     .final-dialog button
   ) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .utility-bar .segmented-control button {
     min-width: 44px;
     min-height: 44px;
   }
