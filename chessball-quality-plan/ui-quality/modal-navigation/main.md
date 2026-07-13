@@ -11,11 +11,11 @@ Provide reliable focus management, status announcements, skip navigation, and se
 
 ## Status
 
-confirmed
+done
 
 ## Planning Depth
 
-Leaf: ready for implementation planning.
+Leaf: implementation and rendered acceptance verified.
 
 ## Subgoals
 
@@ -33,3 +33,4 @@ None.
 ## Activity Log
 
 - 2026-07-12: Confirmed reusable modal focus behavior, polite status announcements, and navigable page structure.
+- 2026-07-13: Verified visible skip navigation; Rules initial focus, forward/reverse trap, Escape, isolation, and trigger restoration; coin/final Escape resistance; and controlled final reset with workspace fallback focus.

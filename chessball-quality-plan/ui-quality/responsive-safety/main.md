@@ -11,11 +11,11 @@ Improve mobile navigation, touch targets, non-color state cues, history read-onl
 
 ## Status
 
-confirmed
+done
 
 ## Planning Depth
 
-Leaf: ready for implementation planning.
+Leaf: implementation and rendered acceptance verified.
 
 ## Subgoals
 
@@ -33,3 +33,4 @@ None.
 ## Activity Log
 
 - 2026-07-12: Confirmed mobile/touch improvements, New Game confirmation, and redundant visual-state indicators.
+- 2026-07-13: At 390×844 verified 390/390 document width, a contained 354px scroller with the complete 860px board, ~35.67px dense cells, preserved manual/pointer scrolling, exact nearest-only arrow reveal, primary non-board controls at least 44px, read-only cues, and modal overscroll/body containment.

@@ -2,6 +2,8 @@
 
 Date run: 2026-07-12. This document combines Task 6 quantitative evidence with the Task 7 football-flow, physical-tabletop, and UI/accessibility qualitative audit.
 
+Accessibility remediation verified: 2026-07-13. The original findings below are retained as the historical baseline; the remediation closeout after the recommendations records their current disposition.
+
 ## Audit method and evidence rules
 
 All games used the public rule engine through `runMatchedAudit`. Each pair reused one seed. Mirror A assigned the primary policy/plan to home, forced home to win the opening choice and receive; mirror B assigned it to away, forced away to win and receive, and swapped formation-plan identity. Thus home/away, opening receiver, initial direction, policy, and plan identity were reversed together under matched randomness.
@@ -240,6 +242,28 @@ Static review covered `src/main.tsx` and `src/styles.css` against the current Ve
 3. P2: test announcements from the existing `role="log"`; add explicit polite treatment only for primary status/history changes outside it, plus a skip link, navigable regions, and read-only history semantics.
 4. P2: provide visible `:focus-visible` styles, target the robust 44px touch heuristic, and use a mobile board/control strategy that reduces long horizontal travel without hiding board state.
 5. P2: confirm destructive New Game or provide undo; ensure legal/selected/power states are conveyed by text/shape and accessibility state, not color alone.
+
+### Accessibility remediation closeout
+
+The P1/P2 implementation recommendations above are remediated. The historical static and rendered observations remain unchanged so the audit continues to show what prompted the work.
+
+| Historical finding | Current disposition and evidence |
+|---|---|
+| Board keyboard and assistive semantics | Remediated. The rendered board exposed 264 named gridcells with exactly one `tabindex="0"` and 263 `tabindex="-1"` cells. ArrowRight moved focus from `0,0` to `1,0` on desktop. Enter selected `5,2`; Space activated target `3,0` and appended an event. CDP pointer activation independently moved `16,0` to `13,0` and appended an event. Selected state exposed `aria-selected="true"`; history exposed `aria-readonly="true"`, `aria-describedby="history-read-only"`, a dashed outline, and an `RO` badge. |
+| Modal focus, isolation, and dismissal policy | Remediated. Rules initially focused Close, trapped forward and reverse Tab, set the application inert, locked body overflow, closed on Escape, and restored focus to Rules. Coin Toss and Final Result resisted Escape. The final flow gate was exercised through a temporary `initialGame` harness: it showed Home 21 - Away 17, kept focus on its New Game action, then reset to Pregame and focused `#game-workspace`. |
+| Skip navigation, regions, status, and destructive reset | Remediated. The first keyboard stop was the visible “Skip to game workspace” link at `(10,10)` with a 3px white outline; activation focused the programmatically focusable workspace heading. Automated coverage verifies the single polite status, named regions, history semantics, and active-match New Game confirmation. |
+| Focus, non-color cues, and read-only clarity | Remediated. Keyboard focus rendered a 3px white outline distinct from the selected 3px gold double outline. Legal movement rendered a 2px gold circular border; kick placement rendered a bordered `K`; a controlled power state rendered two red bordered diamond targets (45-degree transform); history rendered the dashed `RO` treatment. |
+| Mobile overflow, horizontal navigation, and touch targets | Remediated at 390×844. Document `scrollWidth/clientWidth` was `390/390`. The field wrapper occupied x=18–372 with `clientWidth=354`, `scrollWidth=860`, and `overflow-x:auto`; all 264 cells were present. The board alone retained `min-width:860px`; representative regular cells were 35.656–35.672px wide with `min-width:0`, documenting the dense-board exception. Manual `scrollLeft=240` survived an unrelated player-control render, and CDP pointer activation preserved `scrollLeft=300`. ArrowRight from `10,5` to `11,5` moved only the field wrapper from 0 to exactly 76px—the same value as a direct nearest-alignment baseline—aligned the cell's right edge to the wrapper at x=372, and left document horizontal scroll at 0. All ten measured primary non-board controls were at least 44px high; the four segmented player controls were 57.19×44 or 71.38×44 with computed `min-height:44px`. |
+| Modal/mobile scroll containment | Remediated. At 390×844 the Rules dialog stayed within x=24–366, body overflow was locked, the application was inert, and both backdrop and dialog computed `overscroll-behavior:contain`. Escape restored focus to Rules and cleared isolation/overflow state. |
+
+Fresh automated closeout at commit `307bc2756769d773630dbd20fc0fa8c824fac96a`:
+
+- `npm test`: 8/8 test files and 342/342 tests passed, zero failures; Vitest duration 31.53s.
+- `npm run build`: TypeScript and Vite 6.4.3 exited successfully; 1,583 modules transformed in 5.79s. Output was `dist/index.html` 0.39 kB (0.26 kB gzip), CSS 17.65 kB (4.54 kB gzip), and JavaScript 278.19 kB (84.59 kB gzip).
+- Rendered verification used the built preview at `127.0.0.1:4387`, Chrome 150.0.7871.114 through CDP 1.3, desktop 1440×900 and mobile 390×844 at device scale 1. Desktop document width was exactly 1440/1440 with no horizontal overflow. Screenshots were captured in both viewports as inspection evidence.
+- A temporary Vite harness at `127.0.0.1:4388` supplied controlled power and final `initialGame` states without changing production code. All ordinary navigation, coin, kickoff, placement, return, history, responsive, pointer, and keyboard checks ran against the production build.
+
+Limitations remain: this is not certification with a real screen reader, accessibility-tree/browser combinations were not exhaustively tested, and physical-device touch/overscroll behavior was not exercised. The final dialog was rendered and interacted with from a controlled final `initialGame`, not reached by manually completing all 16 drives. These limitations are nonblocking follow-up validation, not claims that those environments were tested.
 
 ## Final post-fix verification
 

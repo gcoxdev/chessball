@@ -6,7 +6,7 @@ Preserve Chessball's approachable hybrid of chess and American football while en
 
 ## Status
 
-in-progress
+done
 
 ## Subgoals
 
@@ -27,7 +27,7 @@ in-progress
 ## Remaining Nonblocking Recommendations
 
 - Investigate goal-line and shotgun formation geometry with adaptive counterplay before any tuning.
-- Implement the prioritized UI/accessibility recommendations in a separate UI change.
+- Validate the remediated UI with real screen readers and physical-device touch before claiming platform certification.
 - Prototype reference cards and markers before physical production.
 
 ## Activity Log
@@ -37,3 +37,4 @@ in-progress
 - 2026-07-12: Approved implementation plan entered subagent-driven execution.
 - 2026-07-12: Completed the post-fix audit: 3,000 core matched pairs plus 2,900 formation pairs all completed; focused/full tests and build were refreshed. All five audit branches are done, with optional implementation work deferred.
 - 2026-07-12: Reopened UI quality for confirmed accessibility and mobile remediation.
+- 2026-07-13: Closed UI remediation after 342/342 tests, a successful production build, and direct-CDP desktop/mobile verification. All five branches are done; remaining recommendations are nonblocking validation or future design work.

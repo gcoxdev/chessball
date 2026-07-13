@@ -10,11 +10,11 @@ Make the current interface keyboard-accessible, screen-reader understandable, to
 
 ## Status
 
-in-progress
+done
 
 ## Planning Depth
 
-Branch confirmed for implementation.
+Branch implementation and rendered acceptance verified.
 
 ## Subgoals
 
@@ -38,3 +38,8 @@ None at design level; implementation findings must remain within the approved sc
 - 2026-07-11: Confirmed an analysis-only UI review.
 - 2026-07-12: Completed static and rendered desktop/mobile analysis. Findings and prioritized remedies are documented; implementation was intentionally deferred to preserve the audit's read-only UI scope.
 - 2026-07-12: Confirmed implementation of the audit's P1/P2 accessibility and mobile findings.
+- 2026-07-13: Completed all three implementation branches. Fresh evidence: 342/342 tests, successful production build, and passing Chrome/CDP checks at 1440×900 and 390×844, including controlled final-state coverage.
+
+## Remaining Nonblocking Recommendations
+
+- Validate announcements with real screen readers and touch/overscroll behavior on physical mobile devices.
