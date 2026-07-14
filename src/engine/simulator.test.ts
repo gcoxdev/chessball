@@ -199,7 +199,7 @@ describe('headless simulator', () => {
     const actingTeamChanged = simulateGame({
       seed: 12,
       policies: { home: 'random', away: 'heuristic' },
-      maxActions: 10,
+      maxActions: 22,
     });
     const otherTeamChanged = simulateGame({
       seed: 12,
@@ -208,11 +208,16 @@ describe('headless simulator', () => {
     });
 
     expect(heuristic.finalState.turn).toBe('home');
+    expect(actingTeamChanged.finalState.turn).toBe('home');
+    expect(otherTeamChanged.finalState.turn).toBe('home');
+    expect(heuristic.finalState.phase).toBe('formation');
+    expect(actingTeamChanged.finalState.phase).toBe('formation');
+    expect(otherTeamChanged.finalState.phase).toBe('formation');
     expect(heuristic.finalState.play.actions).toContainEqual(
       expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
     );
     expect(actingTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'power' }),
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
     );
     expect(otherTeamChanged.finalState.play.actions).toContainEqual(
       expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
@@ -228,15 +233,20 @@ describe('headless simulator', () => {
     const actingTeamChanged = simulateGame({
       seed: 100,
       policies: { home: 'heuristic', away: 'random' },
-      maxActions: 28,
+      maxActions: 46,
     });
     const otherTeamChanged = simulateGame({
       seed: 100,
       policies: { home: 'random', away: 'heuristic' },
-      maxActions: 28,
+      maxActions: 66,
     });
 
     expect(heuristic.finalState.turn).toBe('away');
+    expect(actingTeamChanged.finalState.turn).toBe('away');
+    expect(otherTeamChanged.finalState.turn).toBe('away');
+    expect(heuristic.finalState.phase).toBe('formation');
+    expect(actingTeamChanged.finalState.phase).toBe('formation');
+    expect(otherTeamChanged.finalState.phase).toBe('formation');
     expect(heuristic.finalState.play.actions).toContainEqual(
       expect.objectContaining({ type: 'chooseFormation', formationId: 'power' }),
     );
@@ -244,7 +254,7 @@ describe('headless simulator', () => {
       expect.objectContaining({ type: 'chooseFormation', formationId: 'trips' }),
     );
     expect(otherTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'power' }),
     );
   });
 
