@@ -182,7 +182,6 @@ h1 {
 
 .button-grid,
 .action-list,
-.formation-options,
 .segmented-control,
 .history-controls,
 .utility-actions {
@@ -208,7 +207,6 @@ h1 {
 
 .button-grid button,
 .action-list button,
-.formation-options button,
 .segmented-control button,
 .history-controls button,
 .utility-actions button {
@@ -226,7 +224,6 @@ h1 {
 
 .button-grid button:disabled,
 .action-list button:disabled,
-.formation-options button:disabled,
 .segmented-control button:disabled,
 .history-controls button:disabled,
 .utility-actions button:disabled {
@@ -236,7 +233,6 @@ h1 {
 
 .button-grid button:not(:disabled):hover,
 .action-list button:not(:disabled):hover,
-.formation-options button:not(:disabled):hover,
 .segmented-control button:not(:disabled):hover,
 .history-controls button:not(:disabled):hover,
 .utility-actions button:not(:disabled):hover {
@@ -261,28 +257,51 @@ h1 {
   gap: 7px;
 }
 
-.formation-picker > span {
+.formation-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.formation-heading label {
   color: rgba(244, 240, 222, 0.64);
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.formation-options {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.formation-options button {
-  min-height: 34px;
-  padding: 0 8px;
-  font-size: 0.78rem;
-  line-height: 1.05;
-}
-
-.formation-options button.active {
-  border-color: rgba(213, 166, 58, 0.88);
-  background: #2b361d;
+.formation-picker select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 38px 0 11px;
+  border: 1px solid rgba(213, 166, 58, 0.64);
+  border-radius: 6px;
+  background: #102219;
   color: #f9e7b6;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.formation-picker select:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: #183023;
+}
+
+.formation-picker select:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.formation-description {
+  min-height: 2.7em;
+  margin: 0;
+  color: rgba(244, 240, 222, 0.7);
+  font-size: 0.73rem;
+  line-height: 1.35;
 }
 
 .formation-status {
@@ -1197,7 +1216,7 @@ h1 {
   :is(
     .button-grid button,
     .action-list button,
-    .formation-options button,
+    .formation-picker select,
     .confirm-button,
     .segmented-control button,
     .history-controls button,

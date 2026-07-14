@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App, chooseComputerAction, COMPUTER_ACTION_DELAY_MS } from './main';
 import { cleanup } from '@testing-library/react';
-import { applyAction, createGame, generateLegalActions } from './engine/rules';
+import { applyAction, createGame, defensiveFormations, generateLegalActions, offensiveFormations } from './engine/rules';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AccessibleBoard } from './ui/AccessibleBoard';
@@ -774,27 +774,61 @@ describe('Chessball UI interactions', () => {
     expect(heading).toHaveFocus();
   });
 
-  it('lets users choose offensive and defensive formations before the snap', () => {
+  it('exposes catalog-backed formation selectors with strategic descriptions', () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     expect(screen.getByRole('heading', { name: /formations/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /^command$/i })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /shotgun/i }));
-    expect(screen.getByText('Offense formation: Shotgun.')).toBeInTheDocument();
+
+    const offense = screen.getByRole('combobox', { name: 'Offense formation' });
+    const defense = screen.getByRole('combobox', { name: 'Defense formation' });
+    expect(within(offense).getAllByRole('option').map((option) => (option as HTMLOptionElement).value))
+      .toEqual(offensiveFormations.map(({ id }) => id));
+    expect(within(defense).getAllByRole('option').map((option) => (option as HTMLOptionElement).value))
+      .toEqual(defensiveFormations.map(({ id }) => id));
+    expect(offense).toHaveAttribute('aria-describedby', 'offense-formation-description');
+    expect(defense).toHaveAttribute('aria-describedby', 'defense-formation-description');
+    expect(document.getElementById('offense-formation-description')).toHaveTextContent(offensiveFormations[0].description);
+    expect(document.getElementById('defense-formation-description')).toHaveTextContent(defensiveFormations[0].description);
+  });
+
+  it('previews and confirms human offense and defense selections through the formation action path', () => {
+    const { unmount } = render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+
+    const offense = screen.getByRole('combobox', { name: 'Offense formation' });
+    fireEvent.change(offense, { target: { value: 'trips' } });
+
+    expect(offense).toHaveValue('trips');
+    expect(document.getElementById('offense-formation-description')).toHaveTextContent(/overload one side/i);
+    expect(offense.closest('.formation-picker')).toHaveTextContent('Pending');
+    expect(screen.getByTitle('4,0')).toHaveAccessibleName(/home WR/i);
+    expect(screen.getByTitle('4,1')).toHaveAccessibleName(/home WR/i);
+    expect(screen.getByTitle('5,2')).toHaveAccessibleName(/home TE/i);
+    expect(screen.getByTitle('3,5')).toHaveAccessibleName(/home QB/i);
+    expect(screen.getByTitle('3,6')).toHaveAccessibleName(/home RB/i);
+    expect(screen.getByRole('log', { name: /event log/i })).toHaveTextContent('Formation: Offense chose Trips.');
     expect(screen.queryByRole('button', { name: /snap/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     expect(screen.getByText('Offense formation confirmed.')).toBeInTheDocument();
+    expect(offense).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: /nickel/i }));
-    expect(screen.getByText('Defense formation: Nickel.')).toBeInTheDocument();
+    unmount();
+    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    const defense = screen.getByRole('combobox', { name: 'Defense formation' });
+    fireEvent.change(defense, { target: { value: 'bear-front' } });
+
+    expect(defense).toHaveValue('bear-front');
+    expect(document.getElementById('defense-formation-description')).toHaveTextContent(/challenge the middle/i);
+    expect(defense.closest('.formation-picker')).toHaveTextContent('Pending');
+    expect(screen.getByTitle('6,3')).toHaveAccessibleName(/away DL/i);
+    expect(screen.getByTitle('6,7')).toHaveAccessibleName(/away DL/i);
+    expect(screen.getByRole('log', { name: /event log/i })).toHaveTextContent('Formation: Defense chose Bear Front.');
     expect(screen.queryByRole('heading', { name: /^command$/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
     expect(screen.getByText('Defense formation confirmed.')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /formations/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /^command$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /snap/i })).toBeEnabled();
+    expect(defense).toBeDisabled();
   });
 
   it('groups game setup controls below the field and removes the signal panel', () => {
@@ -922,21 +956,24 @@ describe('Chessball UI interactions', () => {
   it('lets a user change formation before confirming it', () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /shotgun/i }));
-    fireEvent.click(screen.getByRole('button', { name: /singleback/i }));
+    const offense = screen.getByRole('combobox', { name: 'Offense formation' });
+    fireEvent.change(offense, { target: { value: 'shotgun' } });
+    fireEvent.change(offense, { target: { value: 'singleback' } });
     fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
 
-    expect(screen.getByRole('button', { name: /singleback/i })).toHaveClass('active');
+    expect(offense).toHaveValue('singleback');
+    expect(offense).toBeDisabled();
     expect(screen.getByText('Offense formation confirmed.')).toBeInTheDocument();
   });
 
   it('lets a human defense choose formation against a computer offense', () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
 
-    expect(screen.getByRole('button', { name: /shotgun/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /nickel/i })).toBeEnabled();
+    expect(screen.getByRole('combobox', { name: 'Offense formation' })).toBeDisabled();
+    const defense = screen.getByRole('combobox', { name: 'Defense formation' });
+    expect(defense).toBeEnabled();
 
-    fireEvent.click(screen.getByRole('button', { name: /nickel/i }));
+    fireEvent.change(defense, { target: { value: 'nickel' } });
 
     expect(screen.getByText('Defense formation: Nickel.')).toBeInTheDocument();
   });
@@ -975,7 +1012,7 @@ describe('Chessball UI interactions', () => {
     await waitFor(() => {
       expect(within(screen.getByText('Phase').closest('.down-card') as HTMLElement).getByText('Kick Return')).toBeInTheDocument();
     });
-    expect(screen.queryByRole('button', { name: /nickel/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Defense formation' })).not.toBeInTheDocument();
   });
 
   it('computer returner moves onto a reachable loose kickoff even after chasing it last turn', () => {
@@ -1491,28 +1528,41 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('button', { name: /play auto/i })).toBeInTheDocument();
   });
 
-  it('computer teams choose varied formations before snapping', async () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
-    fireEvent.click(screen.getByRole('button', { name: /play auto/i }));
+  it('keeps every catalog formation uniformly reachable by computer selection', () => {
+    const players = { home: 'computer', away: 'computer' } as const;
+    const offenseIds: string[] = [];
+    const defenseIds: string[] = [];
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/computer home: formation: offense chose/i).length).toBeGreaterThan(0);
-    });
-    await waitFor(() => {
-      expect(screen.getAllByText(/computer home: formation: defense chose/i).length).toBeGreaterThan(0);
-    });
+    for (let seed = 0; seed < offensiveFormations.length; seed += 1) {
+      let game = createGame();
+      const offense = chooseComputerAction(game, generateLegalActions(game), seed, players);
+      expect(offense).toMatchObject({ type: 'chooseFormation', side: 'offense' });
+      if (!offense || offense.type !== 'chooseFormation') throw new Error('Expected computer offense formation');
+      offenseIds.push(offense.formationId);
+      game = applyAction(game, offense);
 
-    const logText = screen.getByRole('log', { name: /event log/i }).textContent ?? '';
-    expect(logText).toMatch(/Shotgun|Singleback|Nickel|Goal Line/);
+      const confirmOffense = chooseComputerAction(game, generateLegalActions(game), seed, players);
+      expect(confirmOffense).toEqual({ type: 'confirmFormation', side: 'offense' });
+      if (!confirmOffense) throw new Error('Expected computer offense confirmation');
+      game = applyAction(game, confirmOffense);
+
+      const defense = chooseComputerAction(game, generateLegalActions(game), seed, players);
+      expect(defense).toMatchObject({ type: 'chooseFormation', side: 'defense' });
+      if (!defense || defense.type !== 'chooseFormation') throw new Error('Expected computer defense formation');
+      defenseIds.push(defense.formationId);
+    }
+
+    expect(offenseIds.sort()).toEqual(offensiveFormations.map(({ id }) => id).sort());
+    expect(defenseIds.sort()).toEqual(defensiveFormations.map(({ id }) => id).sort());
   });
 
   it('computer offense does not open live play with an immediate pass', async () => {
     render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /nickel/i })).toBeEnabled();
+      expect(screen.getByRole('combobox', { name: 'Defense formation' })).toBeEnabled();
     });
-    fireEvent.click(screen.getByRole('button', { name: /nickel/i }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Defense formation' }), { target: { value: 'nickel' } });
     fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
 
     await waitFor(() => {

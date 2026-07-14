@@ -864,24 +864,30 @@ function FormationPicker({
   onChoose: (formation: Formation) => void;
   onConfirm: () => void;
 }) {
+  const slug = title.toLowerCase();
+  const active = formations.find(({ id }) => id === activeId) ?? formations[0];
+
   return (
     <div className="formation-picker">
-      <span>
-        {title} <em className={`formation-status ${confirmed ? 'confirmed' : 'pending'}`}>{confirmed ? 'Confirmed' : 'Pending'}</em>
-      </span>
-      <div className="formation-options">
-        {formations.map((formation) => (
-          <button
-            key={formation.id}
-            className={formation.id === activeId ? 'active' : ''}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChoose(formation)}
-          >
-            {formation.name}
-          </button>
-        ))}
+      <div className="formation-heading">
+        <label htmlFor={`${slug}-formation`}>{title} formation</label>
+        <em className={`formation-status ${confirmed ? 'confirmed' : 'pending'}`}>{confirmed ? 'Confirmed' : 'Pending'}</em>
       </div>
+      <select
+        id={`${slug}-formation`}
+        aria-describedby={`${slug}-formation-description`}
+        value={active.id}
+        disabled={disabled}
+        onChange={(event) => {
+          const formation = formations.find(({ id }) => id === event.target.value);
+          if (formation) onChoose(formation);
+        }}
+      >
+        {formations.map((formation) => (
+          <option key={formation.id} value={formation.id}>{formation.name}</option>
+        ))}
+      </select>
+      <p id={`${slug}-formation-description`} className="formation-description">{active.description}</p>
       <button type="button" className="confirm-button" disabled={disabled || confirmed} onClick={onConfirm}>
         Confirm {title}
       </button>
