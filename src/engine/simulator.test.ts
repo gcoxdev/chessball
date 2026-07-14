@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame } from './rules';
-import { actionOpportunityKeys, actingTeamFieldBand, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
+import { applyAction, createGame, generateLegalActions } from './rules';
+import { actionOpportunityKeys, actingTeamFieldBand, chooseActionForTeamPolicies, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
 import type { Action, PlayResult } from './types';
-import type { SimulationFormationPlan, SimulationOpening } from './simulator';
+import type { SimulationFormationPlan, SimulationOpening, TeamPolicies } from './simulator';
 
 describe('headless simulator', () => {
   it('produces repeatable game summaries from the same seed and policy', () => {
@@ -191,71 +191,39 @@ describe('headless simulator', () => {
   });
 
   it('uses only the home policy for a home formation turn', () => {
-    const heuristic = simulateGame({
-      seed: 12,
-      policies: { home: 'heuristic', away: 'heuristic' },
-      maxActions: 10,
-    });
-    const actingTeamChanged = simulateGame({
-      seed: 12,
-      policies: { home: 'random', away: 'heuristic' },
-      maxActions: 22,
-    });
-    const otherTeamChanged = simulateGame({
-      seed: 12,
-      policies: { home: 'heuristic', away: 'random' },
-      maxActions: 10,
-    });
+    const state = createGame({ turn: 'home' });
+    const legalActions = generateLegalActions(state);
+    const select = (policies: TeamPolicies) => chooseActionForTeamPolicies(
+      state,
+      legalActions,
+      () => 0.5,
+      policies,
+      0,
+    );
 
-    expect(heuristic.finalState.turn).toBe('home');
-    expect(actingTeamChanged.finalState.turn).toBe('home');
-    expect(otherTeamChanged.finalState.turn).toBe('home');
-    expect(heuristic.finalState.phase).toBe('formation');
-    expect(actingTeamChanged.finalState.phase).toBe('formation');
-    expect(otherTeamChanged.finalState.phase).toBe('formation');
-    expect(heuristic.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
-    );
-    expect(actingTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
-    );
-    expect(otherTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
-    );
+    expect(state.phase).toBe('formation');
+    expect(state.turn).toBe('home');
+    expect(select({ home: 'heuristic', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
+    expect(select({ home: 'random', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'pistol' });
+    expect(select({ home: 'heuristic', away: 'random' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
   });
 
   it('uses only the away policy for an away formation turn', () => {
-    const heuristic = simulateGame({
-      seed: 100,
-      policies: { home: 'heuristic', away: 'heuristic' },
-      maxActions: 28,
-    });
-    const actingTeamChanged = simulateGame({
-      seed: 100,
-      policies: { home: 'heuristic', away: 'random' },
-      maxActions: 46,
-    });
-    const otherTeamChanged = simulateGame({
-      seed: 100,
-      policies: { home: 'random', away: 'heuristic' },
-      maxActions: 66,
-    });
+    const state = createGame({ possession: 'away', direction: -1, turn: 'away' });
+    const legalActions = generateLegalActions(state);
+    const select = (policies: TeamPolicies) => chooseActionForTeamPolicies(
+      state,
+      legalActions,
+      () => 0.5,
+      policies,
+      0,
+    );
 
-    expect(heuristic.finalState.turn).toBe('away');
-    expect(actingTeamChanged.finalState.turn).toBe('away');
-    expect(otherTeamChanged.finalState.turn).toBe('away');
-    expect(heuristic.finalState.phase).toBe('formation');
-    expect(actingTeamChanged.finalState.phase).toBe('formation');
-    expect(otherTeamChanged.finalState.phase).toBe('formation');
-    expect(heuristic.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'power' }),
-    );
-    expect(actingTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'trips' }),
-    );
-    expect(otherTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'power' }),
-    );
+    expect(state.phase).toBe('formation');
+    expect(state.turn).toBe('away');
+    expect(select({ home: 'heuristic', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
+    expect(select({ home: 'heuristic', away: 'random' })).toMatchObject({ type: 'chooseFormation', formationId: 'pistol' });
+    expect(select({ home: 'random', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
   });
 
   it('gives team policies precedence over the legacy scalar policy', () => {

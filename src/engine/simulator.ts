@@ -202,7 +202,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
     try {
       const legalActions = generateLegalActions(state);
       for (const contextKey of actionOpportunityKeys(state, policies[state.turn], legalActions)) increment(actionOpportunities, contextKey);
-      const action = chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex, options.opening, options.formationPlan);
+      const action = chooseActionForTeamPolicies(state, legalActions, rng, policies, actionIndex, options.opening, options.formationPlan);
 
       if (!action) {
         if (state.phase === 'betweenDowns') {
@@ -698,6 +698,18 @@ function balanceReport(input: {
     averageScoreDelta,
     warnings,
   };
+}
+
+export function chooseActionForTeamPolicies(
+  state: GameState,
+  legalActions: Action[],
+  rng: Random,
+  policies: TeamPolicies,
+  actionIndex: number,
+  opening?: SimulationOpening,
+  formationPlan?: SimulationFormationPlan,
+): Action | null {
+  return chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex, opening, formationPlan);
 }
 
 function chooseSimulationAction(
