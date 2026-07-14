@@ -2,6 +2,7 @@ import {
   applyAction,
   createGame,
   defensiveFormations,
+  fieldGoalAttempt,
   generateLegalActions,
   gridDistance,
   isTouchdownSquare,
@@ -1055,8 +1056,7 @@ function progressScore(state: GameState, coord: Coord): number {
 }
 
 function inFieldGoalRange(state: GameState, coord: Coord): boolean {
-  const distance = state.direction === 1 ? 22 - coord.x : coord.x - 1;
-  return distance <= 6;
+  return fieldGoalAttempt(state.direction, coord).distance <= 6;
 }
 
 function seededRandom(seed: number): Random {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, generateLegalActions } from './rules';
 import { actionOpportunityKeys, actingTeamFieldBand, chooseActionForTeamPolicies, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
-import type { Action, PlayResult } from './types';
+import type { Action, GameState, PlayResult } from './types';
 import type { SimulationFormationPlan, SimulationOpening, TeamPolicies } from './simulator';
 
 describe('headless simulator', () => {
@@ -300,10 +300,33 @@ describe('headless simulator', () => {
       ...before,
       pieces: before.pieces.map((item) => item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item),
     };
-    const after = applyAction(positioned, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 4 } });
+    const after = applyAction(positioned, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
 
     expect(driveOutcomeForTransition(positioned, after)).toBe('fieldGoalGood');
     expect(driveOutcomeForTransition(after, after)).toBeNull();
+  });
+
+  it('uses canonical goalpost geometry for heuristic field-goal range', () => {
+    const at = (x: number) => {
+      const base = createGame({ phase: 'live', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x, firstDownLine: 21 });
+      return {
+        ...base,
+        pieces: base.pieces.map((piece) => piece.id === 'home-qb' ? { ...piece, coord: { x, y: 5 } } : piece),
+        ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
+      };
+    };
+    const inRange = at(18);
+    const outOfRange = at(17);
+    const choose = (state: GameState) => chooseActionForTeamPolicies(
+      state,
+      generateLegalActions(state),
+      () => 0.5,
+      { home: 'heuristic', away: 'heuristic' },
+      0,
+    );
+
+    expect(choose(inRange)).toMatchObject({ type: 'kick', kind: 'fieldGoal' });
+    expect(choose(outOfRange)).not.toMatchObject({ type: 'kick', kind: 'fieldGoal' });
   });
 
   it('does not recount a persisted terminal result on a later transition', () => {

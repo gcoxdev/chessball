@@ -3,6 +3,7 @@ import {
   applyAction,
   activeRoleCode,
   createGame,
+  fieldGoalAttempt,
   fieldZone,
   generateLegalActions,
   isTouchdownSquare,
@@ -41,6 +42,13 @@ const stoppedFor = (
 });
 
 describe('field geometry', () => {
+  it('measures field goals through the end zone to the posts', () => {
+    expect(fieldGoalAttempt(1, { x: 17, y: 5 })).toEqual({ distance: 7, yards: 35, required: 9 });
+    expect(fieldGoalAttempt(-1, { x: 6, y: 5 })).toEqual({ distance: 7, yards: 35, required: 9 });
+    expect(fieldGoalAttempt(1, { x: 21, y: 5 })).toEqual({ distance: 3, yards: 15, required: 7 });
+    expect(fieldGoalAttempt(-1, { x: 2, y: 5 })).toEqual({ distance: 3, yards: 15, required: 7 });
+  });
+
   it('counts distance as diagonals first, then straight squares', () => {
     expect(gridDistance({ x: 4, y: 5 }, { x: 7, y: 5 })).toBe(3);
     expect(gridDistance({ x: 4, y: 5 }, { x: 7, y: 8 })).toBe(3);
@@ -942,8 +950,12 @@ describe('play resolution', () => {
       lineOfScrimmage: 17,
       pieces: fieldGoalState.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
     };
-    expect(applyAction(fieldGoalState, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 4 } }).score.home).toBe(3);
-    expect(applyAction(fieldGoalState, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 3, die2: 4 } }).score.home).toBe(0);
+    const missedFieldGoal = applyAction(fieldGoalState, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 4 } });
+    const madeFieldGoal = applyAction(fieldGoalState, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
+    expect(missedFieldGoal.score.home).toBe(0);
+    expect(missedFieldGoal.play.result).toMatchObject({ type: 'fieldGoal', good: false, roll: { total: 8, required: 9, distance: 7 } });
+    expect(madeFieldGoal.score.home).toBe(3);
+    expect(madeFieldGoal.play.result).toMatchObject({ type: 'fieldGoal', good: true, roll: { total: 9, required: 9, distance: 7 } });
 
     let safetyState = liveGame();
     safetyState = {
@@ -988,6 +1000,20 @@ describe('play resolution', () => {
     expect(next.possession).toBe('away');
     expect(next.lineOfScrimmage).toBe(17);
     expect(next.score.home).toBe(0);
+  });
+
+  it('uses the same field-goal geometry when the offense moves left', () => {
+    let state = liveGame(createGame({ possession: 'away', direction: -1, turn: 'away', lineOfScrimmage: 6 }));
+    state = {
+      ...state,
+      pieces: state.pieces.map((item) => (item.id === 'away-qb' ? { ...item, coord: { x: 6, y: 5 } } : item)),
+      ball: { kind: 'controlled', pieceId: 'away-qb' },
+    };
+
+    const made = applyAction(state, { type: 'kick', kickerId: 'away-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
+
+    expect(made.score.away).toBe(3);
+    expect(made.play.result).toMatchObject({ type: 'fieldGoal', team: 'away', good: true, roll: { total: 9, required: 9, distance: 7 } });
   });
 
   it('resolves the post-touchdown extra point as a simple kick roll', () => {
@@ -1142,7 +1168,7 @@ describe('play resolution', () => {
       type: 'kick',
       kickerId: 'home-qb',
       kind: 'fieldGoal',
-      roll: { die1: 4, die2: 4 },
+      roll: { die1: 4, die2: 5 },
     });
     const next = startNextDown(fieldGoal);
 

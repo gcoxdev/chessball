@@ -25,6 +25,11 @@ const DEFAULT_DRIVES = 4;
 export const QUARTERS_PER_MATCH = 4;
 export const DRIVES_PER_TEAM_PER_QUARTER = 2;
 
+export function fieldGoalAttempt(direction: Direction, ballAt: Coord) {
+  const distance = Math.max(0, direction === 1 ? WIDTH - ballAt.x : ballAt.x + 1);
+  return { distance, yards: distance * 5, required: 5 + Math.ceil(distance / 2) };
+}
+
 export const offensiveFormations: Formation[] = [
   {
     id: 'i-form',
@@ -1094,9 +1099,9 @@ function kick(state: GameState, action: Extract<Action, { type: 'kick' }>): Game
   if (state.ball.kind !== 'controlled' || state.ball.pieceId !== kicker.id) throw new Error('Kicker must control the ball');
   if (action.kind === 'fieldGoal') {
     const ballAt = kicker.coord;
-    const distance = fieldGoalDistance(state, ballAt);
+    const attempt = fieldGoalAttempt(state.direction, ballAt);
     const roll = action.roll ?? defaultRoll();
-    const result = rollResult(roll, fieldGoalRequired(distance), distance);
+    const result = rollResult(roll, attempt.required, attempt.distance);
     const good = result.total >= result.required;
     const scored = good ? addScore(state, state.possession, 3) : state;
     const nextState = good
@@ -1336,14 +1341,6 @@ function passRequired(distance: number): number {
 function tackleRequired(approach: { distance: number; blockers: number }): number {
   if (approach.blockers > 0) return 8 + approach.distance + approach.blockers;
   return 5 + approach.distance;
-}
-
-function fieldGoalRequired(distance: number): number {
-  return 5 + Math.ceil(distance / 2);
-}
-
-function fieldGoalDistance(state: GameState, ballAt: Coord): number {
-  return Math.max(0, state.direction === 1 ? RIGHT_END_ZONE_START - ballAt.x : ballAt.x - (FIELD_START - 1));
 }
 
 function kickoffDistance(roll: DiceRoll): number {

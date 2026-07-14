@@ -6,6 +6,7 @@ import {
   applyAction,
   createGame,
   DRIVES_PER_TEAM_PER_QUARTER,
+  fieldGoalAttempt,
   fieldZone,
   generateLegalActions,
   isTouchdownSquare,
@@ -722,7 +723,7 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
           <li>Tackles need a clear approach lane within the defender's movement range. Friendly pieces do not block the lane; opposing pieces do.</li>
           <li>RB/MLB, FB/OLB, and OL/DL can power tackle through opposing blockers. Roll 2d6 against 8 plus distance plus blockers crossed. Clear tackles use 5 plus distance.</li>
           <li>Double sixes on a tackle creates an immediate strip turnover recovered by the tackling team.</li>
-          <li>Field goals roll 2d6 against distance to the goal line. Made field goals score and lead to a kickoff; missed field goals turn the ball over at the kick spot. After a touchdown, choose an extra point kick or a two-point try from the goal line.</li>
+          <li>A touchdown crosses the near goal line. A field goal measures through the ten-yard end zone to the posts at the back edge/end line, then rolls 2d6 against that distance. Made field goals score and lead to a kickoff; missed field goals turn the ball over at the kick spot. After a touchdown, choose an extra point kick or a two-point try from the goal line.</li>
           <li>Touchdowns, extra points, two-point tries, and made field goals are followed by a kickoff from the scoring team. After a safety, the team that allowed the safety kicks to the scoring team. At halftime, the team that received the opening kickoff kicks to the other side.</li>
           <li>Scores, safeties, interceptions, turnovers on downs, punts, missed field goals, and failed conversions complete drives. Normal tackles and incomplete passes only advance the down.</li>
         </ul>
@@ -1113,7 +1114,7 @@ export function chooseComputerAction(game: GameState, legalActions: Action[], se
       return pickFromTopSeeded(carrierMoves.sort((a, b) => compareOffensiveMoves(game, a.to, b.to)), seed, 3) ?? null;
     }
 
-    if (game.down === 4 && fieldGoalTargetNumber(game, carrier.coord) <= 10) {
+    if (game.down === 4 && fieldGoalAttempt(game.direction, carrier.coord).required <= 10) {
       return { type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' };
     }
 
@@ -1293,11 +1294,6 @@ function handoffPriority(pieceId: string): number {
   return 1;
 }
 
-function fieldGoalTargetNumber(game: GameState, ballAt: Coord): number {
-  const distance = game.direction === 1 ? 22 - ballAt.x : ballAt.x - 1;
-  return 5 + Math.ceil(Math.max(0, distance) / 2);
-}
-
 function recentMovingPieceIds(game: GameState): Set<string> {
   return new Set(game.play.actions
     .slice(-2)
@@ -1398,6 +1394,7 @@ function describeAction(before: GameState, action: Action, after: GameState): st
     return `Missed tackle: ${action.defenderId} missed ${action.targetId}${rollText(action.roll)}.`;
   }
   if (action.type === 'kick') {
+    if (after.play.result?.type === 'fieldGoal') return `Kick: ${action.kickerId} attempted ${kickKindLabel(action.kind)}. ${resultText(after)}`;
     if (after.play.result) return `Kick: ${action.kickerId} attempted ${kickKindLabel(action.kind)}${rollText(action.roll, resultRoll(after))}. ${resultText(after)}`;
     return `Kick: ${action.kickerId} attempted ${kickKindLabel(action.kind)}${rollText(action.roll, resultRoll(after))}.`;
   }
@@ -1408,7 +1405,7 @@ function resultText(game: GameState): string {
   const result = game.play.result;
   if (!result) return 'Action resolved.';
   if (result.type === 'touchdown') return `Touchdown for ${result.team}.`;
-  if (result.type === 'fieldGoal') return `Field goal ${result.good ? 'good' : 'missed'} for ${result.team}${rollText(undefined, result.roll)}.`;
+  if (result.type === 'fieldGoal') return `Field goal ${result.good ? 'good' : 'missed'} for ${result.team}${fieldGoalRollText(result.roll)}.`;
   if (result.type === 'extraPoint') return `Extra point ${result.good ? 'good' : 'missed'} for ${result.team}${rollText(undefined, result.roll)}.`;
   if (result.type === 'twoPoint') return `Two-point try ${result.good ? 'good' : 'failed'} for ${result.team}.`;
   if (result.type === 'kickoff') return `Kickoff by ${result.team}. ${capitalize(result.receivingTeam)} starts at ${coordLabel(result.at)}${rollText(undefined, result.roll)}.`;
@@ -1466,6 +1463,11 @@ function rollText(roll?: { die1: number; die2: number }, result?: { total: numbe
   if (result) return ` (roll ${result.total} vs ${result.required}, distance ${result.distance})`;
   if (roll) return ` (roll ${roll.die1 + roll.die2})`;
   return '';
+}
+
+function fieldGoalRollText(result?: { total: number; required: number; distance: number }): string {
+  if (!result) return '';
+  return ` (${result.distance * 5} yards to posts, roll ${result.total} vs ${result.required})`;
 }
 
 function resultRoll(game: GameState): { total: number; required: number; distance: number } | undefined {

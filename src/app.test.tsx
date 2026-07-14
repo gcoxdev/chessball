@@ -1269,6 +1269,9 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('dialog', { name: /rules and how to play/i })).toBeInTheDocument();
     expect(screen.getByText(/a match starts with a coin toss and kickoff/i)).toBeInTheDocument();
     expect(screen.getByText(/after a touchdown, choose an extra point kick or a two-point try/i)).toBeInTheDocument();
+    expect(screen.getByText(/touchdown crosses the near goal line/i)).toBeInTheDocument();
+    expect(screen.getByText(/field goal measures through the ten-yard end zone to the posts at the back edge\/end line/i)).toBeInTheDocument();
+    expect(screen.queryByText(/field goals roll 2d6 against distance to the goal line/i)).not.toBeInTheDocument();
     expect(screen.getByText(/incomplete passes are dead balls/i)).toBeInTheDocument();
     expect(screen.queryByText(/block,/i)).not.toBeInTheDocument();
   });
@@ -1359,6 +1362,22 @@ describe('Chessball UI interactions', () => {
     const dice = screen.getByLabelText(/last dice roll/i);
     expect(dice).toBeInTheDocument();
     expect(within(dice).getAllByLabelText(/die [12]: [1-6]/i)).toHaveLength(2);
+  });
+
+  it('reports field-goal distance in yards to the posts with the roll target', () => {
+    const base = createGame({ phase: 'live', lineOfScrimmage: 17 });
+    const state = {
+      ...base,
+      pieces: base.pieces.map((piece) => (piece.id === 'home-qb' ? { ...piece, coord: { x: 17, y: 5 } } : piece)),
+      ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
+    };
+    vi.spyOn(Math, 'random').mockReturnValueOnce(0.6).mockReturnValueOnce(0.8);
+    render(<App initialGame={state} initialPlayers={{ home: 'human', away: 'human' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /field goal/i }));
+
+    expect(within(screen.getByRole('log', { name: /event log/i })).getByText(/35 yards to posts.*roll 9 vs 9/i)).toBeInTheDocument();
+    expect(screen.getByRole('log', { name: /event log/i })).not.toHaveTextContent(/distance 7/i);
   });
 
   it('shows one clear tackle command for the selected defender only against the ball carrier', () => {
@@ -1623,5 +1642,29 @@ describe('Chessball UI interactions', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/computer away: kick: away-qb attempted field goal/i).length).toBeGreaterThan(0);
     }, { timeout: 1200 });
+  });
+
+  it('uses canonical field-goal geometry at the computer fourth-down range boundary', () => {
+    const players = { home: 'computer', away: 'computer' } as const;
+    const at = (x: number) => {
+      const base = createGame({ phase: 'live', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x });
+      return {
+        ...base,
+        pieces: base.pieces.map((piece) => (piece.id === 'home-qb' ? { ...piece, coord: { x, y: 5 } } : piece)),
+        ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
+      };
+    };
+    const inRange = at(14);
+    const outOfRange = at(13);
+
+    expect(chooseComputerAction(inRange, generateLegalActions(inRange), 0, players)).toEqual({
+      type: 'kick',
+      kickerId: 'home-qb',
+      kind: 'fieldGoal',
+    });
+    expect(chooseComputerAction(outOfRange, generateLegalActions(outOfRange), 0, players)).not.toMatchObject({
+      type: 'kick',
+      kind: 'fieldGoal',
+    });
   });
 });
