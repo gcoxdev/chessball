@@ -384,7 +384,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <section className="score-strip" aria-label="Game status">
         <div>
-          <h1 id="game-workspace" ref={workspaceHeadingRef} tabIndex={-1}>Chessball</h1>
+          <h1 id="game-workspace" ref={workspaceHeadingRef} tabIndex={-1} className="chessball-wordmark">Chessball</h1>
         </div>
         <ScoreCard label="Home" score={game.score.home} active={game.possession === 'home'} />
         <ScoreCard label="Away" score={game.score.away} active={game.possession === 'away'} />

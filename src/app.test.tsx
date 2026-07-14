@@ -191,9 +191,13 @@ describe('Chessball UI interactions', () => {
     expect(links[0]).toHaveAccessibleName('Skip to game workspace');
     expect(links[0]).toHaveAttribute('href', '#game-workspace');
     expect(appRoot).toContainElement(links[0]);
-    const workspaceHeading = screen.getByRole('heading', { name: 'Chessball', level: 1 });
+    const levelOneHeadings = screen.getAllByRole('heading', { level: 1 });
+    expect(levelOneHeadings).toHaveLength(1);
+    const workspaceHeading = levelOneHeadings[0];
+    expect(workspaceHeading).toHaveAccessibleName('Chessball');
     expect(workspaceHeading).toHaveAttribute('id', 'game-workspace');
     expect(workspaceHeading).toHaveAttribute('tabindex', '-1');
+    expect(workspaceHeading).toHaveClass('chessball-wordmark');
     fireEvent.click(links[0]);
     expect(workspaceHeading).toHaveFocus();
     expect(container.querySelectorAll('main')).toHaveLength(1);
@@ -201,6 +205,49 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('region', { name: /chessball field/i })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: /game setup/i })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: /game history/i })).toBeInTheDocument();
+  });
+
+  it('defines the Chessball wordmark as scoped, local-font, decorative CSS', () => {
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+    const mainSource = readFileSync(join(process.cwd(), 'src/main.tsx'), 'utf8');
+    const packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    const wordmarkRule = cssText.match(/\.chessball-wordmark\s*{([^}]*)}/s)?.[1] ?? '';
+    const accentRule = cssText.match(/\.chessball-wordmark::(?:before|after)\s*{([^}]*)}/s)?.[1] ?? '';
+
+    expect(cssText).not.toMatch(/(?:^|\n)\s*h1\s*{/);
+    expect(wordmarkRule).toMatch(/font-family:\s*Impact,\s*Haettenschweiler,\s*"Arial Narrow Bold",\s*"Arial Narrow",\s*sans-serif/);
+    expect(wordmarkRule).toMatch(/font-weight:\s*(?:900|[1-9]00)/);
+    expect(wordmarkRule).toMatch(/font-stretch:\s*condensed/);
+    expect(wordmarkRule).toMatch(/line-height:\s*0?\.[6789]/);
+    expect(wordmarkRule).toMatch(/transform:\s*skewX\(-7deg\)/);
+    expect(wordmarkRule).toMatch(/color:\s*var\(--gold\)/);
+    expect(wordmarkRule).toMatch(/text-shadow:[^;]*(?:var\(--chalk\)|rgba\(244,\s*240,\s*222)[^;]*#[0-9a-f]{6}/i);
+    expect(accentRule).toMatch(/content:\s*""/);
+    expect(accentRule).toMatch(/(?:width|max-width):\s*(?:clamp\([^;]+\)|[1-5](?:\.\d+)?(?:rem|em))/);
+    expect(accentRule).toMatch(/height:\s*[1-3]px/);
+    expect(cssText).toMatch(/\.chessball-wordmark:focus-visible\s*{[^}]*outline:[^}]*outline-offset:/s);
+    expect(cssText).not.toMatch(/@font-face|url\s*\(/i);
+    expect(cssText).not.toMatch(/\.(?:nfl|shield|stars?)(?:\b|-)|(?:nfl|shield|stars?)[-_](?:asset|logo|wordmark)/i);
+    expect(mainSource).toMatch(/<h1 id="game-workspace" ref={workspaceHeadingRef} tabIndex={-1} className="chessball-wordmark">Chessball<\/h1>/);
+    expect(Object.keys(packageJson.dependencies).sort()).toEqual([
+      '@vitejs/plugin-react',
+      'lucide-react',
+      'react',
+      'react-dom',
+      'typescript',
+      'vite',
+    ]);
+    expect(Object.keys(packageJson.devDependencies).sort()).toEqual([
+      '@testing-library/jest-dom',
+      '@testing-library/react',
+      '@types/react',
+      '@types/react-dom',
+      'jsdom',
+      'vitest',
+    ]);
   });
 
   it('uses one concise polite status without copying the event log', () => {
