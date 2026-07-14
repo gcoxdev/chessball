@@ -911,10 +911,6 @@ h1 {
   text-align: center;
 }
 
-.square:is(.pass-target, .tackle-target) .piece {
-  inset: 3px 3px 3px 12px;
-}
-
 .square.pass-target::before {
   content: "P";
   border-radius: 50%;

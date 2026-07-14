@@ -870,7 +870,9 @@ describe('Chessball UI interactions', () => {
     expect(cssText).not.toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*(?:background|background-image):/s);
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*outline:\s*1px dashed/s);
     expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*3;[^}]*left:\s*1px;[^}]*width:\s*10px;[^}]*height:\s*10px;/s);
-    expect(cssText).toMatch(/\.square:is\(\.pass-target, \.tackle-target\) \.piece\s*{[^}]*inset:\s*3px 3px 3px 12px/s);
+    expect(cssText).not.toMatch(/\.square:is\(\.pass-target, \.tackle-target\) \.piece/);
+    expect(cssText).not.toMatch(/(?:pass-target|tackle-target)[^{]*\.piece\s*{[^}]*(?:inset|width|height|transform|padding|margin)\s*:/s);
+    expect(cssText).toMatch(/\.piece\s*{[^}]*inset:\s*4px;/s);
     expect(cssText).toMatch(/\.piece\s*{[^}]*z-index:\s*2;/s);
     expect(cssText).toMatch(/\.football-marker\s*{[^}]*z-index:\s*3;/s);
   });
