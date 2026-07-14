@@ -10,7 +10,7 @@ Possession, downs, scoring, kicks, turnovers, and tactical risk should feel reco
 
 ## Status
 
-done
+in-progress
 
 ## Planning Depth
 
@@ -33,3 +33,4 @@ None.
 
 - 2026-07-11: Confirmed hybrid realism: recognizable football behavior without simulation-level complexity.
 - 2026-07-12: Audited every major football flow. Fixed and regression-tested completed-drive ownership for kickoffs, punts, transfers, scoring, and quarter/final boundaries; refreshed post-fix outcome evidence documents remaining abstractions and coverage risks.
+- 2026-07-14: Reopened to measure field goals through the ten-yard end zone to the depicted posts and make the distinction explicit in the rules.
