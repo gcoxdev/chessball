@@ -887,6 +887,7 @@ describe('Chessball UI interactions', () => {
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
     expect(cssText).toMatch(/button\s*{[^}]*touch-action:\s*manipulation[^}]*-webkit-tap-highlight-color:/s);
+    expect(cssText).toMatch(/\.formation-picker select\s*{[^}]*touch-action:\s*manipulation;[^}]*-webkit-tap-highlight-color:\s*rgba\(213,\s*166,\s*58,\s*0\.3\);/s);
     expect(cssText).toMatch(/\.rules-backdrop\s*{[^}]*overscroll-behavior:\s*contain/s);
     expect(cssText).toMatch(/\.rules-dialog\s*{[^}]*overscroll-behavior:\s*contain/s);
     expect(cssText).toMatch(/body\s*{[^}]*overflow-x:\s*clip/s);
