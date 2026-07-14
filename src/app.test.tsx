@@ -24,6 +24,59 @@ const confirmBothFormations = () => {
   fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
 };
 
+const splitCssSelectorList = (selectorText: string) => {
+  const selectors: string[] = [];
+  let start = 0;
+  let parenthesisDepth = 0;
+  let bracketDepth = 0;
+
+  for (let index = 0; index < selectorText.length; index += 1) {
+    const character = selectorText[index];
+    if (character === '(') parenthesisDepth += 1;
+    else if (character === ')') parenthesisDepth -= 1;
+    else if (character === '[') bracketDepth += 1;
+    else if (character === ']') bracketDepth -= 1;
+    else if (character === ',' && parenthesisDepth === 0 && bracketDepth === 0) {
+      selectors.push(selectorText.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+
+  selectors.push(selectorText.slice(start).trim());
+  return selectors.filter(Boolean);
+};
+
+const isForbiddenPieceGeometryProperty = (property: string) => /^(?:(?:-(?:webkit|moz|ms|o)-)?transform(?:-.+)?|translate|scale|rotate|inset(?:-.+)?|(?:min-|max-)?(?:width|height|inline-size|block-size)|(?:margin|padding)(?:-.+)?|top|right|bottom|left)$/.test(property);
+
+const findTargetPieceGeometryViolations = (cssText: string): string[] => {
+  const violations: string[] = [];
+  const uncommentedCss = cssText.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  for (const rule of uncommentedCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const declarations = rule[2]
+      .split(';')
+      .map((declaration) => declaration.trim())
+      .filter(Boolean)
+      .map((declaration) => {
+        const separator = declaration.indexOf(':');
+        return separator === -1 ? '' : declaration.slice(0, separator).trim().toLowerCase();
+      })
+      .filter(isForbiddenPieceGeometryProperty);
+
+    if (declarations.length === 0) continue;
+
+    for (const selector of splitCssSelectorList(rule[1])) {
+      const target = /\.(?:pass-target|tackle-target)(?![\w-])/.exec(selector);
+      if (!target) continue;
+      const afterTarget = selector.slice(target.index + target[0].length);
+      if (!/(?:\s|[>+~])\.piece(?![\w-])/.test(afterTarget)) continue;
+      for (const property of declarations) violations.push(`${selector} -> ${property}`);
+    }
+  }
+
+  return violations;
+};
+
 function ModalTestShell({ initiallyInert = false }: { initiallyInert?: boolean }) {
   const [firstOpen, setFirstOpen] = useState(true);
   const [secondOpen, setSecondOpen] = useState(true);
@@ -863,18 +916,37 @@ describe('Chessball UI interactions', () => {
     expect(cssText).not.toMatch(/\.square\.is-selected\s*{[^}]*box-shadow:/s);
     expect(cssText).toMatch(/\.square\.move-target::after\s*{[^}]*border-radius:\s*50%/s);
     expect(cssText).toMatch(/\.square\.power-target::after\s*{[^}]*transform:[^}]*rotate\(45deg\)/s);
-    expect(cssText).toMatch(/\.square\.pass-target::before\s*{[^}]*content:\s*"P"/s);
-    expect(cssText).toMatch(/\.square\.tackle-target::before\s*{[^}]*content:\s*"T"/s);
     expect(cssText).toMatch(/\.square\.kick-target::before\s*{[^}]*content:\s*"K"/s);
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO"/s);
     expect(cssText).not.toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*(?:background|background-image):/s);
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*outline:\s*1px dashed/s);
-    expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*3;[^}]*left:\s*1px;[^}]*width:\s*10px;[^}]*height:\s*10px;/s);
-    expect(cssText).not.toMatch(/\.square:is\(\.pass-target, \.tackle-target\) \.piece/);
-    expect(cssText).not.toMatch(/(?:pass-target|tackle-target)[^{]*\.piece\s*{[^}]*(?:inset|width|height|transform|padding|margin)\s*:/s);
-    expect(cssText).toMatch(/\.piece\s*{[^}]*inset:\s*4px;/s);
     expect(cssText).toMatch(/\.piece\s*{[^}]*z-index:\s*2;/s);
     expect(cssText).toMatch(/\.football-marker\s*{[^}]*z-index:\s*3;/s);
+  });
+
+  it('detects geometry changes on qualified pass and tackle target pieces', () => {
+    const cssText = `
+      .square.move-target, .square.pass-target .piece.home { inset: 1px; }
+      .square.tackle-target .piece.selected { transform: scale(.8); }
+      .square.pass-target .piece { left: 12px; }
+      .square.pass-target::before { left: 1px; width: 10px; }
+    `;
+
+    expect(findTargetPieceGeometryViolations(cssText)).toEqual([
+      '.square.pass-target .piece.home -> inset',
+      '.square.tackle-target .piece.selected -> transform',
+      '.square.pass-target .piece -> left',
+    ]);
+  });
+
+  it('pass and tackle badges do not alter piece geometry', () => {
+    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+
+    expect(findTargetPieceGeometryViolations(cssText)).toEqual([]);
+    expect(cssText).toMatch(/\.piece\s*{[^}]*inset:\s*4px;/s);
+    expect(cssText).toMatch(/\.square\.pass-target::before\s*{[^}]*content:\s*"P"/s);
+    expect(cssText).toMatch(/\.square\.tackle-target::before\s*{[^}]*content:\s*"T"/s);
+    expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*3;[^}]*left:\s*1px;[^}]*width:\s*10px;[^}]*height:\s*10px;/s);
   });
 
   it('keeps the read-only cue legible in the open bottom-right corner', () => {
