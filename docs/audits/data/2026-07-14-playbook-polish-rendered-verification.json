@@ -23,11 +23,22 @@
       }
     },
     "commands": {
+      "checkout": "git worktree add --detach /tmp/chessball-task5-baseline-source 71f17377111984b0faa7ec4bd42eb94912c29076",
+      "dependency_link": "ln -s /home/drpepper/Desktop/CodexProjects/chessball/.worktrees/playbook-polish/node_modules /tmp/chessball-task5-baseline-source/node_modules",
       "build": "npm run build",
       "serve": "npm exec vite -- preview --host 127.0.0.1 --port 4173 --strictPort",
       "chromium": "chromium --headless=new --disable-gpu --no-sandbox --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 --user-data-dir=/tmp/chessball-task5-chromium about:blank",
-      "open_preview": "curl -sSf 'http://127.0.0.1:9222/json/new?http://127.0.0.1:4173/' -X PUT",
-      "cdp_measurement": "node --input-type=module -e '<ephemeral inline CDP client: Emulation.setDeviceMetricsOverride({width:1440,height:900,deviceScaleFactor:1,mobile:false}); Page.navigate; Runtime.evaluate bounding rectangles and document widths; Page.captureScreenshot in memory>'"
+      "cdp_measurement": "node /tmp/chessball_task5_baseline_verify.mjs",
+      "cleanup": {
+        "processes": "Send Ctrl-C to the foreground Chromium and Vite preview terminal sessions and wait for both processes to exit.",
+        "worktree": "git worktree remove --force /tmp/chessball-task5-baseline-source",
+        "temporary_files": "rm -rf /tmp/chessball-task5-chromium /tmp/chessball_task5_baseline_verify.mjs"
+      }
+    },
+    "cdp_client": {
+      "temporary_path": "/tmp/chessball_task5_baseline_verify.mjs",
+      "disposition": "The temporary client was removed after verification. Its complete executable source is preserved below so the procedure does not rely on an untracked file.",
+      "source": "const CDP_HTTP = 'http://127.0.0.1:9222';\nconst PREVIEW_URL = 'http://127.0.0.1:4173/';\n\nconst version = await (await fetch(`${CDP_HTTP}/json/version`)).json();\nconst targets = await (await fetch(`${CDP_HTTP}/json`)).json();\nconst page = targets.find((target) => target.type === 'page');\nif (!page?.webSocketDebuggerUrl) throw new Error('No CDP page target found');\n\nconst socket = new WebSocket(page.webSocketDebuggerUrl);\nawait new Promise((resolve, reject) => {\n  socket.addEventListener('open', resolve, { once: true });\n  socket.addEventListener('error', reject, { once: true });\n});\n\nlet nextId = 0;\nconst pending = new Map();\nconst eventWaiters = new Map();\n\nsocket.addEventListener('message', (event) => {\n  const message = JSON.parse(event.data);\n  if (message.id && pending.has(message.id)) {\n    const { resolve, reject } = pending.get(message.id);\n    pending.delete(message.id);\n    if (message.error) reject(new Error(JSON.stringify(message.error)));\n    else resolve(message.result);\n    return;\n  }\n\n  const waiters = eventWaiters.get(message.method);\n  if (!waiters) return;\n  eventWaiters.delete(message.method);\n  for (const resolve of waiters) resolve(message.params);\n});\n\nconst send = (method, params = {}) => new Promise((resolve, reject) => {\n  const id = ++nextId;\n  pending.set(id, { resolve, reject });\n  socket.send(JSON.stringify({ id, method, params }));\n});\n\nconst waitForEvent = (method) => new Promise((resolve) => {\n  const waiters = eventWaiters.get(method) ?? [];\n  waiters.push(resolve);\n  eventWaiters.set(method, waiters);\n});\n\nconst rectExpression = `(() => {\n  const scoreStrip = document.querySelector('.score-strip');\n  const heading = document.querySelector('#game-workspace');\n  if (!scoreStrip || !heading) throw new Error('Required baseline selector missing');\n  const serializeRect = (rect) => ({\n    x: rect.x,\n    y: rect.y,\n    width: rect.width,\n    height: rect.height,\n    top: rect.top,\n    right: rect.right,\n    bottom: rect.bottom,\n    left: rect.left\n  });\n  return {\n    devicePixelRatio: window.devicePixelRatio,\n    innerWidth: window.innerWidth,\n    innerHeight: window.innerHeight,\n    scoreStrip: serializeRect(scoreStrip.getBoundingClientRect()),\n    gameWorkspaceHeading: serializeRect(heading.getBoundingClientRect()),\n    document: {\n      scrollWidth: document.documentElement.scrollWidth,\n      clientWidth: document.documentElement.clientWidth\n    }\n  };\n})()`;\n\ntry {\n  await send('Page.enable');\n  await send('Runtime.enable');\n  await send('Emulation.setDeviceMetricsOverride', {\n    width: 1440,\n    height: 900,\n    deviceScaleFactor: 1,\n    mobile: false\n  });\n\n  const loaded = waitForEvent('Page.loadEventFired');\n  await send('Page.navigate', { url: PREVIEW_URL });\n  await loaded;\n\n  for (let attempt = 0; attempt < 100; attempt += 1) {\n    const ready = await send('Runtime.evaluate', {\n      expression: `document.readyState === 'complete' && Boolean(document.querySelector('.score-strip')) && Boolean(document.querySelector('#game-workspace'))`,\n      returnByValue: true\n    });\n    if (ready.result.value) break;\n    if (attempt === 99) throw new Error('Preview did not become ready');\n    await new Promise((resolve) => setTimeout(resolve, 50));\n  }\n\n  const measured = await send('Runtime.evaluate', {\n    expression: rectExpression,\n    returnByValue: true\n  });\n  const screenshot = await send('Page.captureScreenshot', {\n    format: 'png',\n    fromSurface: true\n  });\n  const screenshotBase64Characters = screenshot.data.length;\n  screenshot.data = '';\n\n  console.log(JSON.stringify({\n    browser: version.Browser,\n    protocolVersion: version['Protocol-Version'],\n    ...measured.result.value,\n    screenshot: {\n      capturedEphemerally: true,\n      base64Characters: screenshotBase64Characters,\n      disposition: 'discarded in memory; no PNG written'\n    }\n  }, null, 2));\n} finally {\n  socket.close();\n  await new Promise((resolve) => {\n    if (socket.readyState === WebSocket.CLOSED) resolve();\n    else socket.addEventListener('close', resolve, { once: true });\n  });\n}\n"
     },
     "measurements": {
       "device_pixel_ratio": 1,
@@ -60,12 +71,29 @@
     },
     "screenshot": {
       "captured_ephemerally": true,
-      "encoded_bytes_approximate": 305883,
+      "base64_characters": 407844,
       "disposition": "Inspected ephemerally in memory and discarded; no PNG was written or committed."
+    },
+    "reproduction": {
+      "rerun_at_local_date": "2026-07-14",
+      "source_commit": "71f17377111984b0faa7ec4bd42eb94912c29076",
+      "result": "exact_match",
+      "subpixel_tolerance_pixels": 0,
+      "measurement_differences": {
+        "score_strip_bounding_rect": 0,
+        "game_workspace_heading_bounding_rect": 0,
+        "document_scroll_width": 0,
+        "document_client_width": 0
+      },
+      "screenshot_base64_characters": 407844,
+      "screenshot_disposition": "Screenshot base64 was cleared in memory by the client; no image file was written."
     },
     "cleanup": {
       "chromium_stopped": true,
-      "preview_server_stopped": true
+      "preview_server_stopped": true,
+      "temporary_client_removed": true,
+      "temporary_chromium_profile_removed": true,
+      "temporary_worktree_removed": true
     }
   }
 }
