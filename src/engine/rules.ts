@@ -29,6 +29,7 @@ export const offensiveFormations: Formation[] = [
   {
     id: 'i-form',
     name: 'I-Form',
+    description: 'Balanced backs behind the quarterback for central runs and play-action.',
     side: 'offense',
     positions: {
       qb: { x: -1, y: 5 },
@@ -47,6 +48,7 @@ export const offensiveFormations: Formation[] = [
   {
     id: 'shotgun',
     name: 'Shotgun',
+    description: 'A deeper quarterback with wider spacing for passing development.',
     side: 'offense',
     positions: {
       qb: { x: -2, y: 5 },
@@ -65,6 +67,7 @@ export const offensiveFormations: Formation[] = [
   {
     id: 'singleback',
     name: 'Singleback',
+    description: 'One deep runner with balanced receivers and flexible lanes.',
     side: 'offense',
     positions: {
       qb: { x: -1, y: 5 },
@@ -80,12 +83,70 @@ export const offensiveFormations: Formation[] = [
       ol5: { x: 0, y: 7 },
     },
   },
+  {
+    id: 'pistol',
+    name: 'Pistol',
+    description: 'A deep quarterback and trailing runner keep run and pass threats balanced.',
+    side: 'offense',
+    positions: {
+      qb: { x: -2, y: 5 },
+      rb: { x: -3, y: 5 },
+      fb: { x: -1, y: 6 },
+      wr1: { x: -1, y: 1 },
+      wr2: { x: -1, y: 9 },
+      te: { x: 0, y: 8 },
+      ol1: { x: 0, y: 3 },
+      ol2: { x: 0, y: 4 },
+      ol3: { x: 0, y: 5 },
+      ol4: { x: 0, y: 6 },
+      ol5: { x: 0, y: 7 },
+    },
+  },
+  {
+    id: 'trips',
+    name: 'Trips',
+    description: 'Three eligible receivers overload one side and concede the weak side.',
+    side: 'offense',
+    positions: {
+      qb: { x: -2, y: 5 },
+      rb: { x: -2, y: 6 },
+      fb: { x: -1, y: 4 },
+      wr1: { x: -1, y: 0 },
+      wr2: { x: -1, y: 1 },
+      te: { x: 0, y: 2 },
+      ol1: { x: 0, y: 3 },
+      ol2: { x: 0, y: 4 },
+      ol3: { x: 0, y: 5 },
+      ol4: { x: 0, y: 6 },
+      ol5: { x: 0, y: 7 },
+    },
+  },
+  {
+    id: 'power',
+    name: 'Power',
+    description: 'Compact backs and tight end favor blocking lanes and short-yardage play.',
+    side: 'offense',
+    positions: {
+      qb: { x: -1, y: 5 },
+      rb: { x: -2, y: 5 },
+      fb: { x: -1, y: 7 },
+      wr1: { x: -1, y: 2 },
+      wr2: { x: -1, y: 9 },
+      te: { x: 0, y: 8 },
+      ol1: { x: 0, y: 3 },
+      ol2: { x: 0, y: 4 },
+      ol3: { x: 0, y: 5 },
+      ol4: { x: 0, y: 6 },
+      ol5: { x: 0, y: 7 },
+    },
+  },
 ];
 
 export const defensiveFormations: Formation[] = [
   {
     id: '4-3',
     name: '4-3',
+    description: 'Balanced front and second level against either runs or passes.',
     side: 'defense',
     positions: {
       qb: { x: 5, y: 5 },
@@ -104,6 +165,7 @@ export const defensiveFormations: Formation[] = [
   {
     id: 'nickel',
     name: 'Nickel',
+    description: 'Wider coverage spacing trades some strength near the line.',
     side: 'defense',
     positions: {
       qb: { x: 5, y: 5 },
@@ -122,6 +184,7 @@ export const defensiveFormations: Formation[] = [
   {
     id: 'goal-line',
     name: 'Goal Line',
+    description: 'A dense front protects short yardage and concedes deeper space.',
     side: 'defense',
     positions: {
       qb: { x: 4, y: 5 },
@@ -135,6 +198,63 @@ export const defensiveFormations: Formation[] = [
       ol3: { x: 1, y: 5 },
       ol4: { x: 1, y: 6 },
       ol5: { x: 1, y: 7 },
+    },
+  },
+  {
+    id: 'bear-front',
+    name: 'Bear Front',
+    description: 'Five compressed linemen challenge the middle and leave wider edges.',
+    side: 'defense',
+    positions: {
+      qb: { x: 5, y: 5 },
+      rb: { x: 2, y: 5 },
+      fb: { x: 2, y: 2 },
+      wr1: { x: 4, y: 0 },
+      wr2: { x: 4, y: 10 },
+      te: { x: 2, y: 8 },
+      ol1: { x: 1, y: 3 },
+      ol2: { x: 1, y: 4 },
+      ol3: { x: 1, y: 5 },
+      ol4: { x: 1, y: 6 },
+      ol5: { x: 1, y: 7 },
+    },
+  },
+  {
+    id: 'pressure',
+    name: 'Pressure',
+    description: 'An outside linebacker and strong safety crowd the line at deep-coverage risk.',
+    side: 'defense',
+    positions: {
+      qb: { x: 5, y: 5 },
+      rb: { x: 2, y: 5 },
+      fb: { x: 1, y: 2 },
+      wr1: { x: 4, y: 0 },
+      wr2: { x: 4, y: 10 },
+      te: { x: 1, y: 8 },
+      ol1: { x: 1, y: 3 },
+      ol2: { x: 1, y: 4 },
+      ol3: { x: 1, y: 5 },
+      ol4: { x: 1, y: 6 },
+      ol5: { x: 2, y: 7 },
+    },
+  },
+  {
+    id: 'deep-shell',
+    name: 'Deep Shell',
+    description: 'Deep, wide coverage protects passes and softens underneath run support.',
+    side: 'defense',
+    positions: {
+      qb: { x: 6, y: 5 },
+      rb: { x: 2, y: 4 },
+      fb: { x: 2, y: 6 },
+      wr1: { x: 5, y: 0 },
+      wr2: { x: 5, y: 10 },
+      te: { x: 5, y: 8 },
+      ol1: { x: 1, y: 3 },
+      ol2: { x: 1, y: 4 },
+      ol3: { x: 1, y: 5 },
+      ol4: { x: 1, y: 6 },
+      ol5: { x: 2, y: 7 },
     },
   },
 ];

@@ -209,13 +209,13 @@ describe('headless simulator', () => {
 
     expect(heuristic.finalState.turn).toBe('home');
     expect(heuristic.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
     );
     expect(actingTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'i-form' }),
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'power' }),
     );
     expect(otherTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
     );
   });
 
@@ -238,10 +238,10 @@ describe('headless simulator', () => {
 
     expect(heuristic.finalState.turn).toBe('away');
     expect(heuristic.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'power' }),
     );
     expect(actingTeamChanged.finalState.play.actions).toContainEqual(
-      expect.objectContaining({ type: 'chooseFormation', formationId: 'singleback' }),
+      expect.objectContaining({ type: 'chooseFormation', formationId: 'trips' }),
     );
     expect(otherTeamChanged.finalState.play.actions).toContainEqual(
       expect.objectContaining({ type: 'chooseFormation', formationId: 'shotgun' }),

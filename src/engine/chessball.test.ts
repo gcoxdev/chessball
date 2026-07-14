@@ -7,6 +7,8 @@ import {
   generateLegalActions,
   isTouchdownSquare,
   moveDistanceToFirstDown,
+  offensiveFormations,
+  defensiveFormations,
   startNextDown,
   gridDistance,
 } from './rules';
@@ -76,6 +78,158 @@ describe('field geometry', () => {
     expect(isTouchdownSquare({ x: 22, y: 5 }, 1)).toBe(true);
     expect(isTouchdownSquare({ x: 1, y: 5 }, -1)).toBe(true);
     expect(isTouchdownSquare({ x: 21, y: 5 }, 1)).toBe(false);
+  });
+});
+
+const formationPositionIds = ['qb', 'rb', 'fb', 'wr1', 'wr2', 'te', 'ol1', 'ol2', 'ol3', 'ol4', 'ol5'];
+
+const existingOffensivePositions = {
+  'i-form': {
+    qb: { x: -1, y: 5 }, rb: { x: -2, y: 5 }, fb: { x: -1, y: 6 },
+    wr1: { x: -1, y: 1 }, wr2: { x: -1, y: 9 }, te: { x: 0, y: 8 },
+    ol1: { x: 0, y: 3 }, ol2: { x: 0, y: 4 }, ol3: { x: 0, y: 5 },
+    ol4: { x: 0, y: 6 }, ol5: { x: 0, y: 7 },
+  },
+  shotgun: {
+    qb: { x: -2, y: 5 }, rb: { x: -2, y: 6 }, fb: { x: -1, y: 3 },
+    wr1: { x: -1, y: 0 }, wr2: { x: -1, y: 10 }, te: { x: 0, y: 8 },
+    ol1: { x: 0, y: 3 }, ol2: { x: 0, y: 4 }, ol3: { x: 0, y: 5 },
+    ol4: { x: 0, y: 6 }, ol5: { x: 0, y: 7 },
+  },
+  singleback: {
+    qb: { x: -1, y: 5 }, rb: { x: -2, y: 5 }, fb: { x: -1, y: 7 },
+    wr1: { x: -1, y: 1 }, wr2: { x: -1, y: 10 }, te: { x: 0, y: 8 },
+    ol1: { x: 0, y: 3 }, ol2: { x: 0, y: 4 }, ol3: { x: 0, y: 5 },
+    ol4: { x: 0, y: 6 }, ol5: { x: 0, y: 7 },
+  },
+};
+
+const existingDefensivePositions = {
+  '4-3': {
+    qb: { x: 5, y: 5 }, rb: { x: 2, y: 5 }, fb: { x: 2, y: 3 },
+    wr1: { x: 4, y: 1 }, wr2: { x: 4, y: 9 }, te: { x: 3, y: 7 },
+    ol1: { x: 1, y: 3 }, ol2: { x: 1, y: 4 }, ol3: { x: 1, y: 5 },
+    ol4: { x: 1, y: 6 }, ol5: { x: 2, y: 7 },
+  },
+  nickel: {
+    qb: { x: 5, y: 5 }, rb: { x: 2, y: 5 }, fb: { x: 2, y: 2 },
+    wr1: { x: 4, y: 0 }, wr2: { x: 4, y: 10 }, te: { x: 3, y: 7 },
+    ol1: { x: 1, y: 3 }, ol2: { x: 1, y: 4 }, ol3: { x: 1, y: 5 },
+    ol4: { x: 1, y: 6 }, ol5: { x: 2, y: 8 },
+  },
+  'goal-line': {
+    qb: { x: 4, y: 5 }, rb: { x: 2, y: 4 }, fb: { x: 2, y: 6 },
+    wr1: { x: 3, y: 1 }, wr2: { x: 3, y: 9 }, te: { x: 2, y: 8 },
+    ol1: { x: 1, y: 3 }, ol2: { x: 1, y: 4 }, ol3: { x: 1, y: 5 },
+    ol4: { x: 1, y: 6 }, ol5: { x: 1, y: 7 },
+  },
+};
+
+const newOffensivePositions = {
+  pistol: {
+    qb: { x: -2, y: 5 }, rb: { x: -3, y: 5 }, fb: { x: -1, y: 6 },
+    wr1: { x: -1, y: 1 }, wr2: { x: -1, y: 9 }, te: { x: 0, y: 8 },
+    ol1: { x: 0, y: 3 }, ol2: { x: 0, y: 4 }, ol3: { x: 0, y: 5 },
+    ol4: { x: 0, y: 6 }, ol5: { x: 0, y: 7 },
+  },
+  trips: {
+    qb: { x: -2, y: 5 }, rb: { x: -2, y: 6 }, fb: { x: -1, y: 4 },
+    wr1: { x: -1, y: 0 }, wr2: { x: -1, y: 1 }, te: { x: 0, y: 2 },
+    ol1: { x: 0, y: 3 }, ol2: { x: 0, y: 4 }, ol3: { x: 0, y: 5 },
+    ol4: { x: 0, y: 6 }, ol5: { x: 0, y: 7 },
+  },
+  power: {
+    qb: { x: -1, y: 5 }, rb: { x: -2, y: 5 }, fb: { x: -1, y: 7 },
+    wr1: { x: -1, y: 2 }, wr2: { x: -1, y: 9 }, te: { x: 0, y: 8 },
+    ol1: { x: 0, y: 3 }, ol2: { x: 0, y: 4 }, ol3: { x: 0, y: 5 },
+    ol4: { x: 0, y: 6 }, ol5: { x: 0, y: 7 },
+  },
+};
+
+const newDefensivePositions = {
+  'bear-front': {
+    qb: { x: 5, y: 5 }, rb: { x: 2, y: 5 }, fb: { x: 2, y: 2 },
+    wr1: { x: 4, y: 0 }, wr2: { x: 4, y: 10 }, te: { x: 2, y: 8 },
+    ol1: { x: 1, y: 3 }, ol2: { x: 1, y: 4 }, ol3: { x: 1, y: 5 },
+    ol4: { x: 1, y: 6 }, ol5: { x: 1, y: 7 },
+  },
+  pressure: {
+    qb: { x: 5, y: 5 }, rb: { x: 2, y: 5 }, fb: { x: 1, y: 2 },
+    wr1: { x: 4, y: 0 }, wr2: { x: 4, y: 10 }, te: { x: 1, y: 8 },
+    ol1: { x: 1, y: 3 }, ol2: { x: 1, y: 4 }, ol3: { x: 1, y: 5 },
+    ol4: { x: 1, y: 6 }, ol5: { x: 2, y: 7 },
+  },
+  'deep-shell': {
+    qb: { x: 6, y: 5 }, rb: { x: 2, y: 4 }, fb: { x: 2, y: 6 },
+    wr1: { x: 5, y: 0 }, wr2: { x: 5, y: 10 }, te: { x: 5, y: 8 },
+    ol1: { x: 1, y: 3 }, ol2: { x: 1, y: 4 }, ol3: { x: 1, y: 5 },
+    ol4: { x: 1, y: 6 }, ol5: { x: 2, y: 7 },
+  },
+};
+
+describe('formation catalog', () => {
+  it('exposes the complete ordered catalogs with descriptions', () => {
+    expect(offensiveFormations.map((formation) => formation.id)).toEqual([
+      'i-form', 'shotgun', 'singleback', 'pistol', 'trips', 'power',
+    ]);
+    expect(defensiveFormations.map((formation) => formation.id)).toEqual([
+      '4-3', 'nickel', 'goal-line', 'bear-front', 'pressure', 'deep-shell',
+    ]);
+    expect([...offensiveFormations, ...defensiveFormations].every((formation) => formation.description.length > 0)).toBe(true);
+  });
+
+  it('defines each source alignment with eleven unique, in-row positions', () => {
+    for (const formation of [...offensiveFormations, ...defensiveFormations]) {
+      expect(Object.keys(formation.positions)).toEqual(formationPositionIds);
+      expect(new Set(Object.values(formation.positions).map(({ x, y }) => `${x},${y}`)).size).toBe(11);
+      expect(Object.values(formation.positions).every(({ y }) => y >= 0 && y <= 10)).toBe(true);
+    }
+  });
+
+  it('preserves the existing source alignments exactly', () => {
+    for (const [id, positions] of Object.entries(existingOffensivePositions)) {
+      expect(offensiveFormations.find((formation) => formation.id === id)?.positions).toEqual(positions);
+    }
+    for (const [id, positions] of Object.entries(existingDefensivePositions)) {
+      expect(defensiveFormations.find((formation) => formation.id === id)?.positions).toEqual(positions);
+    }
+  });
+
+  it('defines the six new source alignments exactly', () => {
+    for (const [id, positions] of Object.entries(newOffensivePositions)) {
+      expect(offensiveFormations.find((formation) => formation.id === id)?.positions).toEqual(positions);
+    }
+    for (const [id, positions] of Object.entries(newDefensivePositions)) {
+      expect(defensiveFormations.find((formation) => formation.id === id)?.positions).toEqual(positions);
+    }
+  });
+
+  it('projects every new alignment in bounds, without overlap, and on legal sides', () => {
+    for (const [side, ids] of [
+      ['offense', Object.keys(newOffensivePositions)],
+      ['defense', Object.keys(newDefensivePositions)],
+    ] as const) {
+      for (const formationId of ids) {
+        for (const lineOfScrimmage of [2, 5, 21]) {
+          for (const [possession, direction] of [['home', 1], ['away', -1]] as const) {
+            const initial = createGame({ possession, direction, lineOfScrimmage });
+            const state = applyAction(initial, { type: 'chooseFormation', side, formationId });
+            const projected = state.pieces.map((item) => item.coord);
+
+            expect(new Set(projected.map(({ x, y }) => `${x},${y}`)).size).toBe(22);
+            expect(projected.every(({ x, y }) => x >= 0 && x < state.board.width && y >= 0 && y < state.board.height)).toBe(true);
+
+            for (const item of state.pieces) {
+              const isOffense = item.team === possession;
+              const isLegalSide = direction === 1
+                ? (isOffense ? item.coord.x <= lineOfScrimmage : item.coord.x > lineOfScrimmage)
+                : (isOffense ? item.coord.x >= lineOfScrimmage : item.coord.x < lineOfScrimmage);
+              expect(isLegalSide).toBe(true);
+            }
+          }
+        }
+      }
+    }
   });
 });
 

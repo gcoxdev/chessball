@@ -45,6 +45,7 @@ export type Board = {
 export type Formation = {
   id: string;
   name: string;
+  description: string;
   side: FormationSide;
   positions: Record<string, Coord>;
 };
