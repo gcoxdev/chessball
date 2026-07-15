@@ -282,6 +282,7 @@
       "serve": "npm exec vite -- preview . --host 127.0.0.1 --port 4177 --strictPort",
       "chromium": "chromium --headless=new --disable-gpu --no-sandbox --remote-debugging-address=127.0.0.1 --remote-debugging-port=9224 --user-data-dir=/tmp/chessball-task8-chromium about:blank",
       "cdp_driver": "node /tmp/chessball-task8-cdp.mjs",
+      "review_remediation_cdp_driver": "node /tmp/chessball-task8-review-cdp.mjs",
       "final_clean_tree": "git status --short && npm test -- --run && npm run build && git diff ec70bc9..HEAD --check"
     },
     "driver": {
@@ -324,14 +325,14 @@
       "desktop_score_strip_not_enlarged": "pass: final 139.25px equals the recorded pre-wordmark 139.25px baseline",
       "mobile_wordmark_contained": "pass: one unwrapped heading line at both mobile widths; 390px and 320px responsive score strips both measured 493.5px high",
       "literal_heading": "pass: Chessball at all three viewports",
-      "heading_contrast": "pass: 8.5339:1 against the declared #07110d fallback at all three viewports",
+      "heading_contrast": "pass: pixel-sampled minimum WCAG 2 contrast was 7.1439:1 at 1440x900, 6.8599:1 at 390x844, and 6.7401:1 at 320x568 against every composited background pixel in each heading rectangle",
       "skip_link_heading_focus": "pass: keyboard Enter focused #game-workspace with a computed solid 3px outline at all three viewports",
       "formation_accessible_names": "pass: both selects had bound visible labels and bound aria-describedby descriptions",
       "formation_catalogs": "pass: offense and defense each exposed the approved six ordered options",
       "formation_touch_height": "pass: both selects measured exactly 44px high at all three viewports",
       "formation_colors": "pass: both selects computed explicit rgb(249, 231, 182) text on rgb(16, 34, 25) backgrounds",
       "formation_preview": "pass: Trips and Deep Shell updated values, descriptions, and rendered board signatures at all three viewports",
-      "formation_confirmation": "pass: offense was directly observed disabled after individual confirmation at 1440px and 320px; defense was directly observed disabled after individual confirmation at 390px; completing the other side removed the formation panel and exposed the command panel at all three viewports",
+      "formation_confirmation": "pass: independent reloads directly observed both offense and defense selectors and confirmation buttons disabled after their individual confirmation at each of all three viewports",
       "formation_crowding": "pass: descriptions and confirmation buttons did not overlap; measured gap was 7px",
       "pass_badge": "pass: P computed at left 1px and bottom 1px; piece rectangle and 4px inset were identical before/after",
       "tackle_badge": "pass: T computed at left 1px and bottom 1px; piece rectangle and 4px inset were identical before/after",
@@ -387,7 +388,7 @@
     },
     "screenshot": {
       "captured_ephemerally": true,
-      "count": 3,
+      "count": 6,
       "equality_scope": "excluded",
       "disposition": "All base64 image data was discarded in memory; no PNG, visual hash, or screenshot asset was written or retained."
     },
@@ -401,13 +402,89 @@
       "The first restricted-sandbox Chromium launch exited 133 with crashpad setsockopt: Operation not permitted; the same recorded Chromium command then ran with the approved host permission required for local browser IPC.",
       "The first restricted-sandbox CDP connection failed with connect EPERM 127.0.0.1:9224; the recorded driver command then ran with the approved host permission required for localhost CDP."
     ],
+    "review_remediation": {
+      "source_commit": "b565838abc16a437cea2647ea3fb9ba7f8890c93",
+      "driver": {
+        "sha256": "40b38af344570f6dbede567a6bda43dc61e2fe6b1270743f865685c0db756a28",
+        "line_count": 157,
+        "byte_count": 14519,
+        "result": "pass"
+      },
+      "contrast_method": {
+        "standard": "WCAG 2 relative luminance",
+        "foreground_rgb": [213, 166, 58],
+        "sampling": "For each viewport, CDP captured a background-only screenshot after temporarily making only the heading text transparent, removing its text-shadow, and hiding its accent pseudo-element. The body gradients remained fully rendered and composited. Chromium decoded the PNG into a canvas, and the verifier compared the computed gold foreground with every pixel in the complete heading rectangle.",
+        "shadow_treatment": "The text shadow was isolated from the background sample and was not relied upon to pass contrast. A separate normal rendered screenshot retained the shadow for inspection.",
+        "threshold": 4.5
+      },
+      "viewports": [
+        {
+          "viewport": { "width": 1440, "height": 900, "device_scale_factor": 1 },
+          "contrast": { "sampled_rect": { "x": 15, "y": 21, "width": 247, "height": 40 }, "sampled_pixels": 9880, "unique_background_colors": 29, "minimum_ratio": 7.14392863992151, "maximum_ratio": 7.737703926576814, "worst_background_rgb": [31, 35, 19], "pass": true },
+          "confirmation": {
+            "offense": { "independent_reload": true, "preview_value": "trips", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
+            "defense": { "independent_reload": true, "preview_value": "deep-shell", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
+          },
+          "controls": {
+            "offense": { "label": { "x": 33, "y": 185.15625, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 204.15625, "width": 270, "height": 44 }, "description": { "x": 33, "y": 255.15625, "width": 270, "height": 31.53125 }, "confirm": { "x": 33, "y": 293.6875, "width": 270, "height": 32 }, "description_to_confirm_gap": 7, "no_overlap": true },
+            "defense": { "label": { "x": 33, "y": 337.6875, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 356.6875, "width": 270, "height": 44 }, "description": { "x": 33, "y": 407.6875, "width": 270, "height": 31.53125 }, "confirm": { "x": 33, "y": 446.21875, "width": 270, "height": 32 }, "description_to_confirm_gap": 7, "no_overlap": true }
+          },
+          "badges": {
+            "before": { "piece": { "x": 1017.5, "y": 468.09375, "width": 36.15625, "height": 35.96875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.90625 }, "marker": { "x": 1034.939208984375, "y": 463.30987548828125, "width": 20.90283203125, "height": 17.2396240234375, "top": "3px", "right": "3px", "z_index": "3" } },
+            "pass_target": { "piece": { "x": 1017.5, "y": 468.09375, "width": 36.15625, "height": 35.96875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.90625 }, "marker": { "x": 1034.939208984375, "y": 463.30987548828125, "width": 20.90283203125, "height": 17.2396240234375, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true },
+            "tackle_target": { "piece": { "x": 1017.5, "y": 468.09375, "width": 36.15625, "height": 35.96875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.90625 }, "marker": { "x": 1034.939208984375, "y": 463.30987548828125, "width": 20.90283203125, "height": 17.2396240234375, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true }
+          },
+          "screenshots": { "normal_encoded_bytes_before_discard": 386028, "background_encoded_bytes_before_discard": 303006, "discarded": true },
+          "result": "pass"
+        },
+        {
+          "viewport": { "width": 390, "height": 844, "device_scale_factor": 1 },
+          "contrast": { "sampled_rect": { "x": 16, "y": 21, "width": 169, "height": 27 }, "sampled_pixels": 4563, "unique_background_colors": 124, "minimum_ratio": 6.8599088108247095, "maximum_ratio": 7.245322149061042, "worst_background_rgb": [29, 39, 31], "pass": true },
+          "confirmation": {
+            "offense": { "independent_reload": true, "preview_value": "trips", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
+            "defense": { "independent_reload": true, "preview_value": "deep-shell", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
+          },
+          "controls": {
+            "offense": { "label": { "x": 33, "y": 581.5, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 600.5, "width": 309, "height": 44 }, "description": { "x": 33, "y": 651.5, "width": 309, "height": 31.53125 }, "confirm": { "x": 33, "y": 690.03125, "width": 309, "height": 44 }, "description_to_confirm_gap": 7, "no_overlap": true },
+            "defense": { "label": { "x": 33, "y": 746.03125, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 765.03125, "width": 309, "height": 44 }, "description": { "x": 33, "y": 816.03125, "width": 309, "height": 31.53125 }, "confirm": { "x": 33, "y": 854.5625, "width": 309, "height": 44 }, "description_to_confirm_gap": 7, "no_overlap": true }
+          },
+          "badges": {
+            "before": { "piece": { "x": 559, "y": 1400.53125, "width": 26.65625, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": -0.0078125, "y": -0.15625 }, "marker": { "x": 571.0828857421875, "y": 1396.5848388671875, "width": 16.599853515625, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" } },
+            "pass_target": { "piece": { "x": 559, "y": 1400.53125, "width": 26.65625, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": -0.0078125, "y": -0.15625 }, "marker": { "x": 571.0828857421875, "y": 1396.5848388671875, "width": 16.599853515625, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true },
+            "tackle_target": { "piece": { "x": 559, "y": 1400.53125, "width": 26.65625, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": -0.0078125, "y": -0.15625 }, "marker": { "x": 571.0828857421875, "y": 1396.5848388671875, "width": 16.599853515625, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true }
+          },
+          "screenshots": { "normal_encoded_bytes_before_discard": 128229, "background_encoded_bytes_before_discard": 118335, "discarded": true },
+          "result": "pass"
+        },
+        {
+          "viewport": { "width": 320, "height": 568, "device_scale_factor": 1 },
+          "contrast": { "sampled_rect": { "x": 16, "y": 21, "width": 169, "height": 27 }, "sampled_pixels": 4563, "unique_background_colors": 118, "minimum_ratio": 6.7401038179156645, "maximum_ratio": 7.087489734278112, "worst_background_rgb": [34, 40, 26], "pass": true },
+          "confirmation": {
+            "offense": { "independent_reload": true, "preview_value": "trips", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
+            "defense": { "independent_reload": true, "preview_value": "deep-shell", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
+          },
+          "controls": {
+            "offense": { "label": { "x": 33, "y": 581.5, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 600.5, "width": 239, "height": 44 }, "description": { "x": 33, "y": 651.5, "width": 239, "height": 31.53125 }, "confirm": { "x": 33, "y": 690.03125, "width": 239, "height": 44 }, "description_to_confirm_gap": 7, "no_overlap": true },
+            "defense": { "label": { "x": 33, "y": 746.03125, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 765.03125, "width": 239, "height": 44 }, "description": { "x": 33, "y": 816.03125, "width": 239, "height": 31.53125 }, "confirm": { "x": 33, "y": 854.5625, "width": 239, "height": 44 }, "description_to_confirm_gap": 7, "no_overlap": true }
+          },
+          "badges": {
+            "before": { "piece": { "x": 309.328125, "y": 1450.1875, "width": 26.671875, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.15625 }, "marker": { "x": 321.4266052246094, "y": 1446.2410888671875, "width": 16.59991455078125, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" } },
+            "pass_target": { "piece": { "x": 309.328125, "y": 1450.1875, "width": 26.671875, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.15625 }, "marker": { "x": 321.4266052246094, "y": 1446.2410888671875, "width": 16.59991455078125, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true },
+            "tackle_target": { "piece": { "x": 309.328125, "y": 1450.1875, "width": 26.671875, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.15625 }, "marker": { "x": 321.4266052246094, "y": 1446.2410888671875, "width": 16.59991455078125, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true }
+          },
+          "screenshots": { "normal_encoded_bytes_before_discard": 92334, "background_encoded_bytes_before_discard": 85173, "discarded": true },
+          "result": "pass"
+        }
+      ],
+      "result": "pass"
+    },
     "limitations": [
       "Rendered verification used one Chromium build and did not cover Firefox, Safari, or other browser/assistive-technology combinations.",
       "The 390px and 320px checks used desktop CDP metrics with the requested innerWidth and deviceScaleFactor 1, not physical mobile-device emulation or physical touch input.",
       "No real screen reader, audible announcement inspection, physical device, or physical board-game session was used.",
       "Pass and tackle overlay geometry was isolated by applying each production target class to the same rendered controlled-ball square; automated application tests separately exercise the real pass/tackle state semantics.",
       "The formation flow was reached through rendered game controls and deterministic UI automation, but the kickoff path varied with the application coin flip and dice results.",
-      "Contrast was calculated from the computed gold foreground against the declared #07110d fallback. The decorative translucent gradients and text shadows were not pixel-sampled as separate foreground colors.",
+      "Contrast used the computed gold foreground against every pixel of a background-only CDP screenshot of the heading rectangle. Text shadow and the accent were removed only to isolate the background and were not relied upon for contrast.",
       "Screenshots were inspected only during the run and are not retained, so this artifact is structured measurement evidence rather than pixel-image equality evidence."
     ],
     "result": "pass"

@@ -40,7 +40,7 @@ None at design level; implementation findings must remain within the approved sc
 - 2026-07-12: Confirmed implementation of the audit's P1/P2 accessibility and mobile findings.
 - 2026-07-13: Completed all three implementation branches. Fresh evidence: 342/342 tests, successful production build, and passing Chrome/CDP checks at 1440×900 and 390×844, including controlled final-state coverage.
 - 2026-07-14: Reopened for scalable formation selectors, non-deforming pass/tackle badges, and a compact athletic Chessball wordmark while preserving completed accessibility work.
-- 2026-07-14: Closed after 418/418 tests, a successful production build, and passing Chrome/CDP checks at 1440×900, 390×844, and 320×568. Evidence verifies labelled six-option selectors, 44px touch height, preview/confirmation flow, unchanged P/T piece geometry, top-right football placement, literal/focusable 8.53:1 wordmark text, desktop score-strip parity, and no document overflow; real screen-reader and physical-device checks remain nonblocking recommendations.
+- 2026-07-14: Closed after 418/418 tests, a successful 1,583-module production build, and passing Chrome/CDP checks at 1440×900, 390×844, and 320×568 in the [rendered verification artifact](../../docs/audits/data/2026-07-14-playbook-polish-rendered-verification.json). Evidence verifies labelled six-option selectors, 44px touch height, preview/confirmation flow, unchanged P/T piece geometry, top-right football placement, literal/focusable wordmark text with a worst-case pixel-sampled 6.74:1 contrast ratio, desktop score-strip parity, and no document overflow; real screen-reader and physical-device checks remain nonblocking recommendations.
 
 ## Remaining Nonblocking Recommendations
 
