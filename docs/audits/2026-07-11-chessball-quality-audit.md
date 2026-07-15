@@ -288,3 +288,28 @@ Limitations remain: this is not certification with a real screen reader, audible
 ## Dependency/project-health note
 
 The existing npm install summary reported 5 vulnerabilities: 3 moderate, 1 high, and 1 critical. This is a project-health observation, not evidence of a gameplay, rules, or UI defect. `npm audit --json` was not rerun during this read-only qualitative task, so no package/advisory attribution is asserted; schedule a dedicated dependency review before updating dependencies.
+
+## 2026-07-14 formation expansion
+
+The fixed formation-opening balance gate ran once with the exact command `npm exec vite-node scripts/run-formation-expansion-audit.ts`. Wall-clock runtime was 837 seconds (13m57s). Configuration was 12 comparison groups × 6 equally weighted opposing formations × 100 matched pairs, 5,000 maximum actions/game, heuristic versus heuristic, and deterministic 10,000-sample 95% paired-bootstrap intervals. The practical thresholds were a 0.05 win-share difference or 1 point of score delta; broad dominance additionally required at least 4/6 same-direction cell point estimates and no credible counter cell.
+
+The run requested and completed exactly 7,200 matched pairs and attempted and completed 14,400 games. It recorded zero excluded pairs, stalls, crashes, or anomalies. The generated, canonical machine-readable evidence is [`data/2026-07-14-formation-expansion-audit.json`](data/2026-07-14-formation-expansion-audit.json). Values below are primary minus comparison and are rounded to four decimal places; “support” is the same-direction cell count, and counter cells are named by opposing formation.
+
+| Comparison | Pooled win share, mean [95% CI] | Pooled score delta, mean [95% CI] | Decisive metric / direction | Support | Credible counters | Classification | Reason |
+|---|---:|---:|---|---:|---|---|---|
+| Pistol vs Singleback | 0.5400 [0.5088, 0.5704] | 1.0117 [0.4575, 1.5692] | score-delta / primary | 3/6 | 4: 4-3, nickel, bear-front, pressure | split-direction | Only 3/6 cell point estimates support the pooled primary direction. |
+| Trips vs Shotgun | 0.4396 [0.4083, 0.4692] | -1.1908 [-1.7267, -0.6833] | win-share / comparison | 5/6 | 4: 4-3, goal-line, bear-front, pressure | credible-counter | 4 opposing cell interval(s) include neutral or favor the opposite direction. |
+| Power vs I-Form | 0.4846 [0.4558, 0.5133] | -0.1608 [-0.6192, 0.2975] | — | 0/6 | 0 | inconclusive | Neither pooled 95% interval excludes neutral. |
+| Bear Front vs Goal Line | 0.4875 [0.4579, 0.5179] | -0.1975 [-0.6825, 0.2967] | — | 0/6 | 0 | inconclusive | Neither pooled 95% interval excludes neutral. |
+| Pressure vs 4-3 | 0.5425 [0.5117, 0.5721] | 0.7425 [0.2142, 1.2633] | — | 0/6 | 0 | sub-threshold | At least one pooled effect is statistically clear but remains below its practical threshold. |
+| Deep Shell vs Nickel | 0.5733 [0.5421, 0.6029] | 1.1150 [0.6117, 1.6000] | win-share / primary | 4/6 | 3: shotgun, pistol, trips | credible-counter | 3 opposing cell interval(s) include neutral or favor the opposite direction. |
+| Pistol vs Trips | 0.5279 [0.4963, 0.5588] | 0.4692 [-0.0517, 0.9800] | — | 0/6 | 0 | inconclusive | Neither pooled 95% interval excludes neutral. |
+| Pistol vs Power | 0.5329 [0.5021, 0.5633] | 0.7217 [0.1967, 1.2492] | — | 0/6 | 0 | sub-threshold | At least one pooled effect is statistically clear but remains below its practical threshold. |
+| Trips vs Power | 0.5346 [0.5025, 0.5663] | 0.5242 [-0.0125, 1.0475] | — | 0/6 | 0 | sub-threshold | At least one pooled effect is statistically clear but remains below its practical threshold. |
+| Bear Front vs Pressure | 0.5429 [0.5125, 0.5725] | 0.5367 [0.0533, 1.0042] | — | 0/6 | 0 | sub-threshold | At least one pooled effect is statistically clear but remains below its practical threshold. |
+| Bear Front vs Deep Shell | 0.5246 [0.4942, 0.5554] | 0.5808 [0.0467, 1.1167] | — | 0/6 | 0 | sub-threshold | At least one pooled effect is statistically clear but remains below its practical threshold. |
+| Pressure vs Deep Shell | 0.4846 [0.4538, 0.5146] | -0.1667 [-0.6725, 0.3275] | — | 0/6 | 0 | inconclusive | Neither pooled 95% interval excludes neutral. |
+
+No coordinates were tuned. None of the 12 groups met the approved `broad-dominance` gate: the actionable pooled comparisons were either split across cells or retained credible counters, while the remaining results were inconclusive or below the practical threshold. Favorable individual matchups were not “equalized.”
+
+The statistical conclusion is limited to these formation openings under the fixed heuristic policy and fixed experiment matrix. It is not causal proof, does not enumerate human counter-shifts or adaptive policies, and is not calibration to NFL outcomes.
