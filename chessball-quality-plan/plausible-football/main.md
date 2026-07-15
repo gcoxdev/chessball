@@ -14,7 +14,7 @@ done
 
 ## Planning Depth
 
-Leaf: ready for implementation planning.
+Leaf: implementation and verification complete.
 
 ## Subgoals
 

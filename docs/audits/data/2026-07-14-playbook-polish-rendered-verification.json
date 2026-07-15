@@ -281,15 +281,14 @@
       "diff_check_before_evidence": "git diff --check",
       "serve": "npm exec vite -- preview . --host 127.0.0.1 --port 4177 --strictPort",
       "chromium": "chromium --headless=new --disable-gpu --no-sandbox --remote-debugging-address=127.0.0.1 --remote-debugging-port=9224 --user-data-dir=/tmp/chessball-task8-chromium about:blank",
-      "cdp_driver": "node /tmp/chessball-task8-cdp.mjs",
-      "review_remediation_cdp_driver": "node /tmp/chessball-task8-review-cdp.mjs",
+      "cdp_driver": "node scripts/run-playbook-polish-rendered-verification.mjs",
       "final_clean_tree": "git status --short && npm test -- --run && npm run build && git diff ec70bc9..HEAD --check"
     },
     "driver": {
-      "temporary_path": "/tmp/chessball-task8-cdp.mjs",
-      "sha256": "a556721f9a2303bcd2234360470106607911183618d389d01d7ae870446319a7",
-      "line_count": 237,
-      "byte_count": 14732,
+      "tracked_path": "scripts/run-playbook-polish-rendered-verification.mjs",
+      "sha256": "9a1020f581d741c9eb75677d5b57143976641d33d2040b68e07a391815ef0f4e",
+      "line_count": 124,
+      "byte_count": 15999,
       "operations": [
         "Connected to the production preview through CDP Runtime, Page, Emulation, Input, and captureScreenshot methods.",
         "Set 1440x900, 390x844, and 320x568 CSS-pixel viewports at deviceScaleFactor 1.",
@@ -297,9 +296,10 @@
         "Dispatched keyboard Enter on the focused skip link and inspected activeElement and the computed heading outline.",
         "Changed native select values with bubbling change events, compared before/after board signatures, and activated rendered confirmation buttons.",
         "Added pass-target and tackle-target classes one at a time to the same rendered occupied ball square, measured before/after geometry, then removed each class.",
-        "Captured one PNG per viewport through CDP, recorded its encoded size, emptied the in-memory base64 field, and wrote no image file."
+        "Captured one background-isolation PNG and one normal PNG per viewport through CDP, recorded their encoded sizes, emptied the in-memory base64 fields, and wrote no image file.",
+        "Compared pre-change and selected board signatures for Trips and Deep Shell, independently confirmed each selector after a reload, and exited nonzero if any approved contract failed."
       ],
-      "disposition": "Ephemeral verifier removed after the verification session; it was not production code or a tracked dependency. Its digest, commands, algorithm, assertions, and resulting measurements are recorded here."
+      "disposition": "Retained repository verifier. It emits structured JSON and exits nonzero when any approved rendered contract fails."
     },
     "automated_verification": {
       "tests": {
@@ -388,14 +388,17 @@
     },
     "screenshot": {
       "captured_ephemerally": true,
-      "count": 6,
+      "original_run_count": 3,
+      "remediation_run_count": 6,
+      "total_count_across_recorded_runs": 9,
       "equality_scope": "excluded",
-      "disposition": "All base64 image data was discarded in memory; no PNG, visual hash, or screenshot asset was written or retained."
+      "disposition": "The original run captured 1 normal screenshot per viewport. The remediation run captured 1 background-isolation and 1 normal screenshot per viewport. All 9 base64 payloads were discarded in memory; no PNG, visual hash, or screenshot asset was written or retained."
     },
     "cleanup": {
       "preview_server_stopped": true,
       "chromium_stopped": true,
-      "temporary_driver_removed": true,
+      "ephemeral_drivers_removed": true,
+      "tracked_driver_present": true,
       "temporary_chromium_profile_removed": true
     },
     "execution_notes": [
@@ -403,11 +406,12 @@
       "The first restricted-sandbox CDP connection failed with connect EPERM 127.0.0.1:9224; the recorded driver command then ran with the approved host permission required for localhost CDP."
     ],
     "review_remediation": {
-      "source_commit": "b565838abc16a437cea2647ea3fb9ba7f8890c93",
+      "source_commit_before_tracked_driver": "5fa800eb4de6bbb688c774f2c02f27747f84feaa",
       "driver": {
-        "sha256": "40b38af344570f6dbede567a6bda43dc61e2fe6b1270743f865685c0db756a28",
-        "line_count": 157,
-        "byte_count": 14519,
+        "tracked_path": "scripts/run-playbook-polish-rendered-verification.mjs",
+        "sha256": "9a1020f581d741c9eb75677d5b57143976641d33d2040b68e07a391815ef0f4e",
+        "line_count": 124,
+        "byte_count": 15999,
         "result": "pass"
       },
       "contrast_method": {
@@ -422,8 +426,8 @@
           "viewport": { "width": 1440, "height": 900, "device_scale_factor": 1 },
           "contrast": { "sampled_rect": { "x": 15, "y": 21, "width": 247, "height": 40 }, "sampled_pixels": 9880, "unique_background_colors": 29, "minimum_ratio": 7.14392863992151, "maximum_ratio": 7.737703926576814, "worst_background_rgb": [31, 35, 19], "pass": true },
           "confirmation": {
-            "offense": { "independent_reload": true, "preview_value": "trips", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
-            "defense": { "independent_reload": true, "preview_value": "deep-shell", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
+            "offense": { "independent_reload": true, "preview_value": "trips", "board_signature": "1,0:WR|1,1:WR|6,1:CB|2,2:TE|2,3:OL|3,3:DL|4,3:OLB|1,4:FB|2,4:OL|3,4:DL|0,5:QB|2,5:OL|3,5:DL|4,5:MLB|7,5:FS|0,6:RB|2,6:OL|3,6:DL|2,7:OL|4,7:DL|5,7:SS|6,9:CB", "board_changed": true, "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
+            "defense": { "independent_reload": true, "preview_value": "deep-shell", "board_signature": "11,0:CB|17,1:WR|15,3:DL|16,3:OL|14,4:MLB|15,4:DL|16,4:OL|10,5:FS|15,5:DL|16,5:OL|17,5:QB|18,5:RB|14,6:OLB|15,6:DL|16,6:OL|17,6:FB|14,7:DL|16,7:OL|11,8:SS|16,8:TE|17,9:WR|11,10:CB", "board_changed": true, "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
           },
           "controls": {
             "offense": { "label": { "x": 33, "y": 185.15625, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 204.15625, "width": 270, "height": 44 }, "description": { "x": 33, "y": 255.15625, "width": 270, "height": 31.53125 }, "confirm": { "x": 33, "y": 293.6875, "width": 270, "height": 32 }, "description_to_confirm_gap": 7, "no_overlap": true },
@@ -434,15 +438,15 @@
             "pass_target": { "piece": { "x": 1017.5, "y": 468.09375, "width": 36.15625, "height": 35.96875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.90625 }, "marker": { "x": 1034.939208984375, "y": 463.30987548828125, "width": 20.90283203125, "height": 17.2396240234375, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true },
             "tackle_target": { "piece": { "x": 1017.5, "y": 468.09375, "width": 36.15625, "height": 35.96875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.90625 }, "marker": { "x": 1034.939208984375, "y": 463.30987548828125, "width": 20.90283203125, "height": 17.2396240234375, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true }
           },
-          "screenshots": { "normal_encoded_bytes_before_discard": 386028, "background_encoded_bytes_before_discard": 303006, "discarded": true },
+          "screenshots": { "normal_encoded_bytes_before_discard": 385560, "background_encoded_bytes_before_discard": 303006, "discarded": true },
           "result": "pass"
         },
         {
           "viewport": { "width": 390, "height": 844, "device_scale_factor": 1 },
           "contrast": { "sampled_rect": { "x": 16, "y": 21, "width": 169, "height": 27 }, "sampled_pixels": 4563, "unique_background_colors": 124, "minimum_ratio": 6.8599088108247095, "maximum_ratio": 7.245322149061042, "worst_background_rgb": [29, 39, 31], "pass": true },
           "confirmation": {
-            "offense": { "independent_reload": true, "preview_value": "trips", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
-            "defense": { "independent_reload": true, "preview_value": "deep-shell", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
+            "offense": { "independent_reload": true, "preview_value": "trips", "board_signature": "13,0:WR|8,1:CB|13,1:WR|12,2:TE|10,3:OLB|11,3:DL|12,3:OL|11,4:DL|12,4:OL|13,4:FB|7,5:FS|10,5:MLB|11,5:DL|12,5:OL|14,5:QB|11,6:DL|12,6:OL|14,6:RB|9,7:SS|10,7:DL|12,7:OL|8,9:CB", "board_changed": true, "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
+            "defense": { "independent_reload": true, "preview_value": "deep-shell", "board_signature": "12,0:CB|18,1:WR|16,3:DL|17,3:OL|15,4:MLB|16,4:DL|17,4:OL|11,5:FS|16,5:DL|17,5:OL|18,5:QB|19,5:RB|15,6:OLB|16,6:DL|17,6:OL|18,6:FB|15,7:DL|17,7:OL|12,8:SS|17,8:TE|18,9:WR|12,10:CB", "board_changed": true, "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
           },
           "controls": {
             "offense": { "label": { "x": 33, "y": 581.5, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 600.5, "width": 309, "height": 44 }, "description": { "x": 33, "y": 651.5, "width": 309, "height": 31.53125 }, "confirm": { "x": 33, "y": 690.03125, "width": 309, "height": 44 }, "description_to_confirm_gap": 7, "no_overlap": true },
@@ -453,15 +457,15 @@
             "pass_target": { "piece": { "x": 559, "y": 1400.53125, "width": 26.65625, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": -0.0078125, "y": -0.15625 }, "marker": { "x": 571.0828857421875, "y": 1396.5848388671875, "width": 16.599853515625, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true },
             "tackle_target": { "piece": { "x": 559, "y": 1400.53125, "width": 26.65625, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": -0.0078125, "y": -0.15625 }, "marker": { "x": 571.0828857421875, "y": 1396.5848388671875, "width": 16.599853515625, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true }
           },
-          "screenshots": { "normal_encoded_bytes_before_discard": 128229, "background_encoded_bytes_before_discard": 118335, "discarded": true },
+          "screenshots": { "normal_encoded_bytes_before_discard": 128127, "background_encoded_bytes_before_discard": 118335, "discarded": true },
           "result": "pass"
         },
         {
           "viewport": { "width": 320, "height": 568, "device_scale_factor": 1 },
           "contrast": { "sampled_rect": { "x": 16, "y": 21, "width": 169, "height": 27 }, "sampled_pixels": 4563, "unique_background_colors": 118, "minimum_ratio": 6.7401038179156645, "maximum_ratio": 7.087489734278112, "worst_background_rgb": [34, 40, 26], "pass": true },
           "confirmation": {
-            "offense": { "independent_reload": true, "preview_value": "trips", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
-            "defense": { "independent_reload": true, "preview_value": "deep-shell", "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
+            "offense": { "independent_reload": true, "preview_value": "trips", "board_signature": "14,0:WR|9,1:CB|14,1:WR|13,2:TE|11,3:OLB|12,3:DL|13,3:OL|12,4:DL|13,4:OL|14,4:FB|8,5:FS|11,5:MLB|12,5:DL|13,5:OL|15,5:QB|12,6:DL|13,6:OL|15,6:RB|10,7:SS|11,7:DL|13,7:OL|9,9:CB", "board_changed": true, "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true },
+            "defense": { "independent_reload": true, "preview_value": "deep-shell", "board_signature": "17,0:CB|11,1:WR|12,3:OL|13,3:DL|12,4:OL|13,4:DL|14,4:MLB|10,5:RB|11,5:QB|12,5:OL|13,5:DL|18,5:FS|11,6:FB|12,6:OL|13,6:DL|14,6:OLB|12,7:OL|14,7:DL|12,8:TE|17,8:SS|11,9:WR|17,10:CB", "board_changed": true, "selector_present": true, "selector_disabled": true, "confirm_disabled": true, "panel_present": true }
           },
           "controls": {
             "offense": { "label": { "x": 33, "y": 581.5, "width": 126.46875, "height": 12 }, "select": { "x": 33, "y": 600.5, "width": 239, "height": 44 }, "description": { "x": 33, "y": 651.5, "width": 239, "height": 31.53125 }, "confirm": { "x": 33, "y": 690.03125, "width": 239, "height": 44 }, "description_to_confirm_gap": 7, "no_overlap": true },
@@ -472,7 +476,7 @@
             "pass_target": { "piece": { "x": 309.328125, "y": 1450.1875, "width": 26.671875, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.15625 }, "marker": { "x": 321.4266052246094, "y": 1446.2410888671875, "width": 16.59991455078125, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true },
             "tackle_target": { "piece": { "x": 309.328125, "y": 1450.1875, "width": 26.671875, "height": 26.46875 }, "insets": { "top": "4px", "right": "4px", "bottom": "4px", "left": "4px" }, "role_center_delta": { "x": 0, "y": -0.15625 }, "marker": { "x": 321.4266052246094, "y": 1446.2410888671875, "width": 16.59991455078125, "height": 13.892822265625, "top": "3px", "right": "3px", "z_index": "3" }, "badge": { "left": "1px", "bottom": "1px", "width": "10px", "height": "10px" }, "piece_geometry_identical": true, "role_centered": true, "marker_top_right": true }
           },
-          "screenshots": { "normal_encoded_bytes_before_discard": 92334, "background_encoded_bytes_before_discard": 85173, "discarded": true },
+          "screenshots": { "normal_encoded_bytes_before_discard": 92616, "background_encoded_bytes_before_discard": 85173, "discarded": true },
           "result": "pass"
         }
       ],
