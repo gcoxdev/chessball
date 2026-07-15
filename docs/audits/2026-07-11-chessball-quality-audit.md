@@ -293,7 +293,17 @@ The existing npm install summary reported 5 vulnerabilities: 3 moderate, 1 high,
 
 The fixed formation-opening balance gate ran once with the exact command `npm exec vite-node scripts/run-formation-expansion-audit.ts`. Wall-clock runtime was 837 seconds (13m57s). Configuration was 12 comparison groups × 6 equally weighted opposing formations × 100 matched pairs, 5,000 maximum actions/game, heuristic versus heuristic, and deterministic 10,000-sample 95% paired-bootstrap intervals. The practical thresholds were a 0.05 win-share difference or 1 point of score delta; broad dominance additionally required at least 4/6 same-direction cell point estimates and no credible counter cell.
 
-The run requested and completed exactly 7,200 matched pairs and attempted and completed 14,400 games. It recorded zero excluded pairs, stalls, crashes, or anomalies. The generated, canonical machine-readable evidence is [`data/2026-07-14-formation-expansion-audit.json`](data/2026-07-14-formation-expansion-audit.json). Values below are primary minus comparison and are rounded to four decimal places; “support” is the same-direction cell count, and counter cells are named by opposing formation.
+The run requested and completed exactly 7,200 matched pairs and attempted and completed 14,400 games. It recorded zero excluded pairs, stalls, crashes, or anomalies. The generated, canonical machine-readable evidence is [`data/2026-07-14-formation-expansion-audit.json`](data/2026-07-14-formation-expansion-audit.json). Pooled win share is the primary formation's tie-adjusted share across mirrored games (win=1, tie=0.5, loss=0), with 0.5 neutral; pooled score delta is primary minus comparison, with 0 neutral. Values are rounded to four decimal places; “support” is the same-direction cell count, and counter cells are named by opposing formation.
+
+To regenerate safely and verify exact reproducibility, write the runner's stdout to a temporary file, validate it, then compare it byte-for-byte with the tracked artifact:
+
+```sh
+npm exec vite-node scripts/run-formation-expansion-audit.ts > /tmp/chessball-formation-expansion-audit.json
+jq -e . /tmp/chessball-formation-expansion-audit.json > /dev/null
+cmp --silent /tmp/chessball-formation-expansion-audit.json docs/audits/data/2026-07-14-formation-expansion-audit.json
+```
+
+The pooled 95% intervals reported below are per-comparison intervals and are not adjusted for multiplicity across the 12 comparisons. Nominal interval exclusion alone does not trigger tuning: the approved gate also requires the practical effect threshold, at least 4/6 same-direction cell point estimates, and no credible counter cell.
 
 | Comparison | Pooled win share, mean [95% CI] | Pooled score delta, mean [95% CI] | Decisive metric / direction | Support | Credible counters | Classification | Reason |
 |---|---:|---:|---|---:|---|---|---|
