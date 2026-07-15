@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pairedBootstrapInterval, type BootstrapInterval, type MatchedAuditReport } from './audit';
+import { pairedBootstrapInterval, type BootstrapInterval, type MatchedAuditReport, type RunMatchedAuditOptions } from './audit';
 import { defensiveFormations, offensiveFormations } from './rules';
 import {
   canonicalFormationExpansionArtifact,
   FORMATION_EXPANSION_BOOTSTRAP,
   FORMATION_EXPANSION_PAIRS_PER_CELL,
   FORMATION_EXPANSION_THRESHOLDS,
+  formationExpansionAuditOutput,
   formationExpansionExperiments,
   serializeFormationExpansionArtifact,
   summarizeFormationComparison,
@@ -90,6 +91,15 @@ describe('formation expansion experiment matrix', () => {
     expect(new Set(groups.map(group => group.bootstrapSeed)).size).toBe(12);
   });
 
+  it('keeps every cell and group bootstrap seed outside pair ranges and globally unique', () => {
+    const groups = formationExpansionExperiments();
+    const cells = groups.flatMap(group => group.cells);
+    const bootstrapSeeds = [...cells.map(cell => cell.bootstrapSeed), ...groups.map(group => group.bootstrapSeed)];
+    expect(bootstrapSeeds.every(seed => Number.isInteger(seed) && seed >= 0 && seed <= 0xffff_ffff)).toBe(true);
+    expect(new Set(bootstrapSeeds).size).toBe(bootstrapSeeds.length);
+    expect(bootstrapSeeds.every(seed => cells.every(cell => seed < cell.seedRange.first || seed > cell.seedRange.last))).toBe(true);
+  });
+
   it('changes only the compared side while holding the opponent equal', () => {
     for (const group of formationExpansionExperiments()) for (const cell of group.cells) {
       const compared = group.side;
@@ -139,6 +149,39 @@ describe('formation comparison pooling and classification', () => {
     expect(summarizeFormationComparison(group(), reports)).toMatchObject({ classification: 'incomplete', direction: null, decisiveMetric: null });
   });
 
+  it.each([
+    ['missing cell', () => reportsFor(Array(5).fill(.8)), /Expected 6 cell reports; received 5/i],
+    ['crash status', () => {
+      const reports = reportsFor(Array(6).fill(.8));
+      reports[1] = syntheticReport(.8, 0, { statusCounts: { completed: 199, stalled: 0, crashed: 1 } });
+      return reports;
+    }, /recorded 1 crashed game/i],
+    ['anomaly', () => {
+      const reports = reportsFor(Array(6).fill(.8));
+      reports[1] = syntheticReport(.8, 0, { anomalies: [{ type: 'exception', message: 'synthetic', actionIndex: 1, phase: 'coinToss', recentActions: [], pair: 0, mirror: 'A', seed: 1 }] });
+      return reports;
+    }, /recorded 1 anomal/i],
+    ['completed-pair count', () => {
+      const reports = reportsFor(Array(6).fill(.8));
+      reports[1] = syntheticReport(.8, 0, { completedPairs: 99 });
+      return reports;
+    }, /completed 99 pairs; expected 100/i],
+    ['stall status', () => {
+      const reports = reportsFor(Array(6).fill(.8));
+      reports[1] = syntheticReport(.8, 0, { statusCounts: { completed: 199, stalled: 1, crashed: 0 } });
+      return reports;
+    }, /recorded 1 stalled game/i],
+    ['wrong pool length', () => {
+      const reports = reportsFor(Array(6).fill(.8));
+      reports[1].skillGap.pairEffects.pop();
+      return reports;
+    }, /contains 99 win-share effects; expected 100/i],
+  ])('classifies a %s report as incomplete with a specific durable reason', (_case, makeReports, expectedReason) => {
+    const summary = summarizeFormationComparison(group(), makeReports());
+    expect(summary).toMatchObject({ classification: 'incomplete', direction: null, decisiveMetric: null });
+    expect(summary.reasons).toEqual(expect.arrayContaining([expect.stringMatching(expectedReason)]));
+  });
+
   it('classifies statistically visible but practically small effects as sub-threshold', () => {
     expect(summarizeFormationComparison(group(), reportsFor(Array(6).fill(.53), Array(6).fill(.5)))).toMatchObject({ classification: 'sub-threshold', direction: null, decisiveMetric: null });
   });
@@ -170,6 +213,22 @@ describe('formation comparison pooling and classification', () => {
     });
     expect(summarizeFormationComparison(group(), reports)).toMatchObject({ classification: 'broad-dominance', direction: 'comparison', decisiveMetric: 'win-share' });
   });
+
+  it.each([
+    ['primary', 1, 'primary'],
+    ['comparison', -1, 'comparison'],
+  ] as const)('uses an exact %s score-delta practical boundary when win share is neutral', (_case, score, direction) => {
+    const summary = summarizeFormationComparison(group(), reportsFor(Array(6).fill(.5), Array(6).fill(score)));
+    expect(summary).toMatchObject({ classification: 'broad-dominance', direction, decisiveMetric: 'score-delta', supportingCells: 6, credibleCounters: [] });
+    expect(summary.reasons[0]).toMatch(/pooled score-delta lead.*no credible counter/i);
+  });
+
+  it('counts score-delta cell directions and preserves score-based credible counters', () => {
+    const summary = summarizeFormationComparison(group(), reportsFor(Array(6).fill(.5), [2, 2, 2, 2, -1, -1]));
+    expect(summary).toMatchObject({ classification: 'credible-counter', direction: 'primary', decisiveMetric: 'score-delta', supportingCells: 4 });
+    expect(summary.credibleCounters).toEqual([group().cells[4].id, group().cells[5].id]);
+    expect(summary.reasons[0]).toMatch(/2 opposing cell interval/i);
+  });
 });
 
 describe('formation expansion artifact', () => {
@@ -195,15 +254,94 @@ describe('formation expansion artifact', () => {
     expect(serialized).not.toContain('excludedPairDetails');
   });
 
-  it('wires the no-argument runner to matched heuristic audits and stdout', () => {
-    expect(runnerSource).toContain("if (process.argv.slice(2).length) throw new Error('Usage: npm exec vite-node scripts/run-formation-expansion-audit.ts')");
-    expect(runnerSource).toContain("primary: 'heuristic'");
-    expect(runnerSource).toContain("comparison: 'heuristic'");
-    expect(runnerSource).toContain('pairs: cell.pairs');
-    expect(runnerSource).toContain('maxActions: FORMATION_EXPANSION_MAX_ACTIONS');
-    expect(runnerSource).toContain('formationPlan: { home: cell.primaryPlan, away: cell.comparisonPlan }');
-    expect(runnerSource).toContain('bootstrap: { seed: cell.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }');
-    expect(runnerSource).toContain('process.stdout.write');
-    expect(runnerSource).not.toContain('writeFile');
+  it('protects every durable configuration, cell report, and pooled decision field', () => {
+    const groups = formationExpansionExperiments();
+    const reportsByGroup = groups.map(() => reportsFor(Array(6).fill(.5), [2, 2, 2, 2, -1, -1]));
+    const summaries = groups.map((group, index) => summarizeFormationComparison(group, reportsByGroup[index]));
+    const artifact = canonicalFormationExpansionArtifact(groups, summaries);
+    const firstGroup = artifact.groups[0];
+    const firstCell = firstGroup.cells[0];
+    const firstReport = firstGroup.reports[0];
+    expect(artifact).toMatchObject({
+      schema: 'chessball-formation-expansion-audit-v1', runner: 'scripts/run-formation-expansion-audit.ts',
+      command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
+      policy: { primary: 'heuristic', comparison: 'heuristic' }, maxActions: 5_000,
+      pairsPerCell: 100, totalRequestedPairs: 7_200,
+      bootstrap: { samples: 10_000, confidence: .95 }, thresholds: FORMATION_EXPANSION_THRESHOLDS,
+    });
+    expect(firstGroup).toMatchObject({
+      id: 'offense-pistol-vs-singleback', name: 'Pistol vs Singleback', side: 'offense',
+      primaryId: 'pistol', comparisonId: 'singleback', bootstrapSeed: groups[0].bootstrapSeed, requestedPairs: 600,
+    });
+    expect(firstCell).toEqual({
+      id: 'offense-pistol-vs-singleback-against-4-3', opposingFormationId: '4-3',
+      primaryPlan: { offense: 'pistol', defense: '4-3' }, comparisonPlan: { offense: 'singleback', defense: '4-3' },
+      pairs: 100, seed: groups[0].cells[0].seed, seedRange: groups[0].cells[0].seedRange, bootstrapSeed: groups[0].cells[0].bootstrapSeed,
+    });
+    expect(firstReport).toEqual({
+      id: firstCell.id, opposingFormationId: firstCell.opposingFormationId,
+      primaryPlan: firstCell.primaryPlan, comparisonPlan: firstCell.comparisonPlan,
+      requestedPairs: 100, completedPairs: 100, excludedPairs: 0, attemptedGames: 200,
+      seedConvention: 'base-seed-plus-pair-index', seedRange: { first: 0, last: 99 },
+      bootstrap: { seed: firstCell.bootstrapSeed, samples: 10_000, confidence: .95 },
+      statusCounts: { completed: 200, stalled: 0, crashed: 0 }, anomalyCount: 0,
+      completion: { games: 200, actions: 2_000, averageActions: 10 },
+      primaryWins: 0, comparisonWins: 0, ties: 200,
+      winShareInterval: { low: .5, high: .5, mean: .5, seed: 1, samples: 10_000, confidence: .95 },
+      scoreDeltaInterval: { low: 2, high: 2, mean: 2, seed: 1, samples: 10_000, confidence: .95 },
+    });
+    expect(firstGroup.summary).toEqual({
+      groupId: firstGroup.id, classification: 'credible-counter', direction: 'primary', decisiveMetric: 'score-delta', supportingCells: 4,
+      credibleCounters: [firstGroup.cells[4].id, firstGroup.cells[5].id], reasons: [expect.stringMatching(/2 opposing cell interval/i)],
+      pooled: {
+        requestedPairs: 600, completedPairs: 600,
+        winShareInterval: pairedBootstrapInterval(Array(600).fill(.5), { seed: groups[0].bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }),
+        scoreDeltaInterval: pairedBootstrapInterval([
+          ...Array(100).fill(2), ...Array(100).fill(2), ...Array(100).fill(2), ...Array(100).fill(2),
+          ...Array(100).fill(-1), ...Array(100).fill(-1),
+        ], { seed: groups[0].bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }),
+      },
+    });
+    const forbiddenKeys = new Set(['pairEffects', 'scoreDeltaEffects', 'seedList', 'excludedPairDetails', 'runtimeMs']);
+    const visit = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return;
+      for (const [key, nested] of Object.entries(value)) {
+        expect(forbiddenKeys.has(key), `forbidden artifact key: ${key}`).toBe(false);
+        visit(nested);
+      }
+    };
+    visit(artifact);
+  });
+
+  it('runs exactly 72 injected audits and returns canonical stdout content without file writes', () => {
+    const calls: RunMatchedAuditOptions[] = [];
+    const returnedReports: MatchedAuditReport[] = [];
+    const output = formationExpansionAuditOutput([], options => {
+      calls.push(options);
+      const report = syntheticReport(.5);
+      returnedReports.push(report);
+      return report;
+    });
+    const groups = formationExpansionExperiments();
+    const cells = groups.flatMap(group => group.cells);
+    expect(calls).toHaveLength(72);
+    calls.forEach((call, index) => expect(call).toEqual({
+      pairs: 100, seed: cells[index].seed, primary: 'heuristic', comparison: 'heuristic', maxActions: 5_000,
+      formationPlan: { home: cells[index].primaryPlan, away: cells[index].comparisonPlan },
+      bootstrap: { seed: cells[index].bootstrapSeed, samples: 10_000, confidence: .95 },
+    }));
+    const expectedSummaries = groups.map((group, index) => summarizeFormationComparison(group, returnedReports.slice(index * 6, index * 6 + 6)));
+    expect(output).toBe(serializeFormationExpansionArtifact(canonicalFormationExpansionArtifact(groups, expectedSummaries)));
+    expect(runnerSource).toContain('process.stdout.write(formationExpansionAuditOutput(process.argv.slice(2), runMatchedAudit))');
+    expect(runnerSource).not.toMatch(/node:fs|writeFile/);
+  });
+
+  it('rejects every CLI argument with a clear usage message before invoking audits', () => {
+    let calls = 0;
+    expect(() => formationExpansionAuditOutput(['unexpected'], () => {
+      calls++;
+      return syntheticReport(.5);
+    })).toThrow('Usage: npm exec vite-node scripts/run-formation-expansion-audit.ts');
+    expect(calls).toBe(0);
   });
 });

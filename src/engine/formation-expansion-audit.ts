@@ -1,4 +1,4 @@
-import { pairedBootstrapInterval, type BootstrapInterval, type MatchedAuditReport } from './audit';
+import { pairedBootstrapInterval, type BootstrapInterval, type MatchedAuditReport, type RunMatchedAuditOptions } from './audit';
 import { defensiveFormations, offensiveFormations } from './rules';
 import type { SimulationFormationPlan } from './simulator';
 
@@ -145,18 +145,24 @@ export function summarizeFormationComparison(
   cellReports: readonly MatchedAuditReport[],
 ): FormationComparisonSummary {
   const cells = group.cells.map((cell, index) => compactCellReport(cell, cellReports[index]));
-  const reportsComplete = cellReports.length === group.cells.length && cellReports.every(report =>
-    report.requestedPairs === FORMATION_EXPANSION_PAIRS_PER_CELL
-    && report.completedPairs === FORMATION_EXPANSION_PAIRS_PER_CELL
-    && report.excludedPairs === 0
-    && report.statusCounts.stalled === 0
-    && report.statusCounts.crashed === 0
-    && report.anomalies.length === 0
-    && report.skillGap.pairEffects.length === FORMATION_EXPANSION_PAIRS_PER_CELL
-    && report.skillGap.scoreDeltaEffects.length === FORMATION_EXPANSION_PAIRS_PER_CELL);
-  const winEffects = reportsComplete ? cellReports.flatMap(report => report.skillGap.pairEffects) : [];
-  const scoreEffects = reportsComplete ? cellReports.flatMap(report => report.skillGap.scoreDeltaEffects) : [];
-  const pooledComplete = reportsComplete && winEffects.length === group.requestedPairs && scoreEffects.length === group.requestedPairs;
+  const incompleteReasons: string[] = [];
+  if (cellReports.length !== group.cells.length) incompleteReasons.push(`Expected ${group.cells.length} cell reports; received ${cellReports.length}.`);
+  cellReports.forEach((report, index) => {
+    const cellId = group.cells[index]?.id ?? `unexpected-cell-${index + 1}`;
+    if (report.requestedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} requested ${report.requestedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+    if (report.completedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} completed ${report.completedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+    if (report.excludedPairs) incompleteReasons.push(`${cellId} excluded ${report.excludedPairs} pairs.`);
+    if (report.statusCounts.stalled) incompleteReasons.push(`${cellId} recorded ${report.statusCounts.stalled} stalled ${plural(report.statusCounts.stalled, 'game')}.`);
+    if (report.statusCounts.crashed) incompleteReasons.push(`${cellId} recorded ${report.statusCounts.crashed} crashed ${plural(report.statusCounts.crashed, 'game')}.`);
+    if (report.anomalies.length) incompleteReasons.push(`${cellId} recorded ${report.anomalies.length} ${plural(report.anomalies.length, 'anomaly', 'anomalies')}.`);
+    if (report.skillGap.pairEffects.length !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} contains ${report.skillGap.pairEffects.length} win-share effects; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+    if (report.skillGap.scoreDeltaEffects.length !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} contains ${report.skillGap.scoreDeltaEffects.length} score-delta effects; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+  });
+  const winEffects = cellReports.flatMap(report => report.skillGap.pairEffects);
+  const scoreEffects = cellReports.flatMap(report => report.skillGap.scoreDeltaEffects);
+  if (winEffects.length !== group.requestedPairs) incompleteReasons.push(`Pooled win-share effects total ${winEffects.length}; expected ${group.requestedPairs}.`);
+  if (scoreEffects.length !== group.requestedPairs) incompleteReasons.push(`Pooled score-delta effects total ${scoreEffects.length}; expected ${group.requestedPairs}.`);
+  const pooledComplete = incompleteReasons.length === 0;
   const pooled = Object.freeze({
     requestedPairs: group.requestedPairs,
     completedPairs: cellReports.reduce((sum, report) => sum + report.completedPairs, 0),
@@ -164,9 +170,7 @@ export function summarizeFormationComparison(
     scoreDeltaInterval: pooledComplete ? pairedBootstrapInterval(scoreEffects, { seed: group.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }) : null,
   });
 
-  if (!pooledComplete) return summary(group.id, 'incomplete', null, null, 0, [], [
-    `Every cell must complete ${FORMATION_EXPANSION_PAIRS_PER_CELL} clean pairs and pooled effects must total ${group.requestedPairs}.`,
-  ], pooled, cells);
+  if (!pooledComplete) return summary(group.id, 'incomplete', null, null, 0, [], incompleteReasons, pooled, cells);
 
   const winLead = actionableLead(pooled.winShareInterval!, .5, FORMATION_EXPANSION_THRESHOLDS.winSharePracticalDifference);
   const scoreLead = actionableLead(pooled.scoreDeltaInterval!, 0, FORMATION_EXPANSION_THRESHOLDS.scoreDeltaPracticalDifference);
@@ -200,6 +204,10 @@ export function summarizeFormationComparison(
   return summary(group.id, 'broad-dominance', direction, decisiveMetric, supportingCells, [], [
     `The pooled ${decisiveMetric} lead is statistical, practical, supported by ${supportingCells} cells, and has no credible counter.`,
   ], pooled, cells);
+}
+
+function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+  return count === 1 ? singular : pluralForm;
 }
 
 function actionableLead(interval: BootstrapInterval, neutral: number, practicalDifference: number): FormationComparisonDirection | null {
@@ -284,4 +292,22 @@ export type FormationExpansionArtifact = ReturnType<typeof canonicalFormationExp
 
 export function serializeFormationExpansionArtifact(artifact: FormationExpansionArtifact): string {
   return `${JSON.stringify(artifact, null, 2)}\n`;
+}
+
+export function formationExpansionAuditOutput(
+  args: readonly string[],
+  runAudit: (options: RunMatchedAuditOptions) => MatchedAuditReport,
+): string {
+  if (args.length) throw new Error('Usage: npm exec vite-node scripts/run-formation-expansion-audit.ts');
+  const groups = formationExpansionExperiments();
+  const summaries = groups.map(group => summarizeFormationComparison(group, group.cells.map(cell => runAudit({
+    pairs: cell.pairs,
+    seed: cell.seed,
+    primary: 'heuristic',
+    comparison: 'heuristic',
+    maxActions: FORMATION_EXPANSION_MAX_ACTIONS,
+    formationPlan: { home: cell.primaryPlan, away: cell.comparisonPlan },
+    bootstrap: { seed: cell.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP },
+  }))));
+  return serializeFormationExpansionArtifact(canonicalFormationExpansionArtifact(groups, summaries));
 }
