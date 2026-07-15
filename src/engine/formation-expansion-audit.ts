@@ -7,6 +7,7 @@ export type FormationComparisonDirection = 'primary' | 'comparison';
 export type FormationComparisonMetric = 'win-share' | 'score-delta';
 export type FormationComparisonClassification =
   | 'incomplete'
+  | 'inconclusive'
   | 'sub-threshold'
   | 'conflicting-metrics'
   | 'favorable-matchup'
@@ -111,16 +112,16 @@ export type FormationExpansionCellReport = Readonly<{
   excludedPairs: number;
   attemptedGames: number;
   seedConvention: MatchedAuditReport['seedConvention'];
-  seedRange: MatchedAuditReport['seedRange'];
+  seedRange: Readonly<MatchedAuditReport['seedRange']>;
   bootstrap: Readonly<{ seed: number; samples: number; confidence: number }>;
-  statusCounts: MatchedAuditReport['statusCounts'];
+  statusCounts: Readonly<MatchedAuditReport['statusCounts']>;
   anomalyCount: number;
-  completion: MatchedAuditReport['telemetry']['completion'];
+  completion: Readonly<MatchedAuditReport['telemetry']['completion']>;
   primaryWins: number;
   comparisonWins: number;
   ties: number;
-  winShareInterval: BootstrapInterval | null;
-  scoreDeltaInterval: BootstrapInterval | null;
+  winShareInterval: Readonly<BootstrapInterval> | null;
+  scoreDeltaInterval: Readonly<BootstrapInterval> | null;
 }>;
 
 export type FormationComparisonSummary = Readonly<{
@@ -134,8 +135,8 @@ export type FormationComparisonSummary = Readonly<{
   pooled: Readonly<{
     requestedPairs: number;
     completedPairs: number;
-    winShareInterval: BootstrapInterval | null;
-    scoreDeltaInterval: BootstrapInterval | null;
+    winShareInterval: Readonly<BootstrapInterval> | null;
+    scoreDeltaInterval: Readonly<BootstrapInterval> | null;
   }>;
   cells: readonly FormationExpansionCellReport[];
 }>;
@@ -149,31 +150,34 @@ export function summarizeFormationComparison(
   if (cellReports.length !== group.cells.length) incompleteReasons.push(`Expected ${group.cells.length} cell reports; received ${cellReports.length}.`);
   cellReports.forEach((report, index) => {
     const cellId = group.cells[index]?.id ?? `unexpected-cell-${index + 1}`;
-    if (report.requestedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} requested ${report.requestedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
-    if (report.completedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} completed ${report.completedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
-    if (report.excludedPairs) incompleteReasons.push(`${cellId} excluded ${report.excludedPairs} pairs.`);
-    if (report.statusCounts.stalled) incompleteReasons.push(`${cellId} recorded ${report.statusCounts.stalled} stalled ${plural(report.statusCounts.stalled, 'game')}.`);
-    if (report.statusCounts.crashed) incompleteReasons.push(`${cellId} recorded ${report.statusCounts.crashed} crashed ${plural(report.statusCounts.crashed, 'game')}.`);
-    if (report.anomalies.length) incompleteReasons.push(`${cellId} recorded ${report.anomalies.length} ${plural(report.anomalies.length, 'anomaly', 'anomalies')}.`);
-    if (report.skillGap.pairEffects.length !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} contains ${report.skillGap.pairEffects.length} win-share effects; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
-    if (report.skillGap.scoreDeltaEffects.length !== FORMATION_EXPANSION_PAIRS_PER_CELL) incompleteReasons.push(`${cellId} contains ${report.skillGap.scoreDeltaEffects.length} score-delta effects; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+    incompleteReasons.push(...validateCellReport(group.cells[index], report, cellId));
   });
-  const winEffects = cellReports.flatMap(report => report.skillGap.pairEffects);
-  const scoreEffects = cellReports.flatMap(report => report.skillGap.scoreDeltaEffects);
+  const winEffects = cellReports.flatMap(report => Array.isArray(report.skillGap?.pairEffects) ? report.skillGap.pairEffects : []);
+  const scoreEffects = cellReports.flatMap(report => Array.isArray(report.skillGap?.scoreDeltaEffects) ? report.skillGap.scoreDeltaEffects : []);
   if (winEffects.length !== group.requestedPairs) incompleteReasons.push(`Pooled win-share effects total ${winEffects.length}; expected ${group.requestedPairs}.`);
   if (scoreEffects.length !== group.requestedPairs) incompleteReasons.push(`Pooled score-delta effects total ${scoreEffects.length}; expected ${group.requestedPairs}.`);
-  const pooledComplete = incompleteReasons.length === 0;
-  const pooled = Object.freeze({
+  if (incompleteReasons.length || !cellReports.every(hasSkillGapIntervals)) return summary(group.id, 'incomplete', null, null, 0, [], incompleteReasons, Object.freeze({
     requestedPairs: group.requestedPairs,
     completedPairs: cellReports.reduce((sum, report) => sum + report.completedPairs, 0),
-    winShareInterval: pooledComplete ? pairedBootstrapInterval(winEffects, { seed: group.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }) : null,
-    scoreDeltaInterval: pooledComplete ? pairedBootstrapInterval(scoreEffects, { seed: group.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }) : null,
+    winShareInterval: null,
+    scoreDeltaInterval: null,
+  }), cells);
+
+  const validReports = cellReports.filter(hasSkillGapIntervals);
+  const pooled = Object.freeze({
+    requestedPairs: group.requestedPairs,
+    completedPairs: validReports.reduce((sum, report) => sum + report.completedPairs, 0),
+    winShareInterval: cloneInterval(pairedBootstrapInterval(winEffects, { seed: group.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP })),
+    scoreDeltaInterval: cloneInterval(pairedBootstrapInterval(scoreEffects, { seed: group.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP })),
   });
 
-  if (!pooledComplete) return summary(group.id, 'incomplete', null, null, 0, [], incompleteReasons, pooled, cells);
-
-  const winLead = actionableLead(pooled.winShareInterval!, .5, FORMATION_EXPANSION_THRESHOLDS.winSharePracticalDifference);
-  const scoreLead = actionableLead(pooled.scoreDeltaInterval!, 0, FORMATION_EXPANSION_THRESHOLDS.scoreDeltaPracticalDifference);
+  const winStatisticalLead = statisticalLead(pooled.winShareInterval, .5);
+  const scoreStatisticalLead = statisticalLead(pooled.scoreDeltaInterval, 0);
+  if (!winStatisticalLead && !scoreStatisticalLead) return summary(group.id, 'inconclusive', null, null, 0, [], [
+    'Neither pooled 95% interval excludes neutral.',
+  ], pooled, cells);
+  const winLead = practicalLead(pooled.winShareInterval, .5, FORMATION_EXPANSION_THRESHOLDS.winSharePracticalDifference, winStatisticalLead);
+  const scoreLead = practicalLead(pooled.scoreDeltaInterval, 0, FORMATION_EXPANSION_THRESHOLDS.scoreDeltaPracticalDifference, scoreStatisticalLead);
   if (winLead && scoreLead && winLead !== scoreLead) return summary(group.id, 'conflicting-metrics', null, null, 0, [], [
     'Win-share and score-delta leads are actionable in opposite directions.',
   ], pooled, cells);
@@ -181,11 +185,11 @@ export function summarizeFormationComparison(
   const decisiveMetric: FormationComparisonMetric | null = winLead ? 'win-share' : scoreLead ? 'score-delta' : null;
   const direction = winLead ?? scoreLead;
   if (!decisiveMetric || !direction) return summary(group.id, 'sub-threshold', null, null, 0, [], [
-    'No pooled interval meets both the statistical and practical threshold.',
+    'At least one pooled effect is statistically clear but remains below its practical threshold.',
   ], pooled, cells);
 
   const neutral = decisiveMetric === 'win-share' ? .5 : 0;
-  const intervals = cellReports.map(report => decisiveMetric === 'win-share' ? report.skillGap.winShareInterval! : report.skillGap.scoreDeltaInterval!);
+  const intervals = validReports.map(report => decisiveMetric === 'win-share' ? report.skillGap.winShareInterval : report.skillGap.scoreDeltaInterval);
   const supportingCells = intervals.filter(cellInterval => direction === 'primary' ? cellInterval.mean > neutral : cellInterval.mean < neutral).length;
   const credibleCounters = intervals.flatMap((cellInterval, index) => {
     const isCounter = direction === 'primary' ? cellInterval.low <= neutral : cellInterval.high >= neutral;
@@ -206,13 +210,105 @@ export function summarizeFormationComparison(
   ], pooled, cells);
 }
 
+type ReportWithIntervals = MatchedAuditReport & {
+  skillGap: MatchedAuditReport['skillGap'] & { winShareInterval: BootstrapInterval; scoreDeltaInterval: BootstrapInterval };
+};
+
+function hasSkillGapIntervals(report: MatchedAuditReport): report is ReportWithIntervals {
+  return report.skillGap?.winShareInterval !== null && report.skillGap?.winShareInterval !== undefined
+    && report.skillGap?.scoreDeltaInterval !== null && report.skillGap?.scoreDeltaInterval !== undefined;
+}
+
+function validateCellReport(cell: FormationExpansionCell | undefined, report: MatchedAuditReport, cellId: string): string[] {
+  const reasons: string[] = [];
+  if (report.requestedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) reasons.push(`${cellId} requested ${report.requestedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+  if (report.completedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) reasons.push(`${cellId} completed ${report.completedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+  if (report.excludedPairs) reasons.push(`${cellId} excluded ${report.excludedPairs} pairs.`);
+  if (report.completedPairs + report.excludedPairs !== report.requestedPairs) reasons.push(`${cellId} completed-plus-excluded pairs do not equal requested pairs.`);
+  if (report.attemptedGames !== FORMATION_EXPANSION_PAIRS_PER_CELL * 2) reasons.push(`${cellId} attempted ${report.attemptedGames} games; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL * 2}.`);
+  const statusTotal = report.statusCounts.completed + report.statusCounts.stalled + report.statusCounts.crashed;
+  if (statusTotal !== report.attemptedGames) reasons.push(`${cellId} status counts total ${statusTotal} games; expected ${report.attemptedGames}.`);
+  if (report.statusCounts.stalled) reasons.push(`${cellId} recorded ${report.statusCounts.stalled} stalled ${plural(report.statusCounts.stalled, 'game')}.`);
+  if (report.statusCounts.crashed) reasons.push(`${cellId} recorded ${report.statusCounts.crashed} crashed ${plural(report.statusCounts.crashed, 'game')}.`);
+  if (report.anomalies.length) {
+    reasons.push(`${cellId} recorded ${report.anomalies.length} ${plural(report.anomalies.length, 'anomaly', 'anomalies')}.`);
+    report.anomalies.forEach(anomaly => reasons.push(`${cellId} anomaly ${anomaly.type}: ${anomaly.message}`));
+  }
+  if (report.telemetry.completion.games !== report.completedPairs * 2) reasons.push(`${cellId} completion telemetry records ${report.telemetry.completion.games} games; expected ${report.completedPairs * 2}.`);
+  if (report.seedConvention !== 'base-seed-plus-pair-index') reasons.push(`${cellId} seed convention is ${String(report.seedConvention)}; expected base-seed-plus-pair-index.`);
+  if (cell && (report.seedRange.first !== cell.seedRange.first || report.seedRange.last !== cell.seedRange.last)) reasons.push(`${cellId} seed range ${report.seedRange.first}-${report.seedRange.last} does not match ${cell.seedRange.first}-${cell.seedRange.last}.`);
+  if (report.matchup.primary !== 'heuristic' || report.matchup.comparison !== 'heuristic') reasons.push(`${cellId} matchup policies do not match heuristic/heuristic.`);
+  if (cell && !sameFormationPlan(report.matchup.formationPlan, cell)) reasons.push(`${cellId} formation plan does not match the cell plans.`);
+  const winEffectsValid = validateEffects(reasons, cellId, 'win-share', report.skillGap?.pairEffects, true);
+  const scoreEffectsValid = validateEffects(reasons, cellId, 'score-delta', report.skillGap?.scoreDeltaEffects, false);
+  validateInterval(reasons, cellId, 'win-share', report.skillGap?.winShareInterval, cell?.bootstrapSeed, winEffectsValid ? report.skillGap.pairEffects : undefined);
+  validateInterval(reasons, cellId, 'score-delta', report.skillGap?.scoreDeltaInterval, cell?.bootstrapSeed, scoreEffectsValid ? report.skillGap.scoreDeltaEffects : undefined);
+  return reasons;
+}
+
+function validateEffects(reasons: string[], cellId: string, label: string, effects: number[] | undefined, boundedWinShare: boolean): boolean {
+  const length = Array.isArray(effects) ? effects.length : 0;
+  if (length !== FORMATION_EXPANSION_PAIRS_PER_CELL) reasons.push(`${cellId} contains ${length} ${label} effects; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
+  const finite = Array.isArray(effects) && effects.every(Number.isFinite);
+  if (!finite) reasons.push(`${cellId} contains a nonfinite ${label} effect.`);
+  const inRange = !boundedWinShare || (Array.isArray(effects) && effects.every(value => value >= 0 && value <= 1));
+  if (!inRange) reasons.push(`${cellId} contains a win-share effect outside 0-1.`);
+  return length === FORMATION_EXPANSION_PAIRS_PER_CELL && finite && inRange;
+}
+
+function validateInterval(
+  reasons: string[],
+  cellId: string,
+  label: string,
+  interval: BootstrapInterval | null | undefined,
+  bootstrapSeed: number | undefined,
+  effects: number[] | undefined,
+): void {
+  if (!interval) {
+    reasons.push(`${cellId} is missing its ${label} interval.`);
+    return;
+  }
+  if (![interval.low, interval.high, interval.mean].every(Number.isFinite) || interval.low > interval.mean || interval.mean > interval.high) reasons.push(`${cellId} ${label} interval bounds are invalid.`);
+  if (bootstrapSeed !== undefined && interval.seed !== bootstrapSeed) reasons.push(`${cellId} ${label} interval bootstrap seed is ${interval.seed}; expected ${bootstrapSeed}.`);
+  if (interval.samples !== FORMATION_EXPANSION_BOOTSTRAP.samples) reasons.push(`${cellId} ${label} interval bootstrap samples are ${interval.samples}; expected ${FORMATION_EXPANSION_BOOTSTRAP.samples}.`);
+  if (interval.confidence !== FORMATION_EXPANSION_BOOTSTRAP.confidence) reasons.push(`${cellId} ${label} interval bootstrap confidence is ${interval.confidence}; expected ${FORMATION_EXPANSION_BOOTSTRAP.confidence}.`);
+  if (effects && bootstrapSeed !== undefined) {
+    const expected = pairedBootstrapInterval(effects, { seed: bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP });
+    if (!sameIntervalValues(interval, expected)) reasons.push(`${cellId} ${label} interval does not match its effects.`);
+  }
+}
+
+function sameIntervalValues(actual: BootstrapInterval, expected: BootstrapInterval): boolean {
+  return Math.abs(actual.low - expected.low) <= 1e-12
+    && Math.abs(actual.high - expected.high) <= 1e-12
+    && Math.abs(actual.mean - expected.mean) <= 1e-12;
+}
+
+function sameFormationPlan(plan: MatchedAuditReport['matchup']['formationPlan'] | unknown, cell: FormationExpansionCell): boolean {
+  if (!plan || typeof plan !== 'object') return false;
+  const candidate = plan as Partial<Record<'home' | 'away', Partial<Record<'offense' | 'defense', unknown>>>>;
+  return candidate.home?.offense === cell.primaryPlan.offense && candidate.home?.defense === cell.primaryPlan.defense
+    && candidate.away?.offense === cell.comparisonPlan.offense && candidate.away?.defense === cell.comparisonPlan.defense;
+}
+
 function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return count === 1 ? singular : pluralForm;
 }
 
-function actionableLead(interval: BootstrapInterval, neutral: number, practicalDifference: number): FormationComparisonDirection | null {
-  if (interval.low > neutral && interval.mean >= neutral + practicalDifference) return 'primary';
-  if (interval.high < neutral && interval.mean <= neutral - practicalDifference) return 'comparison';
+function statisticalLead(interval: Readonly<BootstrapInterval>, neutral: number): FormationComparisonDirection | null {
+  if (interval.low > neutral) return 'primary';
+  if (interval.high < neutral) return 'comparison';
+  return null;
+}
+
+function practicalLead(
+  interval: Readonly<BootstrapInterval>,
+  neutral: number,
+  practicalDifference: number,
+  direction: FormationComparisonDirection | null,
+): FormationComparisonDirection | null {
+  if (direction === 'primary' && interval.mean >= neutral + practicalDifference) return direction;
+  if (direction === 'comparison' && interval.mean <= neutral - practicalDifference) return direction;
   return null;
 }
 
@@ -227,17 +323,24 @@ function compactCellReport(cell: FormationExpansionCell, report: MatchedAuditRep
     excludedPairs: report?.excludedPairs ?? cell.pairs,
     attemptedGames: report?.attemptedGames ?? 0,
     seedConvention: report?.seedConvention ?? 'base-seed-plus-pair-index',
-    seedRange: report?.seedRange ?? cell.seedRange,
+    seedRange: Object.freeze({ ...(report?.seedRange ?? cell.seedRange) }),
     bootstrap: Object.freeze({ seed: cell.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }),
-    statusCounts: report?.statusCounts ?? { completed: 0, stalled: 0, crashed: 0 },
+    statusCounts: Object.freeze({ ...(report?.statusCounts ?? { completed: 0, stalled: 0, crashed: 0 }) }),
     anomalyCount: report?.anomalies.length ?? 0,
-    completion: report?.telemetry.completion ?? { games: 0, actions: 0, averageActions: null },
+    completion: Object.freeze({ ...(report?.telemetry.completion ?? { games: 0, actions: 0, averageActions: null }) }),
     primaryWins: report?.skillGap.primaryWins ?? 0,
     comparisonWins: report?.skillGap.comparisonWins ?? 0,
     ties: report?.skillGap.ties ?? 0,
-    winShareInterval: report?.skillGap.winShareInterval ?? null,
-    scoreDeltaInterval: report?.skillGap.scoreDeltaInterval ?? null,
+    winShareInterval: cloneInterval(report?.skillGap.winShareInterval),
+    scoreDeltaInterval: cloneInterval(report?.skillGap.scoreDeltaInterval),
   });
+}
+
+function cloneInterval(interval: BootstrapInterval): Readonly<BootstrapInterval>;
+function cloneInterval(interval: null | undefined): null;
+function cloneInterval(interval: BootstrapInterval | null | undefined): Readonly<BootstrapInterval> | null;
+function cloneInterval(interval: BootstrapInterval | null | undefined): Readonly<BootstrapInterval> | null {
+  return interval ? Object.freeze({ ...interval }) : null;
 }
 
 function summary(
@@ -258,7 +361,7 @@ export function canonicalFormationExpansionArtifact(
   groups: readonly FormationExpansionExperiment[],
   summaries: readonly FormationComparisonSummary[],
 ) {
-  return {
+  return deepFreeze({
     schema: 'chessball-formation-expansion-audit-v1' as const,
     runner: 'scripts/run-formation-expansion-audit.ts',
     command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
@@ -280,7 +383,7 @@ export function canonicalFormationExpansionArtifact(
       reports: summaries[index]?.cells ?? [],
       summary: summaries[index] ? omitCells(summaries[index]) : null,
     })),
-  };
+  });
 }
 
 function omitCells(value: FormationComparisonSummary): Omit<FormationComparisonSummary, 'cells'> {
@@ -289,6 +392,19 @@ function omitCells(value: FormationComparisonSummary): Omit<FormationComparisonS
 }
 
 export type FormationExpansionArtifact = ReturnType<typeof canonicalFormationExpansionArtifact>;
+
+export type DeepReadonly<T> = T extends (...args: never[]) => unknown ? T
+  : T extends readonly (infer Item)[] ? readonly DeepReadonly<Item>[]
+    : T extends object ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+      : T;
+
+function deepFreeze<T>(value: T): DeepReadonly<T> {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.values(value as Record<string, unknown>).forEach(nested => deepFreeze(nested));
+    Object.freeze(value);
+  }
+  return value as DeepReadonly<T>;
+}
 
 export function serializeFormationExpansionArtifact(artifact: FormationExpansionArtifact): string {
   return `${JSON.stringify(artifact, null, 2)}\n`;

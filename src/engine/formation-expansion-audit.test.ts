@@ -8,6 +8,7 @@ import {
   FORMATION_EXPANSION_BOOTSTRAP,
   FORMATION_EXPANSION_PAIRS_PER_CELL,
   FORMATION_EXPANSION_THRESHOLDS,
+  type FormationExpansionCell,
   formationExpansionAuditOutput,
   formationExpansionExperiments,
   serializeFormationExpansionArtifact,
@@ -31,23 +32,25 @@ const expectedGroups = [
   ['defense-pressure-vs-deep-shell', 'Pressure vs Deep Shell', 'defense', 'pressure', 'deep-shell'],
 ] as const;
 
-function interval(value: number, neutral: number, seed = 1): BootstrapInterval {
+function interval(value: number, seed = 1): BootstrapInterval {
   return { low: value, high: value, mean: value, seed, samples: 10_000, confidence: .95 };
 }
 
-function syntheticReport(win: number, score = 0, overrides: Partial<MatchedAuditReport> = {}): MatchedAuditReport {
+function syntheticReport(win: number, score = 0, overrides: Partial<MatchedAuditReport> = {}, cell?: FormationExpansionCell): MatchedAuditReport {
   const pairEffects = Array(100).fill(win);
   const scoreDeltaEffects = Array(100).fill(score);
+  const seedRange = cell?.seedRange ?? { first: 0, last: 99 };
+  const bootstrapSeed = cell?.bootstrapSeed ?? 1;
   return {
-    matchup: { primary: 'heuristic', comparison: 'heuristic', formationPlan: null },
+    matchup: { primary: 'heuristic', comparison: 'heuristic', formationPlan: cell ? { home: cell.primaryPlan, away: cell.comparisonPlan } : null },
     requestedPairs: 100, completedPairs: 100, excludedPairs: 0, attemptedGames: 200,
-    seedConvention: 'base-seed-plus-pair-index', seedList: Array.from({ length: 100 }, (_, index) => index), seedRange: { first: 0, last: 99 },
+    seedConvention: 'base-seed-plus-pair-index', seedList: Array.from({ length: 100 }, (_, index) => seedRange.first + index), seedRange: { ...seedRange },
     statusCounts: { completed: 200, stalled: 0, crashed: 0 }, excludedPairDetails: [], anomalies: [],
-    symmetry: { pairEffects: Array(100).fill(.5), scoreDeltaEffects: Array(100).fill(0), winShareInterval: interval(.5, .5), scoreDeltaInterval: interval(0, 0), classification: 'inconclusive' },
+    symmetry: { pairEffects: Array(100).fill(.5), scoreDeltaEffects: Array(100).fill(0), winShareInterval: interval(.5, bootstrapSeed), scoreDeltaInterval: interval(0, bootstrapSeed), classification: 'inconclusive' },
     skillGap: {
       pairEffects, scoreDeltaEffects, primaryWins: 0, comparisonWins: 0, ties: 200,
-      winShareInterval: interval(win, .5), scoreDeltaInterval: interval(score, 0),
-      classification: { state: win > .5 ? 'supported' : 'inconclusive', effect: win - .5, interval: interval(win, .5) },
+      winShareInterval: interval(win, bootstrapSeed), scoreDeltaInterval: interval(score, bootstrapSeed),
+      classification: { state: win > .5 ? 'supported' : 'inconclusive', effect: win - .5, interval: interval(win, bootstrapSeed) },
     },
     telemetry: { actionTypes: { total: 0 }, actionOpportunities: { total: 0 }, formationChoices: { total: 0 }, driveOutcomes: { total: 0 }, selectionRates: {}, formationStratifiedOutcomes: {}, tacticCohorts: {}, completion: { games: 200, actions: 2_000, averageActions: 10 } },
     ...overrides,
@@ -55,7 +58,23 @@ function syntheticReport(win: number, score = 0, overrides: Partial<MatchedAudit
 }
 
 function reportsFor(values: number[], scores: number[] = Array(6).fill(0)): MatchedAuditReport[] {
-  return values.map((value, index) => syntheticReport(value, scores[index]));
+  return reportsForGroup(formationExpansionExperiments()[0], values, scores);
+}
+
+function reportsForGroup(group: ReturnType<typeof formationExpansionExperiments>[number], values: number[], scores: number[] = Array(6).fill(0)): MatchedAuditReport[] {
+  return values.map((value, index) => syntheticReport(value, scores[index], {}, group.cells[index]));
+}
+
+function setCellEffects(report: MatchedAuditReport, cell: FormationExpansionCell, metric: 'win' | 'score', effects: readonly number[]): void {
+  const values = [...effects];
+  const computed = pairedBootstrapInterval(values, { seed: cell.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP });
+  if (metric === 'win') {
+    report.skillGap.pairEffects = values;
+    report.skillGap.winShareInterval = computed;
+  } else {
+    report.skillGap.scoreDeltaEffects = values;
+    report.skillGap.scoreDeltaInterval = computed;
+  }
 }
 
 describe('formation expansion experiment matrix', () => {
@@ -145,7 +164,7 @@ describe('formation comparison pooling and classification', () => {
 
   it('classifies incomplete data before considering dominance', () => {
     const reports = reportsFor(Array(6).fill(.8));
-    reports[2] = syntheticReport(.8, 0, { completedPairs: 99, excludedPairs: 1, statusCounts: { completed: 198, stalled: 2, crashed: 0 } });
+    reports[2] = syntheticReport(.8, 0, { completedPairs: 99, excludedPairs: 1, statusCounts: { completed: 198, stalled: 2, crashed: 0 } }, group().cells[2]);
     expect(summarizeFormationComparison(group(), reports)).toMatchObject({ classification: 'incomplete', direction: null, decisiveMetric: null });
   });
 
@@ -153,22 +172,22 @@ describe('formation comparison pooling and classification', () => {
     ['missing cell', () => reportsFor(Array(5).fill(.8)), /Expected 6 cell reports; received 5/i],
     ['crash status', () => {
       const reports = reportsFor(Array(6).fill(.8));
-      reports[1] = syntheticReport(.8, 0, { statusCounts: { completed: 199, stalled: 0, crashed: 1 } });
+      reports[1] = syntheticReport(.8, 0, { statusCounts: { completed: 199, stalled: 0, crashed: 1 } }, group().cells[1]);
       return reports;
     }, /recorded 1 crashed game/i],
     ['anomaly', () => {
       const reports = reportsFor(Array(6).fill(.8));
-      reports[1] = syntheticReport(.8, 0, { anomalies: [{ type: 'exception', message: 'synthetic', actionIndex: 1, phase: 'coinToss', recentActions: [], pair: 0, mirror: 'A', seed: 1 }] });
+      reports[1] = syntheticReport(.8, 0, { anomalies: [{ type: 'exception', message: 'synthetic', actionIndex: 1, phase: 'coinToss', recentActions: [], pair: 0, mirror: 'A', seed: 1 }] }, group().cells[1]);
       return reports;
     }, /recorded 1 anomal/i],
     ['completed-pair count', () => {
       const reports = reportsFor(Array(6).fill(.8));
-      reports[1] = syntheticReport(.8, 0, { completedPairs: 99 });
+      reports[1] = syntheticReport(.8, 0, { completedPairs: 99 }, group().cells[1]);
       return reports;
     }, /completed 99 pairs; expected 100/i],
     ['stall status', () => {
       const reports = reportsFor(Array(6).fill(.8));
-      reports[1] = syntheticReport(.8, 0, { statusCounts: { completed: 199, stalled: 1, crashed: 0 } });
+      reports[1] = syntheticReport(.8, 0, { statusCounts: { completed: 199, stalled: 1, crashed: 0 } }, group().cells[1]);
       return reports;
     }, /recorded 1 stalled game/i],
     ['wrong pool length', () => {
@@ -184,6 +203,30 @@ describe('formation comparison pooling and classification', () => {
 
   it('classifies statistically visible but practically small effects as sub-threshold', () => {
     expect(summarizeFormationComparison(group(), reportsFor(Array(6).fill(.53), Array(6).fill(.5)))).toMatchObject({ classification: 'sub-threshold', direction: null, decisiveMetric: null });
+  });
+
+  it.each([
+    ['positive win share', 'win', [...Array(51).fill(1), ...Array(49).fill(0)]],
+    ['negative win share', 'win', [...Array(49).fill(1), ...Array(51).fill(0)]],
+    ['positive score delta', 'score', [...Array(50).fill(10), ...Array(50).fill(-9.8)]],
+    ['negative score delta', 'score', [...Array(50).fill(-10), ...Array(50).fill(9.8)]],
+  ] as const)('classifies a %s point estimate as inconclusive when its interval includes neutral', (_case, metric, effects) => {
+    const reports = reportsFor(Array(6).fill(.5));
+    reports.forEach((report, index) => setCellEffects(report, group().cells[index], metric, effects));
+    const summary = summarizeFormationComparison(group(), reports);
+    expect(summary).toMatchObject({ classification: 'inconclusive', direction: null, decisiveMetric: null });
+    expect(summary.reasons).toEqual([expect.stringMatching(/neither pooled 95% interval excludes neutral/i)]);
+  });
+
+  it.each([
+    ['positive win share', .53, 0],
+    ['negative win share', .47, 0],
+    ['positive score delta', .5, .5],
+    ['negative score delta', .5, -.5],
+  ] as const)('classifies a statistically clear but practically small %s as sub-threshold', (_case, win, score) => {
+    const summary = summarizeFormationComparison(group(), reportsFor(Array(6).fill(win), Array(6).fill(score)));
+    expect(summary).toMatchObject({ classification: 'sub-threshold', direction: null, decisiveMetric: null });
+    expect(summary.reasons).toEqual([expect.stringMatching(/statistically clear.*below.*practical threshold/i)]);
   });
 
   it('refuses dominance when actionable metrics point in conflicting directions', () => {
@@ -206,12 +249,19 @@ describe('formation comparison pooling and classification', () => {
   });
 
   it('includes an exact comparison-favored five-point win-share difference', () => {
-    const reports = Array.from({ length: 6 }, () => {
-      const report = syntheticReport(.45);
-      report.skillGap.pairEffects = [...Array(90).fill(.5), ...Array(10).fill(0)];
+    const reports = reportsFor(Array(6).fill(.45)).map((report, index) => {
+      setCellEffects(report, group().cells[index], 'win', [...Array(90).fill(.5), ...Array(10).fill(0)]);
       return report;
     });
     expect(summarizeFormationComparison(group(), reports)).toMatchObject({ classification: 'broad-dominance', direction: 'comparison', decisiveMetric: 'win-share' });
+  });
+
+  it('includes an exact primary-favored five-point win-share difference', () => {
+    const reports = reportsFor(Array(6).fill(.55)).map((report, index) => {
+      setCellEffects(report, group().cells[index], 'win', [...Array(90).fill(.5), ...Array(10).fill(1)]);
+      return report;
+    });
+    expect(summarizeFormationComparison(group(), reports)).toMatchObject({ classification: 'broad-dominance', direction: 'primary', decisiveMetric: 'win-share' });
   });
 
   it.each([
@@ -229,12 +279,50 @@ describe('formation comparison pooling and classification', () => {
     expect(summary.credibleCounters).toEqual([group().cells[4].id, group().cells[5].id]);
     expect(summary.reasons[0]).toMatch(/2 opposing cell interval/i);
   });
+
+  it.each([
+    ['null win interval', (report: MatchedAuditReport) => { report.skillGap.winShareInterval = null; }, /missing its win-share interval/i],
+    ['null score interval', (report: MatchedAuditReport) => { report.skillGap.scoreDeltaInterval = null; }, /missing its score-delta interval/i],
+    ['nonfinite win effect', (report: MatchedAuditReport) => { report.skillGap.pairEffects[0] = Number.NaN; }, /nonfinite win-share effect/i],
+    ['missing score effect', (report: MatchedAuditReport) => { report.skillGap.scoreDeltaEffects[0] = undefined as unknown as number; }, /nonfinite score-delta effect/i],
+    ['requested relationship', (report: MatchedAuditReport) => { report.requestedPairs = 99; }, /requested 99 pairs; expected 100/i],
+    ['attempted relationship', (report: MatchedAuditReport) => { report.attemptedGames = 199; }, /attempted 199 games; expected 200/i],
+    ['status total', (report: MatchedAuditReport) => { report.statusCounts.completed = 199; }, /status counts total 199 games; expected 200/i],
+    ['completion games', (report: MatchedAuditReport) => { report.telemetry.completion.games = 199; }, /completion telemetry records 199 games; expected 200/i],
+    ['seed convention', (report: MatchedAuditReport) => { report.seedConvention = 'wrong' as MatchedAuditReport['seedConvention']; }, /seed convention.*wrong/i],
+    ['seed range', (report: MatchedAuditReport) => { report.seedRange.first++; }, /seed range.*does not match/i],
+    ['win bootstrap seed', (report: MatchedAuditReport) => { report.skillGap.winShareInterval!.seed++; }, /win-share interval bootstrap seed/i],
+    ['score bootstrap samples', (report: MatchedAuditReport) => { report.skillGap.scoreDeltaInterval!.samples--; }, /score-delta interval bootstrap samples/i],
+    ['win bootstrap confidence', (report: MatchedAuditReport) => { report.skillGap.winShareInterval!.confidence = .9; }, /win-share interval bootstrap confidence/i],
+    ['effect length', (report: MatchedAuditReport) => { report.skillGap.scoreDeltaEffects.pop(); }, /contains 99 score-delta effects/i],
+    ['out-of-range win effect', (report: MatchedAuditReport) => { report.skillGap.pairEffects[0] = 1.01; }, /win-share effect outside 0-1/i],
+    ['interval/effect mismatch', (report: MatchedAuditReport) => { report.skillGap.winShareInterval!.low -= .01; }, /win-share interval does not match its effects/i],
+    ['matchup policy', (report: MatchedAuditReport) => { (report.matchup as { primary: 'heuristic' | 'random' }).primary = 'random'; }, /matchup policies do not match heuristic/i],
+    ['missing formation plan', (report: MatchedAuditReport) => { (report.matchup as { formationPlan: MatchedAuditReport['matchup']['formationPlan'] }).formationPlan = null; }, /formation plan does not match/i],
+    ['partial formation plan', (report: MatchedAuditReport) => { (report.matchup as { formationPlan: unknown }).formationPlan = { home: { offense: 'pistol', defense: '4-3' } }; }, /formation plan does not match/i],
+    ['formation plan', (report: MatchedAuditReport) => { (report.matchup as { formationPlan: MatchedAuditReport['matchup']['formationPlan'] }).formationPlan = { home: { offense: 'wrong', defense: '4-3' }, away: { offense: 'singleback', defense: '4-3' } }; }, /formation plan does not match/i],
+  ])('classifies malformed %s data as incomplete without throwing', (_case, mutate, expectedReason) => {
+    const reports = reportsFor(Array(6).fill(.7));
+    mutate(reports[0]);
+    let summary: ReturnType<typeof summarizeFormationComparison> | undefined;
+    expect(() => { summary = summarizeFormationComparison(group(), reports); }).not.toThrow();
+    expect(summary).toMatchObject({ classification: 'incomplete', direction: null, decisiveMetric: null });
+    expect(summary!.reasons).toEqual(expect.arrayContaining([expect.stringMatching(expectedReason)]));
+  });
+
+  it('includes anomaly details in incomplete reasons', () => {
+    const reports = reportsFor(Array(6).fill(.7));
+    reports[0].anomalies.push({ type: 'exception', message: 'synthetic failure', actionIndex: 1, phase: 'coinToss', recentActions: [], pair: 0, mirror: 'A', seed: 1 });
+    const summary = summarizeFormationComparison(group(), reports);
+    expect(summary.classification).toBe('incomplete');
+    expect(summary.reasons).toEqual(expect.arrayContaining([expect.stringMatching(/exception: synthetic failure/i)]));
+  });
 });
 
 describe('formation expansion artifact', () => {
   it('serializes the complete v1 schema deterministically without raw pair arrays', () => {
     const groups = formationExpansionExperiments();
-    const summaries = groups.map(group => summarizeFormationComparison(group, reportsFor(Array(6).fill(.5))));
+    const summaries = groups.map(group => summarizeFormationComparison(group, reportsForGroup(group, Array(6).fill(.5))));
     const artifact = canonicalFormationExpansionArtifact(groups, summaries);
     expect(artifact).toMatchObject({
       schema: 'chessball-formation-expansion-audit-v1',
@@ -244,7 +332,7 @@ describe('formation expansion artifact', () => {
       maxActions: 5_000, pairsPerCell: 100, totalRequestedPairs: 7_200,
       bootstrap: FORMATION_EXPANSION_BOOTSTRAP,
       thresholds: FORMATION_EXPANSION_THRESHOLDS,
-      groups: expect.arrayContaining([expect.objectContaining({ cells: expect.any(Array), summary: expect.objectContaining({ classification: 'sub-threshold' }) })]),
+      groups: expect.arrayContaining([expect.objectContaining({ cells: expect.any(Array), summary: expect.objectContaining({ classification: 'inconclusive' }) })]),
     });
     const serialized = serializeFormationExpansionArtifact(artifact);
     expect(serialized).toBe(serializeFormationExpansionArtifact(canonicalFormationExpansionArtifact(groups, summaries)));
@@ -256,7 +344,7 @@ describe('formation expansion artifact', () => {
 
   it('protects every durable configuration, cell report, and pooled decision field', () => {
     const groups = formationExpansionExperiments();
-    const reportsByGroup = groups.map(() => reportsFor(Array(6).fill(.5), [2, 2, 2, 2, -1, -1]));
+    const reportsByGroup = groups.map(group => reportsForGroup(group, Array(6).fill(.5), [2, 2, 2, 2, -1, -1]));
     const summaries = groups.map((group, index) => summarizeFormationComparison(group, reportsByGroup[index]));
     const artifact = canonicalFormationExpansionArtifact(groups, summaries);
     const firstGroup = artifact.groups[0];
@@ -282,13 +370,13 @@ describe('formation expansion artifact', () => {
       id: firstCell.id, opposingFormationId: firstCell.opposingFormationId,
       primaryPlan: firstCell.primaryPlan, comparisonPlan: firstCell.comparisonPlan,
       requestedPairs: 100, completedPairs: 100, excludedPairs: 0, attemptedGames: 200,
-      seedConvention: 'base-seed-plus-pair-index', seedRange: { first: 0, last: 99 },
+      seedConvention: 'base-seed-plus-pair-index', seedRange: firstCell.seedRange,
       bootstrap: { seed: firstCell.bootstrapSeed, samples: 10_000, confidence: .95 },
       statusCounts: { completed: 200, stalled: 0, crashed: 0 }, anomalyCount: 0,
       completion: { games: 200, actions: 2_000, averageActions: 10 },
       primaryWins: 0, comparisonWins: 0, ties: 200,
-      winShareInterval: { low: .5, high: .5, mean: .5, seed: 1, samples: 10_000, confidence: .95 },
-      scoreDeltaInterval: { low: 2, high: 2, mean: 2, seed: 1, samples: 10_000, confidence: .95 },
+      winShareInterval: { low: .5, high: .5, mean: .5, seed: firstCell.bootstrapSeed, samples: 10_000, confidence: .95 },
+      scoreDeltaInterval: { low: 2, high: 2, mean: 2, seed: firstCell.bootstrapSeed, samples: 10_000, confidence: .95 },
     });
     expect(firstGroup.summary).toEqual({
       groupId: firstGroup.id, classification: 'credible-counter', direction: 'primary', decisiveMetric: 'score-delta', supportingCells: 4,
@@ -343,5 +431,38 @@ describe('formation expansion artifact', () => {
       return syntheticReport(.5);
     })).toThrow('Usage: npm exec vite-node scripts/run-formation-expansion-audit.ts');
     expect(calls).toBe(0);
+  });
+
+  it('deeply freezes summaries and artifacts without retaining report-owned values', () => {
+    const groups = formationExpansionExperiments();
+    const reports = reportsFor(Array(6).fill(.7), Array(6).fill(2));
+    const summary = summarizeFormationComparison(groups[0], reports);
+    const artifact = canonicalFormationExpansionArtifact(groups, [summary]);
+    const cell = summary.cells[0];
+    const original = {
+      status: cell.statusCounts.completed,
+      completion: cell.completion.games,
+      seed: cell.seedRange.first,
+      interval: cell.winShareInterval!.mean,
+      pooled: summary.pooled.winShareInterval!.mean,
+    };
+    expect(() => { (cell.statusCounts as { completed: number }).completed = -1; }).toThrow(TypeError);
+    expect(() => { (cell.completion as { games: number }).games = -1; }).toThrow(TypeError);
+    expect(() => { (cell.seedRange as { first: number }).first = -1; }).toThrow(TypeError);
+    expect(() => { (cell.winShareInterval as BootstrapInterval).mean = -1; }).toThrow(TypeError);
+    expect(() => { (summary.pooled.winShareInterval as BootstrapInterval).mean = -1; }).toThrow(TypeError);
+    expect(() => { (artifact.groups as unknown as unknown[]).push('mutation'); }).toThrow(TypeError);
+    expect(() => { (artifact.groups[0].summary!.reasons as unknown as string[]).push('mutation'); }).toThrow(TypeError);
+    reports[0].statusCounts.completed = -2;
+    reports[0].telemetry.completion.games = -2;
+    reports[0].seedRange.first = -2;
+    reports[0].skillGap.winShareInterval!.mean = -2;
+    expect({
+      status: cell.statusCounts.completed,
+      completion: cell.completion.games,
+      seed: cell.seedRange.first,
+      interval: cell.winShareInterval!.mean,
+      pooled: summary.pooled.winShareInterval!.mean,
+    }).toEqual(original);
   });
 });
