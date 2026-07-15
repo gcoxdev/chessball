@@ -6,7 +6,7 @@ Preserve Chessball's approachable hybrid of chess and American football while en
 
 ## Status
 
-in-progress
+done
 
 ## Subgoals
 
@@ -39,3 +39,4 @@ in-progress
 - 2026-07-12: Reopened UI quality for confirmed accessibility and mobile remediation.
 - 2026-07-13: Closed UI remediation after 342/342 tests, a successful production build, and direct-CDP desktop/mobile verification. All five branches are done; remaining recommendations are nonblocking validation or future design work.
 - 2026-07-14: Reopened Strategic Depth, Plausible Football, and UI Quality for a confirmed small formation expansion, field-goal distance clarification, non-deforming action badges, and wordmark polish.
+- 2026-07-14: Closed the playbook-polish pass after 418/418 tests, a successful 1,583-module production build, a complete 7,200-pair formation screen, and passing Chrome/CDP checks at 1440×900, 390×844, and 320×568. All five required branches are done; screen-reader, physical-device, and physical-board validation remain nonblocking recommendations rather than completed claims.
