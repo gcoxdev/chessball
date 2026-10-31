@@ -40,7 +40,10 @@ export function chooseComputerAction(game: GameState, legalActions: Action[], se
       const carrierMoves = legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
         action.type === 'move' && action.pieceId === carrier.id,
       );
-      return pickFromTopSeeded(carrierMoves.sort((a, b) => compareOffensiveMoves(game, a.to, b.to)), seed, 3) ?? null;
+      const move = pickFromTopSeeded(carrierMoves.sort((a, b) => compareOffensiveMoves(game, a.to, b.to)), seed, 3);
+      if (move) return move;
+      // A boxed-in returner can still use a teammate's action to continue play.
+      return pickSeeded(legalActions, seed) ?? null;
     }
 
     if (!game.conversion && game.down === 4 && fieldGoalAttempt(game.direction, carrier.coord).required <= 10) {

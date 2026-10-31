@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Play, RadioTower, RotateCcw, Settings, Shield, StepForward, X, Zap } from 'lucide-react';
 import {
   activeRoleCode,
+  isGoalToGo,
   applyAction,
   createGame,
   DRIVES_PER_TEAM_PER_QUARTER,
@@ -20,7 +21,8 @@ import type { Action, CoinFace, Coord, DiceRoll, Formation, FormationSide, GameS
 import { AccessibleBoard } from './ui/AccessibleBoard';
 import { Modal } from './ui/Modal';
 import { SettingsDialog } from './ui/SettingsDialog';
-import { loadPieceStyle, savePieceStyle } from './ui/settings';
+import { loadPieceStyle, savePieceStyle, loadMatchLength, saveMatchLength, type MatchLength } from './ui/settings';
+import { oddsText } from './ui/action-odds';
 import type { PieceStyle } from './ui/PieceToken';
 import { chooseComputerAction, type PlayerControl, type PlayerKind } from './engine/computer';
 export { chooseComputerAction } from './engine/computer';
@@ -45,9 +47,14 @@ type MatchProgress = {
 export const COMPUTER_ACTION_DELAY_MS = 120;
 
 export function App({ initialGame, initialPlayers }: { initialGame?: GameState; initialPlayers?: PlayerControl } = {}) {
+  const [matchLength, setMatchLength] = useState<MatchLength>(loadMatchLength);
+  const changeMatchLength = (length: MatchLength) => {
+    setMatchLength(length);
+    saveMatchLength(length);
+  };
   const initialEntry = useMemo<HistoryEntry>(() => ({
     id: 0,
-    game: initialGame ?? createPregameGame(),
+    game: initialGame ?? createPregameGame(loadMatchLength()),
     label: initialGame ? 'Initial setup.' : 'Pregame: choose player types, then press Start Game.',
   }), [initialGame]);
   const [history, setHistory] = useState<HistoryEntry[]>(() => [initialEntry]);
@@ -303,7 +310,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
 
   const reset = () => {
     if (isViewingHistory) return;
-    const pregame = createPregameGame();
+    const pregame = createPregameGame(matchLength);
     const label = 'Pregame: choose player types, then press Start Game.';
     setHistory([{ id: 0, game: pregame, label }]);
     setHistoryIndex(0);
@@ -323,7 +330,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const startGame = () => {
     if (isViewingHistory) return;
     if (game.phase !== 'pregame' && game.phase !== 'final') return;
-    const opening = createOpeningGame();
+    const opening = createOpeningGame(matchLength);
     const automaticCoinToss = bothComputers ? applyAction(opening, withDice({ type: 'coinToss' })) : opening;
     const next = automaticCoinToss.coinToss.winner
       ? applyAction(automaticCoinToss, { type: 'chooseKickoffChoice', team: automaticCoinToss.coinToss.winner, choice: 'receive' })
@@ -404,7 +411,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           <span>Game Progress</span>
           <strong>Drive {progress.completed} of {progress.total}</strong>
           <small>{progress.remaining} drives left</small>
-          <small>Q{game.quarter}: Home {game.drivesThisQuarter.home}/{DRIVES_PER_TEAM_PER_QUARTER}, Away {game.drivesThisQuarter.away}/{DRIVES_PER_TEAM_PER_QUARTER}</small>
+          <small>Q{game.quarter}: Home {game.drivesThisQuarter.home}/{game.drivesPerTeamPerQuarter}, Away {game.drivesThisQuarter.away}/{game.drivesPerTeamPerQuarter}</small>
         </div>
         <div className="down-card phase-card">
           <span>Phase</span>
@@ -477,20 +484,28 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                   <Flag size={17} /> Next
                 </button>
               </div>
+              {game.phase === 'betweenDowns' && game.play.result?.type === 'touchdown' && (
+                <p className="hint">Extra point: {oddsText(game, { type: 'kick', kind: 'extraPoint', kickerId: `${game.possession}-qb` })}</p>
+              )}
+              {game.phase === 'live' && !game.conversion && ballCarrier?.team === game.turn && (
+                <p className="hint">Field goal: {oddsText(game, { type: 'kick', kind: 'fieldGoal', kickerId: ballCarrier.id })}</p>
+              )}
               <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
               <div className="action-list">
                 {legalActions
                   .filter((action) => selectedPiece && actionForPiece(action, selectedPiece.id))
-                  .filter((action) => action.type !== 'move' && action.type !== 'shift' && action.type !== 'tackle' && action.type !== 'pass')
-                  .slice(0, 8)
+                  .filter((action) => targetMode !== 'pass' || action.type === 'pass')
+                  .filter((action) => action.type !== 'move' && action.type !== 'shift' && action.type !== 'tackle' && (action.type !== 'pass' || targetMode === 'pass'))
                   .map((action, index) => (
                     <button key={`${action.type}-${index}`} type="button" disabled={isViewingHistory} onClick={() => runAction(action)}>
                       <Zap size={15} /> {actionLabel(game, action)}
+                      <ActionOddsLabel game={game} action={action} />
                     </button>
                   ))}
                 {selectedPiece && (game.phase === 'live' || game.phase === 'kickReturn') && tackleActions(game, selectedPiece, legalActions).map((action) => (
                   <button key={`${action.defenderId}-${action.targetId}`} type="button" disabled={isViewingHistory} onClick={() => runAction(action)}>
                     <Shield size={15} /> {tackleLabel(game, action)}
+                    <ActionOddsLabel game={game} action={action} />
                   </button>
                 ))}
               </div>
@@ -519,7 +534,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               {showsScrimmageMarkers(game) && (
                 <>
                   <span className="marker-label scrimmage-label">Line of scrimmage {markerYardLabel(game, game.lineOfScrimmage)}</span>
-                  <span className="marker-label gain-label">Line to gain {markerYardLabel(game, game.firstDownLine)}</span>
+                  <span className="marker-label gain-label">{isGoalToGo(game) ? 'Goal to go' : `Line to gain ${markerYardLabel(game, game.firstDownLine)}`}</span>
                 </>
               )}
               <span>{isViewingHistory ? `Viewing history ${historyIndex + 1}/${history.length}` : `${game.turn.toUpperCase()} to act`}</span>
@@ -606,7 +621,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           fallbackFocus={workspaceHeadingRef}
         />
       )}
-      {showSettings && <SettingsDialog pieceStyle={pieceStyle} onPieceStyleChange={changePieceStyle} fallbackFocus={workspaceHeadingRef} onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsDialog pieceStyle={pieceStyle} onPieceStyleChange={changePieceStyle} matchLength={matchLength} onMatchLengthChange={changeMatchLength} fallbackFocus={workspaceHeadingRef} onClose={() => setShowSettings(false)} />}
       {showRules && <RulesDialog fallbackFocus={workspaceHeadingRef} onClose={() => setShowRules(false)} />}
       {showNewGameConfirmation && game.phase !== 'pregame' && (
         <Modal
@@ -697,12 +712,17 @@ function FinalResultModal({
         <p className="final-winner">{result}</p>
         <p className="final-score">Home {game.score.home} - Away {game.score.away}</p>
         <p>Final: Drive {progress.completed} of {progress.total}</p>
-        <p>Completed drives: Home {game.drivesThisQuarter.home}/{DRIVES_PER_TEAM_PER_QUARTER}, Away {game.drivesThisQuarter.away}/{DRIVES_PER_TEAM_PER_QUARTER} in Q{game.quarter}.</p>
+        <p>Completed drives: Home {game.drivesThisQuarter.home}/{game.drivesPerTeamPerQuarter}, Away {game.drivesThisQuarter.away}/{game.drivesPerTeamPerQuarter} in Q{game.quarter}.</p>
         <button type="button" onClick={onNewGame}>
           <RotateCcw size={17} /> New Game
         </button>
     </Modal>
   );
+}
+
+function ActionOddsLabel({ game, action }: { game: GameState; action: Action }) {
+  const text = oddsText(game, action);
+  return text ? <small className="action-odds">{text}</small> : null;
 }
 
 function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObject<HTMLElement | null>; onClose: () => void }) {
@@ -719,10 +739,10 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
         <p>A match starts with a coin toss and kickoff. Heads means Home wins; tails means Away wins. The winner chooses to kick or receive. Computer players choose to receive. A 2d6 roll means rolling two six-sided dice and adding their results.</p>
         <h3>Match and downs</h3>
         <ul>
-          <li>There are {QUARTERS_PER_MATCH} quarters, with no game clock. A quarter ends when both teams have reached {DRIVES_PER_TEAM_PER_QUARTER} completed drives. The match ends after the fourth quarter; equal scores remain a tie.</li>
+          <li>There are {QUARTERS_PER_MATCH} quarters, with no game clock. A quarter ends when both teams have reached {DRIVES_PER_TEAM_PER_QUARTER} completed drives in Standard matches, or 1 each in Short matches. Choose the length in Settings before starting a new match. The match ends after the fourth quarter; equal scores remain a tie.</li>
           <li>Home attacks right and Away attacks left throughout the match. Each field column represents 5 yards.</li>
           <li>Gain 10 yards in four downs by reaching the highlighted line to gain. Short gains and losses keep the same target for the next down. Reaching it earns first down and a new target two columns ahead; failing on fourth down turns the ball over.</li>
-          <li>Near an end zone, the line to gain is capped at the last field column. Reaching that column can still earn a first down; scoring requires entering the end zone.</li>
+          <li>When a new line to gain would reach or pass the end zone, it becomes goal-to-go. You must score within the remaining downs; reaching the last field column does not renew first down. Losses keep the goal-to-go target.</li>
           <li>Each normal down starts with formations. Choose and preview a preset, then confirm each side. After confirming, each team may use up to two shifts to highlighted adjacent orthogonal squares on its own side of the line. Confirm both sides before snapping; shifts are optional.</li>
           <li>The offense acts first after the snap, then teams alternate one action at a time. A stopped play waits for Next; a touchdown first requires a conversion choice.</li>
           <li>A normal drive ends with a field-goal attempt, punt, interception, strip turnover, turnover on downs, safety, or completed touchdown conversion. Drive counts update on Next. Kickoff returns do not consume a normal drive; a punt return completes the kicking team's drive.</li>
@@ -749,14 +769,14 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
         <h3>Kicking and returns</h3>
         <ul>
           <li>Kickoffs start from the kicking team's 35-yard line. Kickoffs and punts roll 2d6 for distance: each point moves the landing column 1 square, or 5 yards, from the kicker. The kicking team chooses the landing row on that column. Kicks beyond the board are capped at the farthest end-zone column.</li>
-          <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, use Recover. If the kicking team moves onto an untouched loose kick first, the play ends and the receiving team starts there.</li>
+          <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, use Recover. If the kicking team moves onto or recovers an untouched loose kick first, the play ends and the receiving team starts there. A normally tackled returner starts a fresh first down at the tackle spot, regardless of return yardage; a strip or safety still applies.</li>
           <li>During returns, every role can move within a square radius: receiving team up to 2 squares, coverage team up to 3. Teammates may be crossed, opponents block the path, and the destination must be empty. Only movement, tackles, and recovery are available; passing, handoffs, power moves, and further kicks wait until normal play.</li>
           <li>Punts and field goals may be attempted by the ball carrier on any normal live down. Punts proceed to placement and a possible return; field goals resolve immediately. Neither is allowed during a two-point try.</li>
           <li>A field goal measures through the ten-yard end zone to the posts at the back edge/end line. Roll 2d6 and meet or beat 5 + half that grid distance, rounded up. A made field goal scores 3; a miss turns possession over at the kick spot.</li>
         </ul>
         <h3>Scoring and restarts</h3>
         <ul>
-          <li>Moving the ball carrier into the opponent's end zone or completing a pass there scores a touchdown worth 6 points. A successful tackle of a carrier in their own end zone awards the defense a 2-point safety.</li>
+          <li>Moving the ball carrier into the opponent's end zone, completing a pass there, or handing off to a teammate there scores a touchdown worth 6 points. A successful tackle of a carrier in their own end zone awards the defense a 2-point safety.</li>
           <li>After a touchdown, choose an extra point kick or a two-point try. The extra point scores 1 on a 2d6 total of 5 or more. A two-point try starts with formations at the last field column before the opponent's end zone and scores 2 for reaching that end zone. An incomplete pass, interception, successful tackle, or strip ends the try without points; there is no second down and no kicking option.</li>
           <li>After the conversion, successful or not, the touchdown team kicks off. A made field goal also leads to a kickoff by the scoring team. After a safety, the team that allowed it kicks. These restarts can be replaced by halftime or the end of the match when both drive counts are complete.</li>
           <li>At halftime, the team that received the opening kickoff kicks to the other side.</li>
@@ -863,9 +883,10 @@ function ScoreCard({ label, score, active }: { label: string; score: number; act
   );
 }
 
-function createOpeningGame(): GameState {
+function createOpeningGame(length: MatchLength): GameState {
   return createGame({
     phase: 'coinToss',
+    drivesPerTeamPerQuarter: length === 'short' ? 1 : 2,
     possession: 'home',
     turn: 'home',
     openingKickoffTeam: 'home',
@@ -874,9 +895,10 @@ function createOpeningGame(): GameState {
   });
 }
 
-function createPregameGame(): GameState {
+function createPregameGame(length: MatchLength): GameState {
   return createGame({
     phase: 'pregame',
+    drivesPerTeamPerQuarter: length === 'short' ? 1 : 2,
     pieces: [],
     ball: { kind: 'loose', coord: { x: -1, y: -1 } },
     play: { actions: [] },
@@ -1084,7 +1106,7 @@ function squareClass(game: GameState, coord: Coord, piece: Piece | undefined, le
   const zone = fieldZone(coord);
   const classes = ['square', zone === 'field' ? 'field-zone' : zone];
   if (showsScrimmageMarkers(game) && coord.x === game.lineOfScrimmage) classes.push('scrimmage', game.direction === 1 ? 'scrimmage-forward' : 'scrimmage-backward');
-  if (showsScrimmageMarkers(game) && coord.x === game.firstDownLine) classes.push('first-down', game.direction === 1 ? 'first-down-forward' : 'first-down-backward');
+  if (showsScrimmageMarkers(game) && coord.x === (isGoalToGo(game) ? game.firstDownLine - game.direction : game.firstDownLine)) classes.push('first-down', game.direction === 1 ? 'first-down-forward' : 'first-down-backward');
   if (coord.x === 12) classes.push('midfield');
   if (coord.x >= 2 && coord.x <= 22) classes.push('five-yard-line');
   if (coord.x >= 2 && coord.x <= 22 && (coord.x - 2) % 2 === 0) classes.push('ten-yard-line');
@@ -1123,6 +1145,10 @@ function actionLabel(game: GameState, action: Action): string {
     return target
       ? `Handoff to ${target.team} ${activeRoleCode(game, target)} at ${coordLabel(target.coord)}`
       : `Handoff to ${action.toId.split('-')[1].toUpperCase()}`;
+  }
+  if (action.type === 'pass') {
+    const receiver = game.pieces.find(piece => piece.id === action.receiverId);
+    return receiver ? `Pass to ${activeRoleCode(game, receiver)} at ${coordLabel(receiver.coord)}` : 'Pass';
   }
   if (action.type === 'recover') return 'Recover ball';
   if (action.type === 'powerMove') return `Power move to ${coordLabel(action.to)}`;
@@ -1292,7 +1318,7 @@ function resultRoll(game: GameState): { total: number; required: number; distanc
 }
 
 function matchProgress(game: GameState): MatchProgress {
-  const drivesPerQuarter = DRIVES_PER_TEAM_PER_QUARTER * 2;
+  const drivesPerQuarter = game.drivesPerTeamPerQuarter * 2;
   const total = drivesPerQuarter * QUARTERS_PER_MATCH;
   const completedBeforeQuarter = (game.quarter - 1) * drivesPerQuarter;
   const completedThisQuarter = game.drivesThisQuarter.home + game.drivesThisQuarter.away;
@@ -1387,11 +1413,6 @@ function stoppedPreviousPossession(game: GameState): Team | undefined {
 
 function hideStoppedChangeOfPossessionBall(game: GameState): boolean {
   return stoppedPreviousPossession(game) !== undefined;
-}
-
-function isGoalToGo(game: GameState): boolean {
-  const nextColumn = game.firstDownLine + game.direction;
-  return isTouchdownSquare({ x: nextColumn, y: 0 }, game.direction);
 }
 
 function actionClearsSelection(action: Action): boolean {

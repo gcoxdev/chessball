@@ -603,3 +603,9 @@ describe('browser computer policy simulations', () => {
     expect(new Set(first.summary.formationSelections.away.defense)).toEqual(new Set(['deep-shell']));
   });
 });
+
+it('runs a complete short computer match through the same engine', () => {
+  const result = simulateGame({ seed: 1, policy: 'computer', drivesPerTeamPerQuarter: 1 });
+  expect(result.status).toBe('completed');
+  expect(result.anomalies).toEqual([]);
+});

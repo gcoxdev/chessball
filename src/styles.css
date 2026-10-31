@@ -1410,3 +1410,7 @@ button {
     min-height: 44px;
   }
 }
+
+.action-list button { flex-wrap: wrap; }
+.action-odds { flex-basis: 100%; font-size: 0.75rem; font-weight: normal; }
+.match-length-options { margin-top: 1.25rem; }

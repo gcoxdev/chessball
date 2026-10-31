@@ -1267,7 +1267,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows goal-to-go instead of a normal 10-yard distance at the goal line', () => {
-    render(<App initialGame={createGame({ lineOfScrimmage: 20, firstDownLine: 21 })} />);
+    render(<App initialGame={createGame({ lineOfScrimmage: 20 })} />);
 
     expect(within(screen.getByText('Down').closest('.down-card') as HTMLElement).getByText('1 & Goal')).toBeInTheDocument();
     expect(screen.queryByText('1 & 10')).not.toBeInTheDocument();

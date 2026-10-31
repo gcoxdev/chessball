@@ -109,6 +109,7 @@ export type GameState = {
   turn: Team;
   score: ScoreState;
   quarter: 1 | 2 | 3 | 4;
+  drivesPerTeamPerQuarter: 1 | 2;
   drivesThisQuarter: Record<Team, number>;
   openingKickoffTeam: Team;
   coinToss: CoinTossState;

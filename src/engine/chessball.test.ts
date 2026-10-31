@@ -1081,7 +1081,7 @@ describe('play resolution', () => {
     expect(next.possession).toBe('home');
     expect(next.conversion).toEqual({ team: 'home' });
     expect(next.lineOfScrimmage).toBe(21);
-    expect(next.firstDownLine).toBe(21);
+    expect(next.firstDownLine).toBe(22);
     expect(piece(next, 'home-qb').coord.x).toBe(20);
   });
 

@@ -3,6 +3,7 @@ import {
   createGame,
   defensiveFormations,
   fieldGoalAttempt,
+  firstDownTarget,
   generateLegalActions,
   gridDistance,
   isTouchdownSquare,
@@ -138,6 +139,7 @@ type BalanceAccumulator = {
 
 export type SimulateGameOptions = {
   seed: number;
+  drivesPerTeamPerQuarter?: 1 | 2;
   policy?: SimulationPolicy;
   policies?: TeamPolicies;
   maxActions?: number;
@@ -181,7 +183,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
     home: { offense: [], defense: [] },
     away: { offense: [], defense: [] },
   };
-  let state = createGame({ phase: 'coinToss', ball: { kind: 'loose', coord: { x: -1, y: -1 } } });
+  let state = createGame({ drivesPerTeamPerQuarter: options.drivesPerTeamPerQuarter ?? 2, phase: 'coinToss', ball: { kind: 'loose', coord: { x: -1, y: -1 } } });
   let status: SimulationStatus = 'completed';
   let actionIndex = 0;
 
@@ -336,6 +338,9 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 }
 
 function validateSimulationOptions(options: SimulateGameOptions): void {
+  if (options.drivesPerTeamPerQuarter !== undefined && options.drivesPerTeamPerQuarter !== 1 && options.drivesPerTeamPerQuarter !== 2) {
+    throw new Error('Drives per team per quarter must be 1 or 2');
+  }
   if (options.opening) {
     if (options.opening.coinWinner !== 'home' && options.opening.coinWinner !== 'away') {
       throw new Error(`Unsupported coin winner: ${String(options.opening.coinWinner)}`);
@@ -373,7 +378,7 @@ export function validateGameStateInvariants(state: GameState): string[] {
   const occupied = new Set<string>();
   const fieldStart = 2;
   const fieldEnd = state.board.width - 3;
-  const expectedFirstDownLine = clamp(state.lineOfScrimmage + 2 * state.direction, fieldStart, fieldEnd);
+  const expectedFirstDownLine = firstDownTarget(state.lineOfScrimmage, state.direction);
 
   for (const piece of state.pieces) {
     if (ids.has(piece.id)) errors.push(`Duplicate piece id ${piece.id}`);

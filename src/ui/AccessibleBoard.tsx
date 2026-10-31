@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { PieceToken, type PieceStyle } from './PieceToken';
+import { oddsText } from './action-odds';
 import { activeRoleCode } from '../engine/rules';
 import type { Action, Coord, GameState, Piece } from '../engine/types';
 import { chooseBoardFocus, describeBoardSquare, moveBoardFocus } from './board-accessibility';
@@ -105,6 +106,12 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
           const kickPlacement = props.game.phase === 'kickPlacement' && props.legalActions.some((action) =>
             action.type === 'placeKick' && sameCoord(action.at, coord),
           );
+          const rollAction = props.legalActions.find(action =>
+            (passTarget && action.type === 'pass' && action.passerId === props.selectedBallCarrier?.id && action.receiverId === piece?.id) ||
+            (!passTarget && tackleTarget && action.type === 'tackle' && action.defenderId === props.selectedPiece?.id && action.targetId === piece?.id) ||
+            (powerMove && action.type === 'powerMove' && action.pieceId === props.selectedPiece?.id && sameCoord(action.to, coord)),
+          );
+          const odds = rollAction ? oddsText(props.game, rollAction) : undefined;
           const selected = Boolean(piece && piece.id === props.selectedPiece?.id);
           const legal = legalMove || passTarget || kickPlacement;
           const stateClasses = [
@@ -129,6 +136,7 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
           });
           return (
             <button
+              aria-description={odds}
               aria-disabled={props.readOnly || undefined}
               aria-colindex={x + 1}
               aria-label={name}

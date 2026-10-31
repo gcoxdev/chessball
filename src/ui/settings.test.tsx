@@ -90,3 +90,38 @@ describe('player appearance settings', () => {
     expect(log).toHaveTextContent(/Computer home:/);
   });
 });
+
+it('saves match length independently and applies it to the next match only', () => {
+  const view = render(<App initialGame={createGame()} initialPlayers={humans} />);
+  expect(screen.getByText('Drive 0 of 16')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Short match' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Helmets' }));
+  expect(JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toEqual({ matchLength: 'short', pieceStyle: 'helmet' });
+  fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
+  expect(screen.getByText('Drive 0 of 16')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'New Game' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'New Game' })).getByRole('button', { name: 'Confirm' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+  expect(screen.getByText('Drive 0 of 8')).toBeInTheDocument();
+  expect(screen.getByText('Q1: Home 0/1, Away 0/1')).toBeInTheDocument();
+  view.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  expect(screen.getByRole('radio', { name: 'Short match' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: 'Helmets' })).toBeChecked();
+});
+
+it('shows pass odds before committing a pass', () => {
+  const game = createGame({ phase: 'live' });
+  render(<App initialGame={game} initialPlayers={humans} />);
+  const qb = game.pieces.find(piece => piece.id === 'home-qb')!;
+  fireEvent.click(screen.getByTitle(`${qb.coord.x},${qb.coord.y}`));
+  fireEvent.click(screen.getByRole('button', { name: 'Pass' }));
+  const passes = screen.getAllByRole('button', { name: /^Pass to .*% success/ });
+  expect(passes.length).toBeGreaterThan(0);
+  expect(screen.getByRole('img', { name: 'Ball: controlled by QB' })).toBeInTheDocument();
+  const targets = screen.getAllByRole('gridcell').filter(cell => cell.classList.contains('pass-target'));
+  expect(targets.length).toBe(passes.length);
+  expect(targets.every(cell => cell.getAttribute('aria-description')?.includes('% success'))).toBe(true);
+});
