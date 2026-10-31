@@ -67,6 +67,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const [targetMode, setTargetMode] = useState<TargetMode>(null);
   const [message, setMessage] = useState(initialGame ? 'Choose formations, shift up to two pieces per side, then snap.' : 'Choose player types, then press Start Game.');
   const [showRules, setShowRules] = useState(false);
+  const [largeBoard, setLargeBoard] = useState(false);
+  const boardScrollerRef = useRef<HTMLDivElement>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [pieceStyle, setPieceStyle] = useState<PieceStyle>(loadPieceStyle);
   const changePieceStyle = (style: PieceStyle) => {
@@ -115,6 +117,21 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     `Home ${game.score.home}, Away ${game.score.away}.`,
     historyAnnouncement,
   ].filter(Boolean).join(' ');
+
+  useEffect(() => {
+    const scroller = boardScrollerRef.current;
+    if (!scroller) return;
+    if (!largeBoard) {
+      scroller.scrollLeft = 0;
+      return;
+    }
+    const target = scroller.querySelector<HTMLElement>('.is-selected') ?? scroller.querySelector<HTMLElement>('.ball-square');
+    if (target) {
+      const cell = target.getBoundingClientRect();
+      const viewport = scroller.getBoundingClientRect();
+      scroller.scrollLeft += cell.left - viewport.left + cell.width / 2 - scroller.clientWidth / 2;
+    }
+  }, [largeBoard]);
 
   const pushEvent = (text: string) => {
     const entry = { id: eventId.current, text };
@@ -420,6 +437,98 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       </section>
 
       <section className="workspace">
+        <section
+          className="field-wrap"
+          aria-label="Chessball field"
+        >
+          <div className="field-toolbar">
+            <DicePanel roll={lastRoll} />
+            <div className="field-meta">
+              {showsScrimmageMarkers(game) && (
+                <>
+                  <span className="marker-label scrimmage-label">Line of scrimmage {markerYardLabel(game, game.lineOfScrimmage)}</span>
+                  <span className="marker-label gain-label">{isGoalToGo(game) ? 'Goal to go' : `Line to gain ${markerYardLabel(game, game.firstDownLine)}`}</span>
+                </>
+              )}
+              <span>{isViewingHistory ? `Viewing history ${historyIndex + 1}/${history.length}` : `${game.turn.toUpperCase()} to act`}</span>
+            </div>
+            <div className="board-view-controls" role="group" aria-label="Field size">
+              <button type="button" aria-pressed={!largeBoard} onClick={() => setLargeBoard(false)}>Fit field</button>
+              <button type="button" aria-pressed={largeBoard} onClick={() => setLargeBoard(true)}>Larger squares</button>
+            </div>
+            <p className="field-size-help" id="field-size-help">{largeBoard ? 'Swipe or scroll across the field.' : 'See the whole field. Enlarge for precise moves.'}</p>
+          </div>
+          <div className={`board-scroller${largeBoard ? ' is-enlarged' : ''}`} ref={boardScrollerRef}>
+            <AccessibleBoard
+              game={game}
+              pieceStyle={pieceStyle}
+              displayGame={boardGame}
+              legalActions={legalActions}
+              selectedPiece={selectedPiece}
+              selectedBallCarrier={selectedBallCarrier}
+              targetMode={targetMode}
+              ballCoord={ballCoord(game)}
+              showBallMarker={showBallMarker}
+              readOnly={isViewingHistory}
+              describedBy={isViewingHistory ? 'history-read-only field-size-help' : 'field-size-help'}
+              onSquareClick={onSquareClick}
+              squareClass={(coord, piece, legal, power, ball) => squareClass(game, coord, piece, legal, power, ball)}
+              renderYardTicks={(coord) => yardTicks(game, coord)}
+              renderYardMarker={(coord) => yardMarker(game, coord)}
+              ballLabel={ballLabel(boardGame)}
+            />
+          </div>
+          <section className="utility-bar" aria-label="Game setup">
+            <div className="utility-control-row">
+              <div className="utility-actions">
+                {game.phase === 'pregame' ? (
+                  <button type="button" disabled={isViewingHistory} onClick={startGame}>
+                    <Play size={17} /> Start Game
+                  </button>
+                ) : (
+                  <button type="button" disabled={isViewingHistory} onClick={openNewGameConfirmation}>
+                    <RotateCcw size={17} /> New Game
+                  </button>
+                )}
+                <button type="button" onClick={() => setShowRules(true)}>
+                  <BookOpen size={17} /> Rules
+                </button>
+                <button type="button" onClick={() => setShowSettings(true)}>
+                  <Settings size={17} /> Settings
+                </button>
+                {bothComputers && !computerMatchStarted && (
+                  <button type="button" disabled={isViewingHistory} onClick={startComputerMatch}>
+                    <Play size={17} /> Play Auto
+                  </button>
+                )}
+                {bothComputers && computerMatchStarted && game.phase !== 'final' && (
+                  <button
+                    className={autoPaused ? 'warning-button' : ''}
+                    type="button"
+                    disabled={isViewingHistory}
+                    onClick={() => {
+                      if (isViewingHistory) return;
+                      setAutoPaused((paused) => !paused);
+                      pushEvent(autoPaused ? 'Computer loop resumed.' : 'Computer loop paused.');
+                    }}
+                  >
+                    {autoPaused ? 'Resume Auto' : 'Pause Auto'}
+                  </button>
+                )}
+              </div>
+              <div className="utility-players">
+                <PlayerToggle team="home" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
+                <PlayerToggle team="away" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
+              </div>
+            </div>
+            <div className="utility-status-row">
+              {!showFormationPanel && !showCommandPanel && (
+                <p className="utility-selection">{selectedPiece ? `${activeRoleCode(game, selectedPiece)} selected.` : 'No piece selected.'}</p>
+              )}
+              <p className="utility-status">{message}</p>
+            </div>
+          </section>
+        </section>
         <aside className="control-rail" aria-label="Game controls">
           {showFormationPanel && (
             <div className="panel formation-panel">
@@ -523,94 +632,6 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
             onLatest={() => setHistoryIndex(history.length - 1)}
           />
         </aside>
-
-        <section
-          className="field-wrap"
-          aria-label="Chessball field"
-        >
-          <div className="field-toolbar">
-            <DicePanel roll={lastRoll} />
-            <div className="field-meta">
-              {showsScrimmageMarkers(game) && (
-                <>
-                  <span className="marker-label scrimmage-label">Line of scrimmage {markerYardLabel(game, game.lineOfScrimmage)}</span>
-                  <span className="marker-label gain-label">{isGoalToGo(game) ? 'Goal to go' : `Line to gain ${markerYardLabel(game, game.firstDownLine)}`}</span>
-                </>
-              )}
-              <span>{isViewingHistory ? `Viewing history ${historyIndex + 1}/${history.length}` : `${game.turn.toUpperCase()} to act`}</span>
-            </div>
-          </div>
-          <div className="board-scroller">
-            <AccessibleBoard
-              game={game}
-              pieceStyle={pieceStyle}
-              displayGame={boardGame}
-              legalActions={legalActions}
-              selectedPiece={selectedPiece}
-              selectedBallCarrier={selectedBallCarrier}
-              targetMode={targetMode}
-              ballCoord={ballCoord(game)}
-              showBallMarker={showBallMarker}
-              readOnly={isViewingHistory}
-              describedBy={isViewingHistory ? 'history-read-only' : undefined}
-              onSquareClick={onSquareClick}
-              squareClass={(coord, piece, legal, power, ball) => squareClass(game, coord, piece, legal, power, ball)}
-              renderYardTicks={(coord) => yardTicks(game, coord)}
-              renderYardMarker={(coord) => yardMarker(game, coord)}
-              ballLabel={ballLabel(boardGame)}
-            />
-          </div>
-          <section className="utility-bar" aria-label="Game setup">
-            <div className="utility-control-row">
-              <div className="utility-actions">
-                {game.phase === 'pregame' ? (
-                  <button type="button" disabled={isViewingHistory} onClick={startGame}>
-                    <Play size={17} /> Start Game
-                  </button>
-                ) : (
-                  <button type="button" disabled={isViewingHistory} onClick={openNewGameConfirmation}>
-                    <RotateCcw size={17} /> New Game
-                  </button>
-                )}
-                <button type="button" onClick={() => setShowRules(true)}>
-                  <BookOpen size={17} /> Rules
-                </button>
-                <button type="button" onClick={() => setShowSettings(true)}>
-                  <Settings size={17} /> Settings
-                </button>
-                {bothComputers && !computerMatchStarted && (
-                  <button type="button" disabled={isViewingHistory} onClick={startComputerMatch}>
-                    <Play size={17} /> Play Auto
-                  </button>
-                )}
-                {bothComputers && computerMatchStarted && game.phase !== 'final' && (
-                  <button
-                    className={autoPaused ? 'warning-button' : ''}
-                    type="button"
-                    disabled={isViewingHistory}
-                    onClick={() => {
-                      if (isViewingHistory) return;
-                      setAutoPaused((paused) => !paused);
-                      pushEvent(autoPaused ? 'Computer loop resumed.' : 'Computer loop paused.');
-                    }}
-                  >
-                    {autoPaused ? 'Resume Auto' : 'Pause Auto'}
-                  </button>
-                )}
-              </div>
-              <div className="utility-players">
-                <PlayerToggle team="home" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
-                <PlayerToggle team="away" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
-              </div>
-            </div>
-            <div className="utility-status-row">
-              {!showFormationPanel && !showCommandPanel && (
-                <p className="utility-selection">{selectedPiece ? `${activeRoleCode(game, selectedPiece)} selected.` : 'No piece selected.'}</p>
-              )}
-              <p className="utility-status">{message}</p>
-            </div>
-          </section>
-        </section>
       </section>
       {showCoinToss && game.phase === 'coinToss' && (
         <CoinTossDialog

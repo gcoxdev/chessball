@@ -53,10 +53,9 @@
 
 body {
   margin: 0;
-  min-width: 1120px;
+  min-width: 0;
   max-width: 100%;
   min-height: 100vh;
-  overflow-x: clip;
   background:
     linear-gradient(135deg, rgba(213, 166, 58, 0.12), transparent 35%),
     radial-gradient(circle at 85% 10%, rgba(60, 120, 168, 0.18), transparent 28%),
@@ -71,9 +70,15 @@ button {
 
 .app-shell {
   display: grid;
-  gap: 18px;
-  min-height: 100vh;
-  padding: 18px;
+  align-content: start;
+  gap: clamp(12px, 1.5vw, 24px);
+  width: 100%;
+  max-width: 1800px;
+  min-height: 100svh;
+  margin-inline: auto;
+  padding: clamp(12px, 1.5vw, 24px);
+  padding-left: max(clamp(12px, 1.5vw, 24px), env(safe-area-inset-left));
+  padding-right: max(clamp(12px, 1.5vw, 24px), env(safe-area-inset-right));
 }
 
 .score-strip {
@@ -194,11 +199,15 @@ button {
 
 .workspace {
   display: grid;
-  grid-template-columns: 300px minmax(760px, 1fr);
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  align-items: start;
   gap: 16px;
 }
 
 .control-rail {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -570,12 +579,15 @@ button {
 }
 
 .field-wrap {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   max-width: 100%;
 }
 
 .field-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   justify-content: space-between;
   gap: 14px;
@@ -585,6 +597,7 @@ button {
 .field-meta {
   display: flex;
   flex: 1;
+  flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
   gap: 16px;
@@ -780,7 +793,7 @@ button {
   height: 0.98em;
   color: rgba(244, 240, 222, 0.74);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1rem, 2.5cqw, 2.05rem);
+  font-size: clamp(6px, 2.5cqw, 2.05rem);
   font-weight: 900;
   line-height: 0.98;
   pointer-events: none;
@@ -812,17 +825,17 @@ button {
 }
 
 .yard-ticks.top {
-  top: 4px;
+  top: clamp(1px, 0.36cqw, 4px);
 }
 
 .yard-ticks.bottom {
-  bottom: 4px;
+  bottom: clamp(1px, 0.36cqw, 4px);
 }
 
 .yard-tick {
   justify-self: start;
-  width: 2px;
-  height: 9px;
+  width: clamp(1px, 0.18cqw, 2px);
+  height: clamp(2px, 0.82cqw, 9px);
   border-radius: 999px;
   background: rgba(244, 240, 222, 0.62);
   box-shadow: 0 0 2px rgba(7, 17, 13, 0.3);
@@ -987,14 +1000,14 @@ button {
 .piece {
   position: absolute;
   z-index: 2;
-  inset: 4px;
+  inset: clamp(1px, 0.36cqw, 5px);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 50%;
-  font-size: clamp(0.52rem, 0.82vw, 0.84rem);
+  font-size: clamp(4px, 1.1cqw, 0.9rem);
   font-weight: 900;
   line-height: 1;
   color: white;
@@ -1050,12 +1063,12 @@ button {
   right: 1px;
   bottom: 1px;
   z-index: 4;
-  min-width: 13px;
-  padding: 1px 2px;
+  min-width: 0;
+  padding: clamp(0px, 0.09cqw, 1px) clamp(0px, 0.18cqw, 2px);
   border: 1px solid rgba(244, 240, 222, 0.6);
   border-radius: 3px;
   color: #fff;
-  font-size: clamp(8px, 0.7vw, 11px);
+  font-size: clamp(4px, 0.95cqw, 11px);
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -1152,10 +1165,10 @@ button {
 
 .football-marker {
   position: absolute;
-  top: 3px;
-  right: 3px;
+  top: clamp(1px, 0.27cqw, 3px);
+  right: clamp(1px, 0.27cqw, 3px);
   z-index: 3;
-  width: clamp(14px, 42%, 22px);
+  width: clamp(5px, 42%, 24px);
   height: auto;
   aspect-ratio: 8 / 5;
   overflow: visible;
@@ -1174,7 +1187,7 @@ button {
   z-index: 20;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: rgba(3, 8, 6, 0.72);
   overflow: auto;
   overscroll-behavior: contain;
@@ -1183,7 +1196,7 @@ button {
 .rules-dialog {
   position: relative;
   width: min(680px, 100%);
-  max-height: min(760px, 90vh);
+  max-height: min(760px, calc(100dvh - 32px));
   overflow: auto;
   overscroll-behavior: contain;
   border: 1px solid rgba(244, 240, 222, 0.18);
@@ -1215,7 +1228,7 @@ button {
 .rules-help-dialog {
   display: flex;
   flex-direction: column;
-  max-height: min(760px, 90dvh);
+  max-height: min(760px, calc(100dvh - 32px));
   overflow: hidden;
   padding: 0;
 }
@@ -1369,48 +1382,197 @@ button {
   font-weight: 900;
 }
 
-@media (max-width: 1119px) {
-  body {
-    min-width: 0;
-  }
-
-  .score-strip,
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .field[role="grid"] {
-    min-width: 860px;
-  }
-
-  .board-scroller {
-    max-width: 100%;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  :is(
-    .button-grid button,
-    .action-list button,
-    .formation-picker select,
-    .confirm-button,
-    .segmented-control button,
-    .history-controls button,
-    .utility-actions button,
-    .rules-close,
-    .final-dialog button
-  ) {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .utility-bar .segmented-control button {
-    min-width: 44px;
-    min-height: 44px;
-  }
-}
 
 .action-list button { flex-wrap: wrap; }
 .action-odds { flex-basis: 100%; font-size: 0.75rem; font-weight: normal; }
 .match-length-options { margin-top: 1.25rem; }
+
+/* Keep the board fluid by default; larger squares scroll only inside this region. */
+.board-scroller {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: var(--gold) var(--field-dark);
+  scrollbar-width: thin;
+}
+
+.board-scroller.is-enlarged .field {
+  min-width: 1068px;
+}
+
+.board-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.board-view-controls button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(244, 240, 222, 0.22);
+  border-radius: 6px;
+  background: #102219;
+  color: var(--chalk);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.board-view-controls button[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: #2b361d;
+  color: #f9e7b6;
+}
+
+.field-size-help {
+  margin: 0;
+  color: rgba(244, 240, 222, 0.65);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.control-rail > *,
+.utility-control-row > *,
+.field-toolbar > * {
+  min-width: 0;
+}
+
+.button-grid button,
+.action-list button,
+.utility-actions button {
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+}
+
+button > svg { flex-shrink: 0; }
+.utility-status-row { flex-wrap: wrap; }
+.utility-status, .history-index, .event-log p { overflow-wrap: anywhere; }
+
+:is(
+  .button-grid button,
+  .action-list button,
+  .formation-picker select,
+  .confirm-button,
+  .segmented-control button,
+  .history-controls button,
+  .utility-actions button,
+  .rules-close,
+  .final-dialog button
+) {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.utility-bar .segmented-control button { min-height: 44px; }
+
+@media (max-width: 1279px) {
+  .score-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .score-strip > :first-child { grid-column: 1 / -1; padding-block: 6px 12px; }
+  .chessball-wordmark { font-size: 2.5rem; }
+  .field-toolbar { flex-wrap: wrap; gap: 10px; }
+  .field-meta { gap: 8px 12px; font-size: 0.65rem; }
+  .dice-panel .panel-heading { min-width: 0; }
+}
+
+@media (max-width: 1119px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .field-wrap, .control-rail { grid-column: 1; grid-row: auto; }
+  .control-rail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .control-rail > :only-child { grid-column: 1 / -1; }
+  .field-toolbar { flex-wrap: nowrap; }
+  .field-meta { font-size: 0.73rem; }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  .score-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .score-card, .down-card { padding: 10px 12px; gap: 4px; }
+  .score-card strong, .down-card strong { font-size: 1.4rem; }
+  .progress-card, .phase-card { grid-column: span 2; }
+  .progress-card strong, .phase-card strong { font-size: 1.05rem; }
+  .progress-card small:first-of-type { display: none; }
+}
+
+@media (max-width: 599px) {
+  .app-shell { gap: 12px; }
+  .score-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .score-strip > :first-child { padding-block: 4px 10px; }
+  .chessball-wordmark { font-size: 2.1rem; }
+  .score-card, .down-card { padding: 9px 8px; gap: 4px; }
+  .score-card strong, .down-card strong { font-size: clamp(1rem, 5vw, 1.3rem); line-height: 1.12; }
+  .score-card span, .down-card span { font-size: clamp(0.5rem, 2.4vw, 0.6rem); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+  .down-card strong.compact-status { font-size: 0.9rem; white-space: normal; }
+  .progress-card, .phase-card { grid-column: span 2; }
+  .progress-card strong, .phase-card strong { font-size: 0.95rem; }
+  .progress-card small { font-size: 0.63rem; }
+  .progress-card small:first-of-type { display: none; }
+  .field-toolbar { align-items: center; gap: 8px; }
+  .field-toolbar > .dice-panel { grid-column: 1; grid-row: 1; }
+  .field-toolbar > .field-meta { grid-column: 1 / -1; grid-row: 2; }
+  .field-toolbar > .field-size-help { grid-column: 1 / -1; grid-row: 3; font-size: 0.7rem; }
+  .dice-panel { padding: 6px; gap: 6px; }
+  .dice-panel .panel-heading { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .dice-panel .panel-heading h2 { font-size: 0.6rem; }
+  .dice-panel .panel-heading span { font-size: 0.55rem; padding: 2px 3px; }
+  .dice-tray { gap: 4px; }
+  .die { width: 28px; height: 28px; padding: 3px; }
+  .pip { width: 3px; height: 3px; }
+  .field-meta { font-size: 0.6rem; gap: 5px; letter-spacing: 0.025em; }
+  .marker-label { gap: 4px; }
+  .marker-label::before { width: 10px; height: 3px; flex-shrink: 0; }
+  .board-view-controls { grid-column: 2; grid-row: 1; justify-content: flex-end; flex-wrap: nowrap; gap: 4px; }
+  .board-view-controls button { min-width: 44px; padding: 6px; font-size: 0.7rem; }
+  .utility-bar { padding: 10px; gap: 10px; }
+  .utility-control-row { display: grid; gap: 12px; }
+  .utility-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .utility-actions button { font-size: 0.75rem; padding: 8px 4px; gap: 4px; }
+  .utility-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .utility-bar .player-toggle { display: grid; gap: 6px; }
+  .utility-bar .segmented-control { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 4px; }
+  .utility-bar .segmented-control button { min-width: 0; padding: 4px; font-size: 0.68rem; }
+  .control-rail { grid-template-columns: minmax(0, 1fr); }
+  .panel { padding: 12px; }
+  .rules-dialog { padding: 16px; }
+  .rules-help-dialog { padding: 0; }
+  .rules-header { padding: 10px 12px; gap: 8px; }
+  .rules-header h2 { font-size: 1.1rem; }
+  .rules-content { padding: 0 16px 16px; }
+  .piece-style-option { padding: 10px; gap: 8px; }
+  .piece-style-preview { flex-direction: column; }
+  .piece-style-preview > span { width: 36px; height: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+
+/* Scale field markings with the board, including the compact overview. */
+@container (max-width: 600px) {
+  .square.ten-yard-line {
+    --yard-line-visible-width: 1px;
+    --yard-line-shadow: inset 1px 0 0 rgba(244, 240, 222, 0.5);
+  }
+  .square.midfield {
+    --yard-line-visible-width: 2px;
+    --yard-line-shadow: inset 2px 0 0 rgba(244, 240, 222, 0.8);
+  }
+  .square.scrimmage-forward { box-shadow: inset -2px 0 0 var(--blue), var(--yard-line-shadow, none); }
+  .square.scrimmage-backward { box-shadow: inset 2px 0 0 var(--blue), var(--yard-line-shadow, none); }
+  .square.first-down-forward { box-shadow: inset -2px 0 0 var(--gold), var(--yard-line-shadow, none); }
+  .square.first-down-backward { box-shadow: inset 2px 0 0 var(--gold), var(--yard-line-shadow, none); }
+  .square.goal-post-left { box-shadow: inset 3px 0 0 var(--gold); }
+  .square.goal-post-right { box-shadow: inset -3px 0 0 var(--gold); }
+  .piece.selected { outline-width: 1px; }
+  .square.pass-target::before, .square.tackle-target::before, .square.kick-target::before {
+    width: clamp(5px, 1.2cqw, 8px);
+    height: clamp(5px, 1.2cqw, 8px);
+    font-size: clamp(4px, 0.9cqw, 6px);
+  }
+}

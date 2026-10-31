@@ -267,7 +267,7 @@ describe('Chessball UI interactions', () => {
     const grid = screen.getByRole('grid', { name: /chessball board/i });
     expect(field).not.toHaveAttribute('aria-readonly');
     expect(grid).toHaveAttribute('aria-readonly', 'true');
-    expect(grid).toHaveAttribute('aria-describedby', 'history-read-only');
+    expect(grid).toHaveAttribute('aria-describedby', 'history-read-only field-size-help');
     expect(screen.getByRole('status')).toHaveTextContent(/formation: defense confirmed/i);
     expect(screen.getByRole('status')).not.toHaveTextContent(/snap: home started the play/i);
     expect(screen.getByRole('status')).toHaveTextContent(/viewing history.*read-only.*history position \d+ of \d+/i);
@@ -963,7 +963,6 @@ describe('Chessball UI interactions', () => {
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
     expect(findTargetPieceGeometryViolations(cssText)).toEqual([]);
-    expect(cssText).toMatch(/\.piece\s*{[^}]*inset:\s*4px;/s);
     expect(cssText).toMatch(/\.square\.pass-target::before\s*{[^}]*content:\s*"P"/s);
     expect(cssText).toMatch(/\.square\.tackle-target::before\s*{[^}]*content:\s*"T"/s);
     expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*3;[^}]*left:\s*1px;[^}]*width:\s*10px;[^}]*height:\s*10px;/s);
@@ -977,19 +976,18 @@ describe('Chessball UI interactions', () => {
     );
   });
 
-  it('defines touch-safe controls, contained dialogs, and viewport-contained mobile field scrolling', () => {
+  it('defines touch-safe controls, contained dialogs, and optional field scrolling', () => {
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
     expect(cssText).toMatch(/button\s*{[^}]*touch-action:\s*manipulation[^}]*-webkit-tap-highlight-color:/s);
     expect(cssText).toMatch(/\.formation-picker select\s*{[^}]*touch-action:\s*manipulation;[^}]*-webkit-tap-highlight-color:\s*rgba\(213,\s*166,\s*58,\s*0\.3\);/s);
     expect(cssText).toMatch(/\.rules-backdrop\s*{[^}]*overscroll-behavior:\s*contain/s);
     expect(cssText).toMatch(/\.rules-dialog\s*{[^}]*overscroll-behavior:\s*contain/s);
-    expect(cssText).toMatch(/body\s*{[^}]*overflow-x:\s*clip/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?body\s*{[^}]*min-width:\s*0/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.board-scroller\s*{[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain[^}]*-webkit-overflow-scrolling:\s*touch/s);
+    expect(cssText).toMatch(/body\s*{[^}]*min-width:\s*0/s);
+    expect(cssText).toMatch(/\.board-scroller\s*{[^}]*max-width:\s*100%[^}]*overflow-x:\s*auto[^}]*overscroll-behavior-inline:\s*contain[^}]*-webkit-overflow-scrolling:\s*touch/s);
     expect(cssText).not.toMatch(/\.field-wrap\s*{[^}]*overflow-x:\s*auto/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?\.field\[role="grid"\]\s*{[^}]*min-width:\s*860px/s);
-    expect(cssText).toMatch(/@media \(max-width:\s*1119px\)[\s\S]*?:is\([\s\S]*?\.rules-close[\s\S]*?\)\s*{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s);
+    expect(cssText).toMatch(/\.board-scroller\.is-enlarged \.field\s*{[^}]*min-width:\s*1068px/s);
+    expect(cssText).toMatch(/:is\([\s\S]*?\.rules-close[\s\S]*?\)\s*{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s);
     expect(cssText).toMatch(/\.square\s*{[^}]*min-inline-size:\s*0;/s);
   });
 
@@ -1021,17 +1019,6 @@ describe('Chessball UI interactions', () => {
     expect(regularTurf).toHaveClass('field-zone');
     expect(screen.getByTitle('0,0')).toHaveClass('leftEndZone');
     expect(screen.getByTitle('23,0')).toHaveClass('rightEndZone');
-  });
-
-  it('targets only the mobile field container width and overrides utility player controls at matching specificity', () => {
-    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
-    const mobileCss = cssText.match(/@media \(max-width:\s*1119px\)\s*{([\s\S]*)}\s*$/)?.[1] ?? '';
-
-    expect(mobileCss).toMatch(/\.field\[role="grid"\]\s*{[^}]*min-width:\s*860px/s);
-    expect(mobileCss).not.toMatch(/(^|})\s*\.field\s*{[^}]*min-width:\s*860px/s);
-    expect(mobileCss).toMatch(
-      /\.utility-bar \.segmented-control button\s*{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s,
-    );
   });
 
   it('renders history controls as one icon-only row with accessible labels', () => {
@@ -1784,4 +1771,22 @@ describe('opening and conversion regressions', () => {
     expect(screen.getByRole('button', { name: 'Field Goal' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Punt' })).toBeDisabled();
   });
+});
+
+it('switches field size without changing the game or selection', () => {
+  const { container } = render(<App initialGame={createGame({ phase: 'live' })} initialPlayers={{ home: 'human', away: 'human' }} />);
+  fireEvent.click(screen.getByTitle('4,5'));
+  const before = screen.getByRole('grid').innerHTML;
+  const fit = screen.getByRole('button', { name: 'Fit field' });
+  const large = screen.getByRole('button', { name: 'Larger squares' });
+  expect(fit).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(large);
+  expect(large).toHaveAttribute('aria-pressed', 'true');
+  expect(container.querySelector('.board-scroller')).toHaveClass('is-enlarged');
+  expect(screen.getByRole('grid').innerHTML).toBe(before);
+  expect(screen.getByText('Swipe or scroll across the field.')).toBeInTheDocument();
+  fireEvent.click(fit);
+  expect(container.querySelector('.board-scroller')).not.toHaveClass('is-enlarged');
+  expect(screen.getByRole('grid').innerHTML).toBe(before);
+  expect(screen.getByRole('button', { name: 'Previous move' })).toBeDisabled();
 });
