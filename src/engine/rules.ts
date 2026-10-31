@@ -365,8 +365,21 @@ export function gridDistance(a: Coord, b: Coord): number {
 }
 
 export function activeRoleCode(state: GameState, piece: Piece): string {
-  if (state.phase === 'kickoff' && piece.team === state.possession && piece.id === `${piece.team}-qb`) {
-    return 'K';
+  // Possession changes when a kick lands, but the special-teams units stay
+  // on the field until the next down. Use the kick's teams, not possession.
+  const kickResult = state.play.result;
+  const scoringKick = state.phase === 'betweenDowns' && (kickResult?.type === 'fieldGoal' || kickResult?.type === 'extraPoint')
+    ? kickResult : undefined;
+  const kickKind = scoringKick?.type ?? (state.phase === 'kickoff' ? 'kickoff' : state.pendingKick?.kind);
+  const kickingTeam = scoringKick?.team ?? (state.phase === 'kickoff' ? state.possession : state.pendingKick?.kickingTeam);
+  if (kickKind && kickingTeam) {
+    const kickAction = state.play.actions.find((action): action is Extract<Action, { type: 'kick' }> => action.type === 'kick' && action.kind === kickKind);
+    const kickerId = kickAction?.kickerId ?? `${kickingTeam}-qb`;
+    if (piece.id === kickerId) return kickKind === 'punt' ? 'P' : 'K';
+    if (scoringKick) return piece.team === kickingTeam ? 'BL' : 'ST';
+    if (piece.team === kickingTeam) return 'ST';
+    if (piece.role === 'wr') return kickKind === 'punt' ? 'PR' : 'KR';
+    return 'BL';
   }
 
   const roleCodes: Record<Role, [string, string]> = {
@@ -379,6 +392,14 @@ export function activeRoleCode(state: GameState, piece: Piece): string {
   };
   const [offense, defense] = roleCodes[piece.role];
   return piece.team === state.possession ? offense : defense;
+}
+
+export function activeRoleDescription(state: GameState, piece: Piece): string {
+  const specialTeams: Record<string, string> = {
+    K: 'Kicker', P: 'Punter', KR: 'Kick returner', PR: 'Punt returner',
+    ST: 'Special teams coverage', BL: 'Special teams blocker',
+  };
+  return specialTeams[activeRoleCode(state, piece)] ?? piece.label;
 }
 
 export function generateLegalActions(state: GameState): LegalAction[] {

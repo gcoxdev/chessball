@@ -9,6 +9,7 @@ type AccessibleName =
 type ModalProps = AccessibleName & {
   children: ReactNode;
   dismissible?: boolean;
+  dismissOnBackdrop?: boolean;
   initialFocus?: RefObject<HTMLElement | null>;
   fallbackFocus: RefObject<HTMLElement | null>;
   onClose?: () => void;
@@ -85,7 +86,7 @@ function focusable(dialog: HTMLElement) {
   return Array.from(dialog.querySelectorAll<HTMLElement>('*')).filter((element) => isTabbable(element, dialog));
 }
 
-export function Modal({ children, titleId, label, dismissible = false, initialFocus, fallbackFocus, onClose, backdropClassName = '', dialogClassName = '' }: ModalProps) {
+export function Modal({ children, titleId, label, dismissible = false, dismissOnBackdrop = false, initialFocus, fallbackFocus, onClose, backdropClassName = '', dialogClassName = '' }: ModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const tokenRef = useRef(Symbol('modal'));
@@ -107,7 +108,7 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
     const focusTarget = initialTarget && dialog.contains(initialTarget) && isTabbable(initialTarget, dialog)
       ? initialTarget
       : focusable(dialog)[0] ?? dialog;
-    focusTarget.focus();
+    focusTarget.focus({ preventScroll: true });
     entry.lastFocused = focusTarget;
 
     const onFocusIn = (event: FocusEvent) => {
@@ -170,7 +171,9 @@ export function Modal({ children, titleId, label, dismissible = false, initialFo
   }, []);
 
   return createPortal(
-    <div ref={backdropRef} className={`rules-backdrop ${backdropClassName}`.trim()}>
+    <div ref={backdropRef} className={`rules-backdrop ${backdropClassName}`.trim()} onClick={(event) => {
+      if (dismissOnBackdrop && dismissible && event.target === event.currentTarget && modalStack[modalStack.length - 1]?.token === tokenRef.current) onClose?.();
+    }}>
       <section ref={dialogRef} className={`rules-dialog ${dialogClassName}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-label={label} tabIndex={-1}>
         {children}
       </section>

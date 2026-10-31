@@ -1,8 +1,9 @@
 import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Play, RadioTower, RotateCcw, Settings, Shield, StepForward, X, Zap } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Menu, Play, RadioTower, RotateCcw, Settings, Shield, StepForward, X, Zap } from 'lucide-react';
 import {
   activeRoleCode,
+  activeRoleDescription,
   isGoalToGo,
   applyAction,
   createGame,
@@ -20,6 +21,7 @@ import {
 import type { Action, CoinFace, Coord, DiceRoll, Formation, FormationSide, GameState, Piece, Team } from './engine/types';
 import { AccessibleBoard } from './ui/AccessibleBoard';
 import { Modal } from './ui/Modal';
+import { GameMenu } from './ui/GameMenu';
 import { SettingsDialog } from './ui/SettingsDialog';
 import { loadPieceStyle, savePieceStyle, loadMatchLength, saveMatchLength, type MatchLength } from './ui/settings';
 import { oddsText } from './ui/action-odds';
@@ -67,6 +69,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const [targetMode, setTargetMode] = useState<TargetMode>(null);
   const [message, setMessage] = useState(initialGame ? 'Choose formations, shift up to two pieces per side, then snap.' : 'Choose player types, then press Start Game.');
   const [showRules, setShowRules] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [largeBoard, setLargeBoard] = useState(false);
   const boardScrollerRef = useRef<HTMLDivElement>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -341,12 +345,14 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setShowCoinToss(false);
     setShowRules(false);
     setShowNewGameConfirmation(false);
+    setShowMenu(true);
     setMessage('Choose player types, then press Start Game.');
   };
 
   const startGame = () => {
     if (isViewingHistory) return;
     if (game.phase !== 'pregame' && game.phase !== 'final') return;
+    setShowMenu(false);
     const opening = createOpeningGame(matchLength);
     const automaticCoinToss = bothComputers ? applyAction(opening, withDice({ type: 'coinToss' })) : opening;
     const next = automaticCoinToss.coinToss.winner
@@ -375,6 +381,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
 
   const startComputerMatch = () => {
     if (isViewingHistory) return;
+    setShowMenu(false);
     setComputerMatchStarted(true);
     setAutoPaused(false);
     pushEvent('Computer match started.');
@@ -389,7 +396,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   useEffect(() => {
     if (game.phase === 'final') return;
     if (bothComputers && !computerMatchStarted) return;
-    if (autoPaused || isViewingHistory || showNewGameConfirmation || showSettings) return;
+    if (autoPaused || isViewingHistory || showNewGameConfirmation || showSettings || showMenu) return;
     if (game.phase !== 'formation' && players[controlTeam] !== 'computer') return;
 
     const timer = window.setTimeout(() => {
@@ -403,17 +410,17 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     }, COMPUTER_ACTION_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players, showNewGameConfirmation, showSettings]);
+  }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players, showNewGameConfirmation, showSettings, showMenu]);
 
   return (
     <div id="chessball-app">
       <a className="skip-link" href="#game-workspace" onClick={() => workspaceHeadingRef.current?.focus()}>Skip to game workspace</a>
       <main className="app-shell">
       <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
-      <section className="score-strip" aria-label="Game status">
-        <div>
-          <h1 id="game-workspace" ref={workspaceHeadingRef} tabIndex={-1} className="chessball-wordmark">Chessball</h1>
-        </div>
+      <header className="app-header">
+        <h1 id="game-workspace" ref={workspaceHeadingRef} tabIndex={-1} className="chessball-wordmark">Chessball</h1>
+        <button ref={menuButtonRef} className="menu-trigger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={showMenu} onClick={() => setShowMenu(true)}><Menu size={24} /></button>
+        <section className="score-strip" aria-label="Game status">
         <ScoreCard label="Home" score={game.score.home} active={game.possession === 'home'} />
         <ScoreCard label="Away" score={game.score.away} active={game.possession === 'away'} />
         <div className="down-card">
@@ -434,7 +441,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           <span>Phase</span>
           <strong>{phaseLabel(game.phase)}</strong>
         </div>
-      </section>
+        </section>
+      </header>
 
       <section className="workspace">
         <section
@@ -443,6 +451,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
         >
           <div className="field-toolbar">
             <DicePanel roll={lastRoll} />
+            {game.phase === 'pregame' && (
+              <button className="start-game-button" type="button" disabled={isViewingHistory} onClick={startGame}>
+                <Play size={18} /> Start Game
+              </button>
+            )}
             <div className="field-meta">
               {showsScrimmageMarkers(game) && (
                 <>
@@ -452,12 +465,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               )}
               <span>{isViewingHistory ? `Viewing history ${historyIndex + 1}/${history.length}` : `${game.turn.toUpperCase()} to act`}</span>
             </div>
-            <div className="board-view-controls" role="group" aria-label="Field size">
-              <button type="button" aria-pressed={!largeBoard} onClick={() => setLargeBoard(false)}>Fit field</button>
-              <button type="button" aria-pressed={largeBoard} onClick={() => setLargeBoard(true)}>Larger squares</button>
-            </div>
-            <p className="field-size-help" id="field-size-help">{largeBoard ? 'Swipe or scroll across the field.' : 'See the whole field. Enlarge for precise moves.'}</p>
           </div>
+          <p className="visually-hidden" id="field-size-help">{largeBoard ? 'Swipe or scroll across the field.' : 'The whole field fits the screen. Change field size in Settings.'}</p>
           <div className={`board-scroller${largeBoard ? ' is-enlarged' : ''}`} ref={boardScrollerRef}>
             <AccessibleBoard
               game={game}
@@ -478,56 +487,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               ballLabel={ballLabel(boardGame)}
             />
           </div>
-          <section className="utility-bar" aria-label="Game setup">
-            <div className="utility-control-row">
-              <div className="utility-actions">
-                {game.phase === 'pregame' ? (
-                  <button type="button" disabled={isViewingHistory} onClick={startGame}>
-                    <Play size={17} /> Start Game
-                  </button>
-                ) : (
-                  <button type="button" disabled={isViewingHistory} onClick={openNewGameConfirmation}>
-                    <RotateCcw size={17} /> New Game
-                  </button>
-                )}
-                <button type="button" onClick={() => setShowRules(true)}>
-                  <BookOpen size={17} /> Rules
-                </button>
-                <button type="button" onClick={() => setShowSettings(true)}>
-                  <Settings size={17} /> Settings
-                </button>
-                {bothComputers && !computerMatchStarted && (
-                  <button type="button" disabled={isViewingHistory} onClick={startComputerMatch}>
-                    <Play size={17} /> Play Auto
-                  </button>
-                )}
-                {bothComputers && computerMatchStarted && game.phase !== 'final' && (
-                  <button
-                    className={autoPaused ? 'warning-button' : ''}
-                    type="button"
-                    disabled={isViewingHistory}
-                    onClick={() => {
-                      if (isViewingHistory) return;
-                      setAutoPaused((paused) => !paused);
-                      pushEvent(autoPaused ? 'Computer loop resumed.' : 'Computer loop paused.');
-                    }}
-                  >
-                    {autoPaused ? 'Resume Auto' : 'Pause Auto'}
-                  </button>
-                )}
-              </div>
-              <div className="utility-players">
-                <PlayerToggle team="home" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
-                <PlayerToggle team="away" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
-              </div>
-            </div>
-            <div className="utility-status-row">
-              {!showFormationPanel && !showCommandPanel && (
-                <p className="utility-selection">{selectedPiece ? `${activeRoleCode(game, selectedPiece)} selected.` : 'No piece selected.'}</p>
-              )}
-              <p className="utility-status">{message}</p>
-            </div>
-          </section>
+
         </section>
         <aside className="control-rail" aria-label="Game controls">
           {showFormationPanel && (
@@ -622,6 +582,59 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
             </div>
           )}
 
+          {isViewingHistory && (
+            <div className="history-notice">
+              <p className="history-read-only" id="history-read-only">Viewing history — Read-only</p>
+              <button type="button" onClick={() => setHistoryIndex(history.length - 1)}>Return to latest</button>
+            </div>
+          )}
+          <p className="game-message">{game.phase === 'pregame' ? 'Press Start Game to play. Choose players and match options in the menu.' : message}</p>
+
+        </aside>
+      </section>
+      {showMenu && (
+        <GameMenu fallbackFocus={menuButtonRef} onClose={() => setShowMenu(false)}>
+          <section className="utility-bar" aria-label="Game setup">
+            <div className="utility-control-row">
+              <div className="utility-actions">
+                {game.phase !== 'pregame' && (
+                  <button type="button" disabled={isViewingHistory} onClick={openNewGameConfirmation}>
+                    <RotateCcw size={17} /> New Game
+                  </button>
+                )}
+                <button type="button" onClick={() => setShowRules(true)}>
+                  <BookOpen size={17} /> Rules
+                </button>
+                <button type="button" onClick={() => setShowSettings(true)}>
+                  <Settings size={17} /> Settings
+                </button>
+                {bothComputers && !computerMatchStarted && (
+                  <button type="button" disabled={isViewingHistory} onClick={startComputerMatch}>
+                    <Play size={17} /> Play Auto
+                  </button>
+                )}
+                {bothComputers && computerMatchStarted && game.phase !== 'final' && (
+                  <button
+                    className={autoPaused ? 'warning-button' : ''}
+                    type="button"
+                    disabled={isViewingHistory}
+                    onClick={() => {
+                      if (isViewingHistory) return;
+                      setAutoPaused((paused) => !paused);
+                      pushEvent(autoPaused ? 'Computer loop resumed.' : 'Computer loop paused.');
+                      setShowMenu(false);
+                    }}
+                  >
+                    {autoPaused ? 'Resume Auto' : 'Pause Auto'}
+                  </button>
+                )}
+              </div>
+              <div className="utility-players">
+                <PlayerToggle team="home" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
+                <PlayerToggle team="away" players={players} disabled={isViewingHistory || playerSelectionLocked} onChange={setPlayerKind} />
+              </div>
+            </div>
+          </section>
           <HistoryPanel
             history={history}
             historyIndex={historyIndex}
@@ -631,8 +644,9 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
             onFirst={() => setHistoryIndex(0)}
             onLatest={() => setHistoryIndex(history.length - 1)}
           />
-        </aside>
-      </section>
+          {isViewingHistory && <p className="hint">Close the menu to inspect the selected move on the field.</p>}
+        </GameMenu>
+      )}
       {showCoinToss && game.phase === 'coinToss' && (
         <CoinTossDialog
           game={game}
@@ -642,7 +656,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           fallbackFocus={workspaceHeadingRef}
         />
       )}
-      {showSettings && <SettingsDialog pieceStyle={pieceStyle} onPieceStyleChange={changePieceStyle} matchLength={matchLength} onMatchLengthChange={changeMatchLength} fallbackFocus={workspaceHeadingRef} onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsDialog pieceStyle={pieceStyle} onPieceStyleChange={changePieceStyle} matchLength={matchLength} onMatchLengthChange={changeMatchLength} largeBoard={largeBoard} onLargeBoardChange={setLargeBoard} fallbackFocus={workspaceHeadingRef} onClose={() => setShowSettings(false)} />}
       {showRules && <RulesDialog fallbackFocus={workspaceHeadingRef} onClose={() => setShowRules(false)} />}
       {showNewGameConfirmation && game.phase !== 'pregame' && (
         <Modal
@@ -789,6 +803,7 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
         </ul>
         <h3>Kicking and returns</h3>
         <ul>
+          <li>Special-teams labels: K = kicker, P = punter, KR = kick returner, PR = punt returner, ST = coverage, and BL = blocker. The two receiver pieces serve as returners; any receiving-team piece may recover the kick. These labels remain through the stopped play, then normal positions return for the next scrimmage down.</li>
           <li>Kickoffs start from the kicking team's 35-yard line. Kickoffs and punts roll 2d6 for distance: each point moves the landing column 1 square, or 5 yards, from the kicker. The kicking team chooses the landing row on that column. Kicks beyond the board are capped at the farthest end-zone column.</li>
           <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, use Recover. If the kicking team moves onto or recovers an untouched loose kick first, the play ends and the receiving team starts there. A normally tackled returner starts a fresh first down at the tackle spot, regardless of return yardage; a strip or safety still applies.</li>
           <li>During returns, every role can move within a square radius: receiving team up to 2 squares, coverage team up to 3. Teammates may be crossed, opponents block the path, and the destination must be empty. Only movement, tackles, and recovery are available; passing, handoffs, power moves, and further kicks wait until normal play.</li>
@@ -870,7 +885,7 @@ function HistoryPanel({
         <h2 id="history-heading">Game history</h2>
         {!isLatest && <span>Viewing history</span>}
       </div>
-      {!isLatest && <p className="history-read-only" id="history-read-only">Viewing history — Read-only</p>}
+      {!isLatest && <p className="history-read-only">Viewing history — Read-only</p>}
       <div className="history-controls" role="group" aria-label="History controls">
         <button type="button" onClick={onFirst} disabled={historyIndex === 0} aria-label="First move" title="First move">
           <ChevronsLeft size={16} aria-hidden="true" />
@@ -949,12 +964,13 @@ function FormationPicker({
   return (
     <div className="formation-picker">
       <div className="formation-heading">
-        <label htmlFor={`${slug}-formation`}>{title} formation</label>
+        <label htmlFor={`${slug}-formation`}>{title}<span className="visually-hidden"> formation</span></label>
         <em className={`formation-status ${confirmed ? 'confirmed' : 'pending'}`}>{confirmed ? 'Confirmed' : 'Pending'}</em>
       </div>
       <select
         id={`${slug}-formation`}
         aria-describedby={`${slug}-formation-description`}
+        title={active.description}
         value={active.id}
         disabled={disabled}
         onChange={(event) => {
@@ -966,7 +982,7 @@ function FormationPicker({
           <option key={formation.id} value={formation.id}>{formation.name}</option>
         ))}
       </select>
-      <p id={`${slug}-formation-description`} className="formation-description">{active.description}</p>
+      <p id={`${slug}-formation-description`} className="visually-hidden">{active.description}</p>
       <button type="button" className="confirm-button" disabled={disabled || confirmed} onClick={onConfirm}>
         Confirm {title}
       </button>
@@ -992,7 +1008,7 @@ function PieceCard({ piece, game }: { piece: Piece; game: GameState }) {
       <span>{piece.team}</span>
       <strong>{activeRoleCode(game, piece)}</strong>
       <small>
-        {piece.label} · {piece.coord.x},{piece.coord.y} {game.ball.kind === 'controlled' && game.ball.pieceId === piece.id ? ' BALL' : ''}
+        {activeRoleDescription(game, piece)} · {piece.coord.x},{piece.coord.y} {game.ball.kind === 'controlled' && game.ball.pieceId === piece.id ? ' BALL' : ''}
       </small>
     </div>
   );
@@ -1173,7 +1189,10 @@ function actionLabel(game: GameState, action: Action): string {
   }
   if (action.type === 'recover') return 'Recover ball';
   if (action.type === 'powerMove') return `Power move to ${coordLabel(action.to)}`;
-  if (action.type === 'tackle') return `Tackle ${action.targetId.split('-')[1].toUpperCase()}`;
+  if (action.type === 'tackle') {
+    const target = game.pieces.find(piece => piece.id === action.targetId);
+    return `Tackle ${target ? activeRoleCode(game, target) : action.targetId.split('-')[1].toUpperCase()}`;
+  }
   if (action.type === 'kick') {
     if (action.kind === 'extraPoint') return 'Extra point';
     if (action.kind === 'kickoff') return 'Kickoff';

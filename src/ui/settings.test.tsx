@@ -5,6 +5,25 @@ import { App, COMPUTER_ACTION_DELAY_MS } from '../main';
 import { createGame } from '../engine/rules';
 import { loadPieceStyle, SETTINGS_STORAGE_KEY } from './settings';
 
+const openMenu = () => {
+  if (!screen.queryByRole('dialog', { name: 'Game menu' })) fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+};
+const closeMenu = () => {
+  const close = screen.queryByRole('button', { name: 'Close menu' });
+  if (close) fireEvent.click(close);
+};
+const menuButton = (name: string | RegExp) => {
+  if (/start game/i.test(String(name))) closeMenu();
+  const existing = screen.queryByRole('button', { name });
+  if (existing) return existing;
+  openMenu();
+  return screen.getByRole('button', { name });
+};
+const historyLog = () => {
+  openMenu();
+  return screen.getByRole('log', { name: /event log/i });
+};
+
 const humans = { home: 'human', away: 'human' } as const;
 
 // Supply browser storage explicitly: this Vitest/Node environment exposes it as undefined.
@@ -32,7 +51,7 @@ describe('player appearance settings', () => {
     const signature = () => Array.from(board.querySelectorAll('.square.occupied')).map(node => `${node.getAttribute('title')}:${node.getAttribute('aria-label')}`);
     const before = signature();
     expect(board.querySelectorAll('.piece--player')).toHaveLength(22);
-    const trigger = screen.getByRole('button', { name: 'Settings' });
+    const trigger = menuButton('Settings');
     trigger.focus();
     fireEvent.click(trigger);
     const dialog = screen.getByRole('dialog', { name: 'Settings' });
@@ -50,12 +69,12 @@ describe('player appearance settings', () => {
 
   it('retains the selected style across remounts and a new game', () => {
     const view = render(<App initialGame={createGame()} initialPlayers={humans} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(menuButton('Settings'));
     fireEvent.click(screen.getByRole('radio', { name: 'Helmets' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
-    fireEvent.click(screen.getByRole('button', { name: 'New Game' }));
+    fireEvent.click(menuButton('New Game'));
     fireEvent.click(within(screen.getByRole('dialog', { name: 'New Game' })).getByRole('button', { name: 'Confirm' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(menuButton('Settings'));
     expect(screen.getByRole('radio', { name: 'Helmets' })).toBeChecked();
     view.unmount();
     render(<App initialGame={createGame()} initialPlayers={humans} />);
@@ -71,7 +90,7 @@ describe('player appearance settings', () => {
     vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => { throw new Error('Storage denied'); });
     vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('Storage denied'); });
     render(<App initialGame={createGame()} initialPlayers={humans} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(menuButton('Settings'));
     fireEvent.click(screen.getByRole('radio', { name: 'Football players' }));
     fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
     expect(screen.getByRole('grid').querySelectorAll('.piece--player')).toHaveLength(22);
@@ -80,34 +99,35 @@ describe('player appearance settings', () => {
   it('pauses computer play while Settings is open and resumes on close', () => {
     vi.useFakeTimers();
     render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play Auto' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(menuButton('Play Auto'));
+    fireEvent.click(menuButton('Settings'));
     act(() => vi.advanceTimersByTime(COMPUTER_ACTION_DELAY_MS * 5));
     fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
-    const log = screen.getByRole('log', { name: /event log/i });
+    const log = historyLog();
     expect(log.textContent).not.toMatch(/Computer home:/);
+    closeMenu();
     act(() => vi.advanceTimersByTime(COMPUTER_ACTION_DELAY_MS));
-    expect(log).toHaveTextContent(/Computer home:/);
+    expect(historyLog()).toHaveTextContent(/Computer home:/);
   });
 });
 
 it('saves match length independently and applies it to the next match only', () => {
   const view = render(<App initialGame={createGame()} initialPlayers={humans} />);
   expect(screen.getByText('Drive 0 of 16')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(menuButton('Settings'));
   fireEvent.click(screen.getByRole('radio', { name: 'Short match' }));
   fireEvent.click(screen.getByRole('radio', { name: 'Helmets' }));
   expect(JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toEqual({ matchLength: 'short', pieceStyle: 'helmet' });
   fireEvent.click(screen.getByRole('button', { name: 'Close settings' }));
   expect(screen.getByText('Drive 0 of 16')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'New Game' }));
+  fireEvent.click(menuButton('New Game'));
   fireEvent.click(within(screen.getByRole('dialog', { name: 'New Game' })).getByRole('button', { name: 'Confirm' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+  fireEvent.click(menuButton('Start Game'));
   expect(screen.getByText('Drive 0 of 8')).toBeInTheDocument();
   expect(screen.getByText('Q1: Home 0/1, Away 0/1')).toBeInTheDocument();
   view.unmount();
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(menuButton('Settings'));
   expect(screen.getByRole('radio', { name: 'Short match' })).toBeChecked();
   expect(screen.getByRole('radio', { name: 'Helmets' })).toBeChecked();
 });

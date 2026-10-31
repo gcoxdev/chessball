@@ -10,11 +10,13 @@ const styles: { value: PieceStyle; label: string; description: string }[] = [
   { value: 'circle', label: 'Circles', description: 'Classic board pieces' },
 ];
 
-export function SettingsDialog({ pieceStyle, onPieceStyleChange, matchLength, onMatchLengthChange, fallbackFocus, onClose }: {
+export function SettingsDialog({ pieceStyle, onPieceStyleChange, matchLength, onMatchLengthChange, largeBoard, onLargeBoardChange, fallbackFocus, onClose }: {
   pieceStyle: PieceStyle;
   matchLength: MatchLength;
   onMatchLengthChange: (length: MatchLength) => void;
   onPieceStyleChange: (style: PieceStyle) => void;
+  largeBoard: boolean;
+  onLargeBoardChange: (large: boolean) => void;
   fallbackFocus: RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
@@ -26,6 +28,14 @@ export function SettingsDialog({ pieceStyle, onPieceStyleChange, matchLength, on
         <button ref={closeRef} className="rules-close" type="button" onClick={onClose} aria-label="Close settings"><X size={18} /></button>
       </header>
       <div className="rules-content">
+        <fieldset className="piece-style-options field-size-options">
+          <legend>Field size</legend>
+          <div className="board-view-controls" role="group" aria-label="Field size">
+            <button type="button" aria-pressed={!largeBoard} onClick={() => onLargeBoardChange(false)}>Fit field</button>
+            <button type="button" aria-pressed={largeBoard} onClick={() => onLargeBoardChange(true)}>Larger squares</button>
+          </div>
+          <p className="field-size-help">Fit the whole field on screen, or use larger squares and scroll across it for precise moves.</p>
+        </fieldset>
         <p>Choose how players appear on the field. Team colors and position labels stay visible.</p>
         <fieldset className="piece-style-options">
           <legend>Player appearance</legend>
