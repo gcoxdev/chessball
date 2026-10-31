@@ -637,7 +637,6 @@ describe('Chessball UI interactions', () => {
 
   it('shows football-style yard numbers at the top and bottom of the field', () => {
     render(<App />);
-    const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
     const bottom50Left = within(screen.getByTitle('11,9')).getByLabelText('Bottom 50 yard marker left digit');
     const bottom50Right = within(screen.getByTitle('12,9')).getByLabelText('Bottom 50 yard marker right digit');
@@ -666,7 +665,6 @@ describe('Chessball UI interactions', () => {
     expect(topRight40Right).toHaveClass('inverted');
     expect(screen.getByTitle('11,10')).not.toHaveTextContent('5');
     expect(screen.getByTitle('11,0')).not.toHaveTextContent('0');
-    expect(cssText).toMatch(/\.yard-number\s*{[^}]*font-size: 2\.05rem/s);
   });
 
   it('renders five left-aligned one-yard ticks on every top and bottom field square', () => {
@@ -1365,7 +1363,7 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('dialog', { name: /rules and how to play/i })).toBeInTheDocument();
     expect(screen.getByText(/a match starts with a coin toss and kickoff/i)).toBeInTheDocument();
     expect(screen.getByText(/after a touchdown, choose an extra point kick or a two-point try/i)).toBeInTheDocument();
-    expect(screen.getByText(/touchdown crosses the near goal line/i)).toBeInTheDocument();
+    expect(screen.getByText(/touchdown worth 6 points/i)).toBeInTheDocument();
     expect(screen.getByText(/field goal measures through the ten-yard end zone to the posts at the back edge\/end line/i)).toBeInTheDocument();
     expect(screen.queryByText(/field goals roll 2d6 against distance to the goal line/i)).not.toBeInTheDocument();
     expect(screen.getByText(/incomplete passes are dead balls/i)).toBeInTheDocument();
@@ -1391,10 +1389,13 @@ describe('Chessball UI interactions', () => {
     expect(document.body.style.overflow).toBe('hidden');
     expect(close).toHaveFocus();
 
-    fireEvent.keyDown(close, { key: 'Tab' });
+    const rulesText = within(dialog).getByRole('region', { name: 'Rules text' });
+    expect(rulesText).not.toContainElement(close);
+    rulesText.focus();
+    fireEvent.keyDown(rulesText, { key: 'Tab' });
     expect(close).toHaveFocus();
     fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
-    expect(close).toHaveFocus();
+    expect(rulesText).toHaveFocus();
     fireEvent.keyDown(dialog, { key: 'Escape' });
 
     expect(screen.queryByRole('dialog', { name: /rules and how to play/i })).not.toBeInTheDocument();
@@ -1762,5 +1763,25 @@ describe('Chessball UI interactions', () => {
       type: 'kick',
       kind: 'fieldGoal',
     });
+  });
+});
+
+
+describe('opening and conversion regressions', () => {
+  it.each([[0.1, 'Home'], [0.9, 'Away']] as const)('resolves an automatic coin toss with random value %s', (value, winner) => {
+    vi.spyOn(Math, 'random').mockReturnValue(value);
+    render(<App initialPlayers={{ home: 'computer', away: 'computer' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start Game' }));
+    expect(screen.getByRole('log', { name: /event log/i })).toHaveTextContent(`${winner} won automatically and chose to receive`);
+  });
+
+  it('disables field goals and punts during a live two-point try', () => {
+    let game = applyAction(createGame({ phase: 'betweenDowns', play: { actions: [], result: { type: 'touchdown', team: 'home' } } }), { type: 'startTwoPointTry', team: 'home' });
+    game = applyAction(game, { type: 'confirmFormation', side: 'offense' });
+    game = applyAction(game, { type: 'confirmFormation', side: 'defense' });
+    game = applyAction(game, { type: 'snap' });
+    render(<App initialGame={game} initialPlayers={{ home: 'human', away: 'human' }} />);
+    expect(screen.getByRole('button', { name: 'Field Goal' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Punt' })).toBeDisabled();
   });
 });

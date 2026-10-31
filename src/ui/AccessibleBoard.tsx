@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { PieceToken, type PieceStyle } from './PieceToken';
 import { activeRoleCode } from '../engine/rules';
 import type { Action, Coord, GameState, Piece } from '../engine/types';
 import { chooseBoardFocus, describeBoardSquare, moveBoardFocus } from './board-accessibility';
@@ -7,6 +8,7 @@ type TargetMode = 'move' | 'pass' | null;
 
 export type AccessibleBoardProps = {
   game: GameState;
+  pieceStyle?: PieceStyle;
   displayGame: GameState;
   legalActions: Action[];
   selectedPiece?: Piece;
@@ -151,8 +153,15 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
             >
               {props.renderYardTicks(coord)}
               {props.renderYardMarker(coord)}
-              {piece && <span className={`piece ${piece.team} ${selected ? 'selected' : ''}`}>{activeRoleCode(props.displayGame, piece)}</span>}
-              {ballHere && <span className="football-marker" aria-label={props.ballLabel} />}
+              {piece && <PieceToken team={piece.team} label={activeRoleCode(props.displayGame, piece)} style={props.pieceStyle} selected={selected} />}
+              {ballHere && (
+                <svg className="football-marker" viewBox="0 0 32 20" role="img" aria-label={props.ballLabel} focusable="false">
+                  <path d="M1 10C6-1 26-1 31 10C26 21 6 21 1 10Z" fill="#9b512e" stroke="#f9e7b6" strokeWidth="1.2" />
+                  <path d="M3 11Q16 17 29 11" fill="none" stroke="#5c2c18" strokeWidth="1.2" />
+                  <path d="M8 3.5Q4.5 10 8 16.5M24 3.5Q27.5 10 24 16.5" fill="none" stroke="#f9e7b6" strokeWidth="2" />
+                  <path d="M11 9.5H21M12 7.5V11.5M16 7.5V11.5M20 7.5V11.5" fill="none" stroke="#fff3d4" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              )}
             </button>
           );
           })}

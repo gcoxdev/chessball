@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { chooseComputerAction } from './computer';
 import { applyAction, createGame, generateLegalActions } from './rules';
 import { actionOpportunityKeys, actingTeamFieldBand, chooseActionForTeamPolicies, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
 import type { Action, GameState, PlayResult } from './types';
@@ -559,5 +560,46 @@ describe('headless simulator', () => {
     });
 
     expect(validateGameStateInvariants(invalid)).toContain('Controlled ball belongs to home-qb, but possession is away');
+  });
+});
+
+
+describe('browser computer policy simulations', () => {
+  it.each([1, 42, 77])('finishes a full browser-policy match with seed %s', (seed) => {
+    const result = simulateGame({ seed, policy: 'computer' });
+    expect(result.anomalies).toEqual([]);
+    expect(result.status).toBe('completed');
+    expect(result.finalState.phase).toBe('final');
+    expect(result.summary.policies).toEqual({ home: 'computer', away: 'computer' });
+    expect(Object.keys(result.summary.actionTypes).filter(key => key !== 'total').every(key => key.includes('policy=computer'))).toBe(true);
+  });
+
+  it('uses the browser selector for formation, live, return, and conversion decisions', () => {
+    const base = createGame();
+    const states: GameState[] = [base,
+      applyAction(applyAction(applyAction(base, { type: 'confirmFormation', side: 'offense' }), { type: 'confirmFormation', side: 'defense' }), { type: 'snap' }),
+      createGame({ phase: 'betweenDowns', play: { actions: [], result: { type: 'touchdown', team: 'home' } } }),
+      createGame({ phase: 'kickReturn' }),
+    ];
+    for (const state of states) {
+      const legal = generateLegalActions(state);
+      expect(chooseActionForTeamPolicies(state, legal, () => 0.5, { home: 'computer', away: 'computer' }, 10))
+        .toEqual(chooseComputerAction(state, legal, 9, { home: 'computer', away: 'computer' }));
+    }
+  });
+
+  it('retains deterministic replay and explicit audit setup controls', () => {
+    const options = { seed: 12, policy: 'computer' as const,
+      opening: { coinWinner: 'away' as const, choice: 'kick' as const },
+      formationPlan: { home: { offense: 'trips', defense: 'pressure' }, away: { offense: 'pistol', defense: 'deep-shell' } },
+    };
+    const first = simulateGame(options);
+    const second = simulateGame(options);
+    expect(first.anomalies).toEqual([]);
+    expect(second.summary).toEqual(first.summary);
+    expect(first.summary.openingKicker).toBe('away');
+    expect(first.summary.formationSelections.home.offense.length).toBeGreaterThan(0);
+    expect(new Set(first.summary.formationSelections.home.offense)).toEqual(new Set(['trips']));
+    expect(new Set(first.summary.formationSelections.away.defense)).toEqual(new Set(['deep-shell']));
   });
 });

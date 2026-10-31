@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Play, RadioTower, RotateCcw, Shield, StepForward, X, Zap } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Play, RadioTower, RotateCcw, Settings, Shield, StepForward, X, Zap } from 'lucide-react';
 import {
   activeRoleCode,
   applyAction,
@@ -19,11 +19,14 @@ import {
 import type { Action, CoinFace, Coord, DiceRoll, Formation, FormationSide, GameState, Piece, Team } from './engine/types';
 import { AccessibleBoard } from './ui/AccessibleBoard';
 import { Modal } from './ui/Modal';
+import { SettingsDialog } from './ui/SettingsDialog';
+import { loadPieceStyle, savePieceStyle } from './ui/settings';
+import type { PieceStyle } from './ui/PieceToken';
+import { chooseComputerAction, type PlayerControl, type PlayerKind } from './engine/computer';
+export { chooseComputerAction } from './engine/computer';
 import './styles.css';
 
 type TargetMode = 'move' | 'pass' | null;
-type PlayerKind = 'human' | 'computer';
-type PlayerControl = Record<Team, PlayerKind>;
 type HistoryEntry = {
   id: number;
   game: GameState;
@@ -57,6 +60,12 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const [targetMode, setTargetMode] = useState<TargetMode>(null);
   const [message, setMessage] = useState(initialGame ? 'Choose formations, shift up to two pieces per side, then snap.' : 'Choose player types, then press Start Game.');
   const [showRules, setShowRules] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [pieceStyle, setPieceStyle] = useState<PieceStyle>(loadPieceStyle);
+  const changePieceStyle = (style: PieceStyle) => {
+    setPieceStyle(style);
+    savePieceStyle(style);
+  };
   const [showCoinToss, setShowCoinToss] = useState(false);
   const [showNewGameConfirmation, setShowNewGameConfirmation] = useState(false);
   const eventId = useRef(1);
@@ -315,7 +324,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     if (isViewingHistory) return;
     if (game.phase !== 'pregame' && game.phase !== 'final') return;
     const opening = createOpeningGame();
-    const automaticCoinToss = bothComputers ? applyAction(opening, { type: 'coinToss' }) : opening;
+    const automaticCoinToss = bothComputers ? applyAction(opening, withDice({ type: 'coinToss' })) : opening;
     const next = automaticCoinToss.coinToss.winner
       ? applyAction(automaticCoinToss, { type: 'chooseKickoffChoice', team: automaticCoinToss.coinToss.winner, choice: 'receive' })
       : automaticCoinToss;
@@ -356,16 +365,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   useEffect(() => {
     if (game.phase === 'final') return;
     if (bothComputers && !computerMatchStarted) return;
-    if (autoPaused || isViewingHistory || showNewGameConfirmation) return;
+    if (autoPaused || isViewingHistory || showNewGameConfirmation || showSettings) return;
     if (game.phase !== 'formation' && players[controlTeam] !== 'computer') return;
 
     const timer = window.setTimeout(() => {
-      if (game.phase === 'betweenDowns') {
-        if (game.play.result?.type === 'touchdown') {
-          runAction({ type: 'kick', kickerId: `${game.play.result.team}-qb`, kind: 'extraPoint' }, 'computer');
-          return;
-        }
-
+      if (game.phase === 'betweenDowns' && game.play.result?.type !== 'touchdown') {
         nextDown();
         return;
       }
@@ -375,7 +379,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     }, COMPUTER_ACTION_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players, showNewGameConfirmation]);
+  }, [autoPaused, bothComputers, computerMatchStarted, controlTeam, game, history.length, isViewingHistory, legalActions, players, showNewGameConfirmation, showSettings]);
 
   return (
     <div id="chessball-app">
@@ -462,11 +466,11 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     </button>
                   </>
                 ) : (
-                  <button type="button" onClick={fieldGoal} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || ballCarrier?.team !== game.turn}>
+                  <button type="button" onClick={fieldGoal} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || Boolean(game.conversion) || ballCarrier?.team !== game.turn}>
                     <Goal size={17} /> Field Goal
                   </button>
                 )}
-                <button type="button" onClick={punt} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || ballCarrier?.team !== game.turn}>
+                <button type="button" onClick={punt} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || Boolean(game.conversion) || ballCarrier?.team !== game.turn}>
                   <Flag size={17} /> Punt
                 </button>
                 <button type="button" onClick={nextDown} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'betweenDowns' || game.play.result?.type === 'touchdown'}>
@@ -524,6 +528,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           <div className="board-scroller">
             <AccessibleBoard
               game={game}
+              pieceStyle={pieceStyle}
               displayGame={boardGame}
               legalActions={legalActions}
               selectedPiece={selectedPiece}
@@ -554,6 +559,9 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                 )}
                 <button type="button" onClick={() => setShowRules(true)}>
                   <BookOpen size={17} /> Rules
+                </button>
+                <button type="button" onClick={() => setShowSettings(true)}>
+                  <Settings size={17} /> Settings
                 </button>
                 {bothComputers && !computerMatchStarted && (
                   <button type="button" disabled={isViewingHistory} onClick={startComputerMatch}>
@@ -598,6 +606,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           fallbackFocus={workspaceHeadingRef}
         />
       )}
+      {showSettings && <SettingsDialog pieceStyle={pieceStyle} onPieceStyleChange={changePieceStyle} fallbackFocus={workspaceHeadingRef} onClose={() => setShowSettings(false)} />}
       {showRules && <RulesDialog fallbackFocus={workspaceHeadingRef} onClose={() => setShowRules(false)} />}
       {showNewGameConfirmation && game.phase !== 'pregame' && (
         <Modal
@@ -699,34 +708,60 @@ function FinalResultModal({
 function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObject<HTMLElement | null>; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   return (
-    <Modal label="Rules and How to Play" dismissible initialFocus={closeRef} fallbackFocus={fallbackFocus} onClose={onClose}>
+    <Modal label="Rules and How to Play" dismissible initialFocus={closeRef} fallbackFocus={fallbackFocus} onClose={onClose} dialogClassName="rules-help-dialog">
+      <header className="rules-header">
+        <h2>Rules and How to Play</h2>
         <button ref={closeRef} className="rules-close" type="button" onClick={onClose} aria-label="Close rules">
           <X size={18} />
         </button>
-        <h2>Rules and How to Play</h2>
-        <p>A match starts with a coin toss and kickoff. Heads means home wins, tails means away wins. The winner chooses to kick or receive, then each quarter allows two completed drives per team.</p>
+      </header>
+      <div className="rules-content" role="region" aria-label="Rules text" tabIndex={0}>
+        <p>A match starts with a coin toss and kickoff. Heads means Home wins; tails means Away wins. The winner chooses to kick or receive. Computer players choose to receive. A 2d6 roll means rolling two six-sided dice and adding their results.</p>
+        <h3>Match and downs</h3>
         <ul>
-          <li>Kickoffs and punts roll 2d6 for distance. Each dice point is 5 yards, so each point moves the landing column 1 grid square. The kicking team chooses only the landing row on that exact column.</li>
-          <li>If a kick lands in the end zone, it is a touchback to the receiving team's 25-yard line. Otherwise, the ball lands loose and the receiving team must move a player onto the landing square to control it. If the kicking team reaches an untouched loose kick first, the play is dead and the receiving team starts at that spot. During returns, every player uses the same square-radius movement: return team up to 2 squares, coverage team up to 3 squares.</li>
-          <li>Each normal down starts with formations. Choose a preset, change it freely, then confirm each side before the snap.</li>
-          <li>Offense acts first after the snap, then turns alternate one action at a time.</li>
-          <li>Move, power move, pass, hand off, tackle, recover, punt, or attempt a field goal.</li>
-          <li>Gain 10 yards in four downs. On this 5-yard grid, that means advancing two columns. Near the end zone, the series becomes goal-to-go.</li>
-          <li>Punts and field goals are offensive kicks from live play. Punts start a live return; field goals resolve immediately. They are normally fourth-down choices, but either can be attempted on any down as in football.</li>
-          <li>Distance is counted by moving diagonally first, then straight. A pass from 4,5 to 5,9 is distance 4.</li>
-          <li>Movement: QB/FS moves 1 any direction; RB/MLB moves up to 3 orthogonal with one turn; FB/OLB moves up to 2 orthogonal; WR/CB moves up to 5 straight or diagonal; TE/SS moves up to 3 straight or diagonal; OL/DL moves 1 orthogonal.</li>
-          <li>When the offense controls the ball, offensive movement is reduced by 1 square so the defense has a pursuit advantage.</li>
-          <li>RB, FB, and line pieces can power move through occupied orthogonal lanes. Roll 2d6 against a high target; more contact makes it harder. Failed power moves stay put and lose the turn.</li>
-          <li>Forward passes must start behind the line and can be used once per down. Choose an eligible receiver, then roll 2d6 against the distance to that receiver. Passes may be thrown through traffic.</li>
-          <li>Snake eyes on a failed pass is an interception only when a defender is within one square of the intended receiver.</li>
-          <li>Incomplete passes are dead balls. They stop the play at the previous line unless the failed forward pass creates a turnover on downs.</li>
-          <li>Tackles need a clear approach lane within the defender's movement range. Friendly pieces do not block the lane; opposing pieces do.</li>
-          <li>RB/MLB, FB/OLB, and OL/DL can power tackle through opposing blockers. Roll 2d6 against 8 plus distance plus blockers crossed. Clear tackles use 5 plus distance.</li>
-          <li>Double sixes on a tackle creates an immediate strip turnover recovered by the tackling team.</li>
-          <li>A touchdown crosses the near goal line. A field goal measures through the ten-yard end zone to the posts at the back edge/end line, then rolls 2d6 against that distance. Made field goals score and lead to a kickoff; missed field goals turn the ball over at the kick spot. After a touchdown, choose an extra point kick or a two-point try from the goal line.</li>
-          <li>Touchdowns, extra points, two-point tries, and made field goals are followed by a kickoff from the scoring team. After a safety, the team that allowed the safety kicks to the scoring team. At halftime, the team that received the opening kickoff kicks to the other side.</li>
-          <li>Scores, safeties, interceptions, turnovers on downs, punts, missed field goals, and failed conversions complete drives. Normal tackles and incomplete passes only advance the down.</li>
+          <li>There are {QUARTERS_PER_MATCH} quarters, with no game clock. A quarter ends when both teams have reached {DRIVES_PER_TEAM_PER_QUARTER} completed drives. The match ends after the fourth quarter; equal scores remain a tie.</li>
+          <li>Home attacks right and Away attacks left throughout the match. Each field column represents 5 yards.</li>
+          <li>Gain 10 yards in four downs by reaching the highlighted line to gain. Short gains and losses keep the same target for the next down. Reaching it earns first down and a new target two columns ahead; failing on fourth down turns the ball over.</li>
+          <li>Near an end zone, the line to gain is capped at the last field column. Reaching that column can still earn a first down; scoring requires entering the end zone.</li>
+          <li>Each normal down starts with formations. Choose and preview a preset, then confirm each side. After confirming, each team may use up to two shifts to highlighted adjacent orthogonal squares on its own side of the line. Confirm both sides before snapping; shifts are optional.</li>
+          <li>The offense acts first after the snap, then teams alternate one action at a time. A stopped play waits for Next; a touchdown first requires a conversion choice.</li>
+          <li>A normal drive ends with a field-goal attempt, punt, interception, strip turnover, turnover on downs, safety, or completed touchdown conversion. Drive counts update on Next. Kickoff returns do not consume a normal drive; a punt return completes the kicking team's drive.</li>
         </ul>
+        <h3>Movement and possession</h3>
+        <ul>
+          <li>Base movement: QB/FS moves 1 square in any direction; RB/MLB moves up to 3 orthogonally, with one optional right-angle turn; FB/OLB moves up to 2 in a straight orthogonal line; WR/CB moves up to 5 straight or diagonally; TE/SS moves up to 3 straight or diagonally; OL/DL moves 1 orthogonally. A turning RB/MLB move uses its full movement allowance.</li>
+          <li>When the offense controls the ball, its normal RB, FB, WR, and TE movement ranges are reduced by 1. QB and OL movement remains 1. This applies to the whole offense, not just the ball carrier; power moves use their separate ranges below.</li>
+          <li>Moves must end on an empty square inside the board. Normal movement can pass through teammates, but opponents block the path. An RB/MLB cannot turn on an occupied square.</li>
+          <li>Power moves travel straight orthogonally through at least one opponent: RB/MLB up to 3 squares, FB/OLB and OL/DL up to 2. They cannot pass through the ball carrier and must end on an empty square. Roll 2d6 and meet or beat 8 + 2 per opposing piece crossed. A failed power move stays put and uses the turn.</li>
+          <li>A handoff transfers the ball to an adjacent teammate, including diagonally, without a roll. Linemen may receive handoffs. Recover is available to a player already standing on a loose ball.</li>
+          <li>Pass and tackle distance is the larger of the horizontal and vertical gaps: count diagonally first, then straight. For example, from 4,5 to 5,9 is distance 4.</li>
+        </ul>
+        <h3>Passing and tackling</h3>
+        <ul>
+          <li>The ball carrier may pass to any teammate except an offensive lineman. A forward pass must start on or behind the line of scrimmage and can be attempted only once per down. Sideways and backward passes do not use that allowance, but still require a roll. Passes may travel through traffic.</li>
+          <li>Passes succeed on a 2d6 total of at least 5 + half the distance, rounded up. Snake eyes causes an interception only if a defender is within one square of the intended receiver, including diagonally. The interception ends the play at the defender's square.</li>
+          <li>Incomplete passes are dead balls, including failed sideways and backward passes. They stop play at the previous line of scrimmage and use a down; on fourth down, possession changes at that line.</li>
+          <li>Only the ball carrier may be tackled. A defender must be within its movement range, measured by the same distance rule as passing. Friendly pieces do not block the approach. With no opposing blockers, a tackle succeeds on 2d6 totaling at least 5 + distance.</li>
+          <li>RB/MLB, FB/OLB, and OL/DL may power tackle through opposing blockers. The target is 8 + distance + opposing blockers crossed. Other roles cannot tackle through opposing blockers.</li>
+          <li>Double sixes on a legal tackle causes an immediate strip turnover at the tackler's square, even if the normal target exceeds 12. A successful tackle in the carrier's own end zone is a safety instead. During a two-point try, a successful tackle or strip ends the try without points.</li>
+          <li>A failed tackle uses the turn and moves the defender one square toward the carrier if that square is empty and inside the board. A normal successful tackle stops play at the carrier's square; reaching the line to gain earns first down, otherwise a down is used.</li>
+        </ul>
+        <h3>Kicking and returns</h3>
+        <ul>
+          <li>Kickoffs start from the kicking team's 35-yard line. Kickoffs and punts roll 2d6 for distance: each point moves the landing column 1 square, or 5 yards, from the kicker. The kicking team chooses the landing row on that column. Kicks beyond the board are capped at the farthest end-zone column.</li>
+          <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, use Recover. If the kicking team moves onto an untouched loose kick first, the play ends and the receiving team starts there.</li>
+          <li>During returns, every role can move within a square radius: receiving team up to 2 squares, coverage team up to 3. Teammates may be crossed, opponents block the path, and the destination must be empty. Only movement, tackles, and recovery are available; passing, handoffs, power moves, and further kicks wait until normal play.</li>
+          <li>Punts and field goals may be attempted by the ball carrier on any normal live down. Punts proceed to placement and a possible return; field goals resolve immediately. Neither is allowed during a two-point try.</li>
+          <li>A field goal measures through the ten-yard end zone to the posts at the back edge/end line. Roll 2d6 and meet or beat 5 + half that grid distance, rounded up. A made field goal scores 3; a miss turns possession over at the kick spot.</li>
+        </ul>
+        <h3>Scoring and restarts</h3>
+        <ul>
+          <li>Moving the ball carrier into the opponent's end zone or completing a pass there scores a touchdown worth 6 points. A successful tackle of a carrier in their own end zone awards the defense a 2-point safety.</li>
+          <li>After a touchdown, choose an extra point kick or a two-point try. The extra point scores 1 on a 2d6 total of 5 or more. A two-point try starts with formations at the last field column before the opponent's end zone and scores 2 for reaching that end zone. An incomplete pass, interception, successful tackle, or strip ends the try without points; there is no second down and no kicking option.</li>
+          <li>After the conversion, successful or not, the touchdown team kicks off. A made field goal also leads to a kickoff by the scoring team. After a safety, the team that allowed it kicks. These restarts can be replaced by halftime or the end of the match when both drive counts are complete.</li>
+          <li>At halftime, the team that received the opening kickoff kicks to the other side.</li>
+        </ul>
+      </div>
     </Modal>
   );
 }
@@ -1078,229 +1113,6 @@ function tackleActions(_game: GameState, selected: Piece, legalActions: Action[]
   );
 }
 
-export function chooseComputerAction(game: GameState, legalActions: Action[], seed: number, players: PlayerControl): Action | null {
-  if (game.phase === 'coinToss') {
-    if (!game.coinToss.winner) return { type: 'coinToss' };
-    return { type: 'chooseKickoffChoice', team: game.coinToss.winner, choice: 'receive' };
-  }
-  if (game.phase === 'kickoff') return { type: 'kick', kickerId: `${game.turn}-qb`, kind: 'kickoff' };
-  if (game.phase === 'kickPlacement') return chooseComputerKickPlacement(game, legalActions, seed);
-  if (game.phase === 'formation') return chooseComputerFormationAction(game, seed, players);
-  if (game.phase !== 'live' && game.phase !== 'kickReturn') return null;
-
-  const ball = game.ball;
-  const carrier = ball.kind === 'controlled' ? game.pieces.find((piece) => piece.id === ball.pieceId) : undefined;
-  if (carrier && carrier.team !== game.turn) {
-    const tackles = legalActions.filter((action): action is Extract<Action, { type: 'tackle' }> => action.type === 'tackle');
-    const tackle = pickSeeded(tackles, seed);
-    if (tackle) return tackle;
-  }
-
-  const recovery = pickSeeded(legalActions.filter((action) => action.type === 'recover'), seed);
-  if (recovery) return recovery;
-
-  if (ball.kind === 'loose') {
-    const pickupMove = pickSeeded(legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
-      action.type === 'move' && sameCoord(action.to, ball.coord),
-    ), seed);
-    if (pickupMove) return pickupMove;
-  }
-
-  if (carrier?.team === game.turn) {
-    if (game.phase === 'kickReturn') {
-      const carrierMoves = legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
-        action.type === 'move' && action.pieceId === carrier.id,
-      );
-      return pickFromTopSeeded(carrierMoves.sort((a, b) => compareOffensiveMoves(game, a.to, b.to)), seed, 3) ?? null;
-    }
-
-    if (game.down === 4 && fieldGoalAttempt(game.direction, carrier.coord).required <= 10) {
-      return { type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' };
-    }
-
-    const carrierMoves = legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
-      action.type === 'move' && action.pieceId === carrier.id,
-    );
-    const forwardCarrierMove = carrierMoves.some((action) => madeForwardProgress(game, carrier.coord, action.to));
-    if (carrier.role === 'qb' && !forwardCarrierMove) {
-      const routeMove = chooseRouteDevelopmentMove(game, legalActions, seed);
-      if (routeMove) return routeMove;
-
-      const receiverPass = chooseComputerPass(game, carrier, seed);
-      if (receiverPass) return receiverPass;
-    }
-
-    const handoffs = legalActions
-      .filter((action): action is Extract<Action, { type: 'handoff' }> => action.type === 'handoff')
-      .sort((a, b) => handoffPriority(b.toId) - handoffPriority(a.toId));
-    const handoff = pickFromTopSeeded(handoffs, seed, 2);
-    if (carrier.role === 'qb' && handoff && !forwardCarrierMove) return handoff;
-
-    const bestCarrierMove = pickFromTopSeeded(carrierMoves.sort((a, b) => compareOffensiveMoves(game, a.to, b.to)), seed, 3);
-    if (bestCarrierMove) return bestCarrierMove;
-
-    const powerMoves = legalActions.filter((action): action is Extract<Action, { type: 'powerMove' }> =>
-      action.type === 'powerMove' && action.pieceId === carrier.id,
-    );
-    const bestPowerMove = pickFromTopSeeded(powerMoves.sort((a, b) => compareOffensiveMoves(game, a.to, b.to)), seed, 2);
-    if (bestPowerMove) return bestPowerMove;
-  }
-
-  const ballAt = ballCoord(game);
-  const recentMoverIds = recentMovingPieceIds(game);
-  const moves = legalActions.filter((action): action is Extract<Action, { type: 'move' | 'powerMove' }> => action.type === 'move' || action.type === 'powerMove');
-  const nonRepeatingMoves = moves.filter((action) => !recentMoverIds.has(action.pieceId));
-  const candidateMoves = nonRepeatingMoves.length > 0 ? nonRepeatingMoves : moves;
-  const bestMove = pickFromTopSeeded(candidateMoves.sort((a, b) => chebyshevDistance(a.to, ballAt) - chebyshevDistance(b.to, ballAt)), seed, 4);
-  if (bestMove) return bestMove;
-
-  return legalActions[0] ?? null;
-}
-
-function chooseComputerKickPlacement(game: GameState, legalActions: Action[], seed: number): Extract<Action, { type: 'placeKick' }> | null {
-  const placements = legalActions.filter((action): action is Extract<Action, { type: 'placeKick' }> => action.type === 'placeKick');
-  const direction = game.pendingKick ? directionForUi(game.pendingKick.kickingTeam) : directionForUi(game.turn);
-  return pickFromTopSeeded(placements.sort((a, b) => {
-    const depthA = direction === 1 ? a.at.x : -a.at.x;
-    const depthB = direction === 1 ? b.at.x : -b.at.x;
-    if (depthA !== depthB) return depthB - depthA;
-    return Math.abs(a.at.y - 1 - (seed % 9)) - Math.abs(b.at.y - 1 - (seed % 9));
-  }), seed, 6) ?? null;
-}
-
-function chooseComputerFormationAction(game: GameState, seed: number, players: PlayerControl): Action | null {
-  const offenseChosen = game.play.actions.some((action) => action.type === 'chooseFormation' && action.side === 'offense');
-  if (!game.formationConfirmed.offense && !offenseChosen) {
-    if (players[game.possession] !== 'computer') return null;
-    const formation = offensiveFormations[(seed + game.down) % offensiveFormations.length];
-    return { type: 'chooseFormation', side: 'offense', formationId: formation.id };
-  }
-
-  if (!game.formationConfirmed.offense) {
-    if (players[game.possession] !== 'computer') return null;
-    return { type: 'confirmFormation', side: 'offense' };
-  }
-
-  const defenseChosen = game.play.actions.some((action) => action.type === 'chooseFormation' && action.side === 'defense');
-  if (!game.formationConfirmed.defense && !defenseChosen) {
-    const defenseTeam = otherTeamForUi(game.possession);
-    if (players[defenseTeam] !== 'computer') return null;
-    const formation = defensiveFormations[(seed + game.down + 1) % defensiveFormations.length];
-    return { type: 'chooseFormation', side: 'defense', formationId: formation.id };
-  }
-
-  if (!game.formationConfirmed.defense) {
-    const defenseTeam = otherTeamForUi(game.possession);
-    if (players[defenseTeam] !== 'computer') return null;
-    return { type: 'confirmFormation', side: 'defense' };
-  }
-
-  if (players[game.possession] !== 'computer') return null;
-  return { type: 'snap' };
-}
-
-function compareOffensiveMoves(game: GameState, a: Coord, b: Coord): number {
-  const progressA = game.direction === 1 ? a.x : -a.x;
-  const progressB = game.direction === 1 ? b.x : -b.x;
-  if (progressA !== progressB) return progressB - progressA;
-  return Math.abs(a.y - 5) - Math.abs(b.y - 5);
-}
-
-function chooseComputerPass(game: GameState, passer: Piece, seed: number): Extract<Action, { type: 'pass' }> | null {
-  const receivers = game.pieces
-    .filter((piece) => piece.team === passer.team && piece.id !== passer.id)
-    .filter((piece) => piece.role !== 'ol')
-    .sort((a, b) => receiverPriority(b) - receiverPriority(a));
-
-  for (const receiver of rotate(receivers, seed)) {
-    const action = { type: 'pass' as const, passerId: passer.id, receiverId: receiver.id };
-    try {
-      applyAction(game, action);
-      return action;
-    } catch {
-      continue;
-    }
-  }
-
-  return null;
-}
-
-function chooseRouteDevelopmentMove(game: GameState, legalActions: Action[], seed: number): Extract<Action, { type: 'move' }> | null {
-  const routeAlreadyDeveloped = game.play.actions.some((action) => {
-    if (action.type !== 'move') return false;
-    const piece = game.pieces.find((item) => item.id === action.pieceId);
-    return piece?.team === game.possession && (piece.role === 'wr' || piece.role === 'te');
-  });
-  if (routeAlreadyDeveloped) return null;
-
-  const routeMoves = legalActions
-    .filter((action): action is Extract<Action, { type: 'move' }> => action.type === 'move')
-    .filter((action) => {
-      const piece = game.pieces.find((item) => item.id === action.pieceId);
-      return Boolean(piece && piece.team === game.possession && (piece.role === 'wr' || piece.role === 'te') && madeForwardProgress(game, piece.coord, action.to));
-    })
-    .sort((a, b) => compareRouteMoves(game, a, b));
-
-  return pickFromTopSeeded(routeMoves, seed, 3) ?? null;
-}
-
-function compareRouteMoves(game: GameState, a: Extract<Action, { type: 'move' }>, b: Extract<Action, { type: 'move' }>): number {
-  const safetyA = nearestDefenderDistance(game, a.to);
-  const safetyB = nearestDefenderDistance(game, b.to);
-  const safeA = safetyA > 1 ? 1 : 0;
-  const safeB = safetyB > 1 ? 1 : 0;
-  if (safeA !== safeB) return safeB - safeA;
-  if (safetyA !== safetyB) return safetyB - safetyA;
-
-  const progressA = game.direction === 1 ? a.to.x : -a.to.x;
-  const progressB = game.direction === 1 ? b.to.x : -b.to.x;
-  if (progressA !== progressB) return progressB - progressA;
-  return Math.abs(a.to.y - 5) - Math.abs(b.to.y - 5);
-}
-
-function nearestDefenderDistance(game: GameState, coord: Coord): number {
-  const defenders = game.pieces.filter((piece) => piece.team !== game.possession);
-  return Math.min(...defenders.map((piece) => chebyshevDistance(piece.coord, coord)));
-}
-
-function pickSeeded<T>(items: T[], seed: number): T | undefined {
-  if (items.length === 0) return undefined;
-  return items[Math.abs(seed) % items.length];
-}
-
-function pickFromTopSeeded<T>(items: T[], seed: number, limit: number): T | undefined {
-  return pickSeeded(items.slice(0, Math.max(1, limit)), seed);
-}
-
-function rotate<T>(items: T[], seed: number): T[] {
-  if (items.length === 0) return items;
-  const offset = Math.abs(seed) % items.length;
-  return [...items.slice(offset), ...items.slice(0, offset)];
-}
-
-function receiverPriority(piece: Piece): number {
-  if (piece.role === 'wr') return 3;
-  if (piece.role === 'te') return 2;
-  return 1;
-}
-
-function madeForwardProgress(game: GameState, from: Coord, to: Coord): boolean {
-  return game.direction === 1 ? to.x > from.x : to.x < from.x;
-}
-
-function handoffPriority(pieceId: string): number {
-  if (pieceId.includes('-rb')) return 3;
-  if (pieceId.includes('-fb')) return 2;
-  return 1;
-}
-
-function recentMovingPieceIds(game: GameState): Set<string> {
-  return new Set(game.play.actions
-    .slice(-2)
-    .filter((action): action is Extract<Action, { type: 'move' | 'powerMove' }> => action.type === 'move' || action.type === 'powerMove')
-    .map((action) => action.pieceId));
-}
-
 function actionLabel(game: GameState, action: Action): string {
   if (action.type === 'coinToss') return 'Flip coin';
   if (action.type === 'chooseKickoffChoice') return capitalize(action.choice);
@@ -1541,9 +1353,6 @@ function coordLabel(coord: Coord): string {
   return `${coord.x},${coord.y}`;
 }
 
-function chebyshevDistance(a: Coord, b: Coord): number {
-  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-}
 
 function downDistanceLabel(game: GameState): string {
   if (game.phase === 'pregame') return 'Ready';

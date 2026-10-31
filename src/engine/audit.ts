@@ -191,7 +191,7 @@ function emptyOutcome(): OutcomeAccumulator { return { games: 0, wins: 0, ties: 
 function accumulateTacticCohorts(target: Map<string, TacticAccumulator>, game: SimulatedGame): void {
   for (const [key, opportunities] of Object.entries(game.summary.actionOpportunities)) {
     if (key === 'total' || opportunities <= 0) continue;
-    const match = /^team=(home|away)\|policy=(heuristic|random)\|/.exec(key);
+    const match = /^team=(home|away)\|policy=(heuristic|random|computer)\|/.exec(key);
     if (!match) continue;
     const team = match[1] as 'home' | 'away', policy = match[2] as SimulationPolicy;
     const accumulator = target.get(key) ?? { policy, team, selections: 0, opportunities: 0, selected: emptyOutcome(), notSelected: emptyOutcome() };

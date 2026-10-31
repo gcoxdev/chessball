@@ -178,3 +178,9 @@ function auditReport(overrides: Partial<MatchedAuditReport> = {}): MatchedAuditR
     ...overrides,
   };
 }
+
+
+it('accepts the browser computer policy for matched CLI audits', () => {
+  expect(parseArgs(['--audit', '--home-policy', 'computer', '--away-policy', 'computer']))
+    .toMatchObject({ homePolicy: 'computer', awayPolicy: 'computer' });
+});

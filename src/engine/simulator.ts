@@ -11,8 +11,10 @@ import {
   startNextDown,
 } from './rules';
 import type { Action, Coord, DiceRoll, GameState, Piece, PlayResult, Team } from './types';
+import { chooseComputerAction } from './computer';
 
-export type SimulationPolicy = 'heuristic' | 'random';
+type BatchPolicy = 'heuristic' | 'random';
+export type SimulationPolicy = BatchPolicy | 'computer';
 export type TeamPolicies = Record<Team, SimulationPolicy>;
 export type SimulationOpening = {
   coinWinner: Team;
@@ -81,7 +83,7 @@ export type SimulationBatchReport = {
   stalled: number;
   crashed: number;
   averageActions: number;
-  byPolicy: Record<SimulationPolicy, BatchPolicySummary>;
+  byPolicy: Record<BatchPolicy, BatchPolicySummary>;
   phases: CountMap;
   resultTypes: CountMap;
   actionTypes: CountMap;
@@ -97,7 +99,7 @@ export type SimulationBatchReport = {
     averageAwayScore: number | null;
   };
   balance: BalanceReport;
-  balanceByPolicy: Record<SimulationPolicy, BalanceBucket>;
+  balanceByPolicy: Record<BatchPolicy, BalanceBucket>;
   balanceByOpeningKickoff: Record<Team, BalanceBucket>;
   balanceByOpeningReceiver: Record<Team, BalanceBucket>;
   balanceByFinalDirection: Record<'left' | 'right', BalanceBucket>;
@@ -441,7 +443,7 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
   const actionOpportunities = countMap();
   const formationChoices = countMap();
   const driveOutcomes = countMap();
-  const byPolicy: Record<SimulationPolicy, BatchPolicySummary> = {
+  const byPolicy: Record<BatchPolicy, BatchPolicySummary> = {
     heuristic: emptyPolicySummary(),
     random: emptyPolicySummary(),
   };
@@ -473,7 +475,7 @@ export function simulateBatch(options: SimulateBatchOptions): SimulationBatchRep
   let awayScore = 0;
 
   for (let game = 0; game < games; game += 1) {
-    const policy: SimulationPolicy = game < Math.ceil(games / 2) ? 'heuristic' : 'random';
+    const policy: BatchPolicy = game < Math.ceil(games / 2) ? 'heuristic' : 'random';
     const gameSeed = seed + game * 9_973;
     const result = simulate({
       seed: gameSeed,
@@ -724,6 +726,17 @@ function chooseSimulationAction(
 ): Action | null {
   if (state.phase === 'betweenDowns' && state.play.result?.type !== 'touchdown') return null;
   if (legalActions.length === 0) return null;
+  if (policy === 'computer') {
+    // Explicit audit controls override only the requested setup decisions.
+    if (state.phase === 'coinToss' && state.coinToss.winner && opening) {
+      return { type: 'chooseKickoffChoice', team: state.coinToss.winner, choice: opening.choice };
+    }
+    if (state.phase === 'formation' && formationPlan) {
+      return chooseFormationProtocolAction(state, legalActions, rng, policy, actionIndex, formationPlan);
+    }
+    // The browser folds coin toss + choice into its initial history entry.
+    return chooseComputerAction(state, legalActions, Math.max(1, actionIndex - 1), { home: 'computer', away: 'computer' });
+  }
   const protocolAction = chooseProtocolAction(state, legalActions, rng, policy, actionIndex, opening, formationPlan);
   if (protocolAction) return protocolAction;
   if (policy === 'random') return chooseBoundedRandomAction(state, legalActions, rng);

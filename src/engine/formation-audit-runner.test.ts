@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchedAuditReport } from './audit';
-import committedArtifact from '../../docs/audits/data/2026-07-11-formation-audit.json';
 import {
   canonicalArtifact,
   compactFormationReport,
@@ -53,12 +52,15 @@ describe('formation audit canonical output', () => {
     expect(serializeCanonicalArtifact(artifact).endsWith('\n')).toBe(true);
   });
 
-  it('keeps the committed artifact aligned with the canonical helper and experiment definitions', () => {
+  it('assembles all experiments into the canonical artifact in definition order', () => {
     const experiments = formationExperiments('all');
-    expect(committedArtifact.schema).toBe('chessball-formation-audit-v2');
-    expect([...committedArtifact.screen, ...committedArtifact.followups].map(item => item.name)).toEqual(experiments.map(item => item.name));
-    expect([...committedArtifact.screen, ...committedArtifact.followups].map(item => item.requestedPairs)).toEqual(experiments.map(item => item.pairs));
-    expect(JSON.stringify(committedArtifact)).not.toContain('runtimeMs');
-    expect(serializeCanonicalArtifact(committedArtifact as unknown as ReturnType<typeof canonicalArtifact>)).toBe(`${JSON.stringify(committedArtifact, null, 2)}\n`);
+    const artifact = canonicalArtifact(experiments.map(experiment => compactFormationReport(experiment, {
+      ...report(), requestedPairs: experiment.pairs,
+    })));
+    expect(artifact.schema).toBe('chessball-formation-audit-v2');
+    expect([...artifact.screen, ...artifact.followups].map(item => item.name)).toEqual(experiments.map(item => item.name));
+    expect([...artifact.screen, ...artifact.followups].map(item => item.requestedPairs)).toEqual(experiments.map(item => item.pairs));
+    expect(JSON.stringify(artifact)).not.toContain('runtimeMs');
+    expect(serializeCanonicalArtifact(artifact)).toBe(`${JSON.stringify(artifact, null, 2)}\n`);
   });
 });

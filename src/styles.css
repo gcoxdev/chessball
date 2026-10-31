@@ -614,8 +614,9 @@ button {
 
 .field {
   display: grid;
-  grid-template-columns: repeat(24, minmax(34px, 1fr));
-  grid-template-rows: repeat(11, minmax(34px, 1fr));
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  grid-template-rows: repeat(11, minmax(0, 1fr));
+  container-type: inline-size;
   aspect-ratio: 24 / 11;
   overflow: hidden;
   border: 2px solid rgba(244, 240, 222, 0.65);
@@ -775,13 +776,13 @@ button {
   position: absolute;
   z-index: 0;
   display: block;
-  width: 22px;
-  height: 32px;
+  width: 0.67em;
+  height: 0.98em;
   color: rgba(244, 240, 222, 0.74);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 2.05rem;
+  font-size: clamp(1rem, 2.5cqw, 2.05rem);
   font-weight: 900;
-  line-height: 32px;
+  line-height: 0.98;
   pointer-events: none;
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
@@ -828,11 +829,11 @@ button {
 }
 
 .yard-digit-left {
-  right: 8px;
+  right: 0.24em;
 }
 
 .yard-digit-right {
-  left: calc(8px + var(--yard-line-visible-width, 0px));
+  left: calc(0.24em + var(--yard-line-visible-width, 0px));
 }
 
 .yard-number::before,
@@ -843,21 +844,21 @@ button {
   display: none;
   width: 0;
   height: 0;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  border-top: 0.15em solid transparent;
+  border-bottom: 0.15em solid transparent;
   transform: translateY(-50%);
 }
 
 .yard-number.arrow-left::before {
   display: block;
-  left: -9px;
-  border-right: 8px solid rgba(244, 240, 222, 0.72);
+  left: -0.27em;
+  border-right: 0.24em solid rgba(244, 240, 222, 0.72);
 }
 
 .yard-number.arrow-right::after {
   display: block;
-  right: -9px;
-  border-left: 8px solid rgba(244, 240, 222, 0.72);
+  right: -0.27em;
+  border-left: 0.24em solid rgba(244, 240, 222, 0.72);
 }
 
 .square.scrimmage-forward {
@@ -1004,10 +1005,16 @@ button {
 }
 
 .piece.home {
+  --piece-color: #286b9c;
+  --piece-shadow: #123953;
+  --piece-highlight: #82c6ef;
   background: #286b9c;
 }
 
 .piece.away {
+  --piece-color: #b24b3f;
+  --piece-shadow: #5f2525;
+  --piece-highlight: #ffae91;
   background: #b24b3f;
 }
 
@@ -1016,45 +1023,145 @@ button {
   outline-offset: 1px;
 }
 
+.piece.piece--player,
+.piece.piece--helmet {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.piece > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+.piece.away > .piece-profile {
+  transform: scaleX(-1);
+}
+
+.piece-corner-label {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  z-index: 4;
+  min-width: 13px;
+  padding: 1px 2px;
+  border: 1px solid rgba(244, 240, 222, 0.6);
+  border-radius: 3px;
+  color: #fff;
+  font-size: clamp(8px, 0.7vw, 11px);
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 1px 1px #07110d;
+}
+
+.piece-corner-label.home {
+  background: #123953;
+}
+
+.piece-corner-label.away {
+  background: #5f2525;
+}
+
+.field[aria-readonly="true"] .square[tabindex="0"]:has(.piece-corner-label)::before {
+  left: 1px;
+  right: auto;
+}
+
+.rules-dialog.settings-dialog {
+  width: min(540px, 100%);
+}
+
+.piece-style-options {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.piece-style-options legend {
+  margin-bottom: 12px;
+  font-weight: 800;
+  color: var(--chalk);
+}
+
+.piece-style-option {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 84px;
+  padding: 12px;
+  border: 1px solid rgba(244, 240, 222, 0.2);
+  border-radius: 8px;
+  background: #102219;
+  cursor: pointer;
+}
+
+.piece-style-option.is-active {
+  border-color: var(--gold);
+  background: #272b1a;
+}
+
+.piece-style-option:focus-within {
+  outline: 2px solid var(--chalk);
+  outline-offset: 3px;
+}
+
+.piece-style-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--gold);
+}
+
+.piece-style-copy {
+  display: grid;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+
+.piece-style-copy > span {
+  color: rgba(244, 240, 222, 0.7);
+  font-size: 0.8rem;
+}
+
+.piece-style-preview {
+  display: flex;
+}
+
+.piece-style-preview > span {
+  position: relative;
+  width: clamp(40px, 8vw, 52px);
+  height: clamp(40px, 8vw, 52px);
+}
+
+.piece-style-preview .piece {
+  font-size: 0.7rem;
+}
+
 .football-marker {
   position: absolute;
   top: 3px;
   right: 3px;
   z-index: 3;
   width: clamp(14px, 42%, 22px);
-  height: clamp(8px, 22%, 12px);
-  border: 2px solid #f9e7b6;
-  border-radius: 50% / 58%;
-  background: #6f3a19;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.48);
+  height: auto;
+  aspect-ratio: 8 / 5;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
   transform: rotate(-28deg);
-}
-
-.football-marker::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 21%;
-  width: 58%;
-  height: 2px;
-  border-radius: 999px;
-  background: #f9e7b6;
-  transform: translateY(-50%);
-}
-
-.football-marker::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  width: 2px;
-  height: calc(100% - 6px);
-  border-radius: 999px;
-  background: #f9e7b6;
-  box-shadow:
-    -4px 0 0 rgba(249, 231, 182, 0.92),
-    4px 0 0 rgba(249, 231, 182, 0.92);
-  transform: translateX(-50%);
 }
 
 .square.target-zone {
@@ -1103,6 +1210,46 @@ button {
   gap: 8px;
   margin: 14px 0 0;
   padding-left: 20px;
+}
+
+.rules-help-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: min(760px, 90dvh);
+  overflow: hidden;
+  padding: 0;
+}
+
+.rules-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(244, 240, 222, 0.14);
+}
+
+.rules-header h2 {
+  margin: 0;
+}
+
+.rules-header .rules-close {
+  position: static;
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.rules-content {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 24px 24px;
+}
+
+.rules-content:focus-visible {
+  outline-offset: -3px;
 }
 
 .coin-toss-dialog {

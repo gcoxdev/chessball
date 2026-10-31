@@ -401,8 +401,10 @@ export function generateLegalActions(state: GameState): LegalAction[] {
     actions.push(...state.pieces
       .filter((piece) => canLegallyPassToReceiver(state, carrier, piece))
       .map((receiver) => ({ type: 'pass' as const, passerId: carrier.id, receiverId: receiver.id })));
-    actions.push({ type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' });
-    actions.push({ type: 'kick', kickerId: carrier.id, kind: 'punt' });
+    if (!state.conversion) {
+      actions.push({ type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' });
+      actions.push({ type: 'kick', kickerId: carrier.id, kind: 'punt' });
+    }
   }
 
   const ball = state.ball;
@@ -536,7 +538,9 @@ export function startNextDown(state: GameState): GameState {
     down: scoringOrTurnover ? 1 : state.down,
     pieces: formationPieces(nextPossession, lineOfScrimmage, state.formation),
     lineOfScrimmage,
-    firstDownLine: clamp(lineOfScrimmage + FIRST_DOWN_COLUMNS * direction, FIELD_START, FIELD_END),
+    firstDownLine: scoringOrTurnover || state.down === 1
+      ? clamp(lineOfScrimmage + FIRST_DOWN_COLUMNS * direction, FIELD_START, FIELD_END)
+      : state.firstDownLine,
     forwardPassUsed: false,
     formationShiftsRemaining: { home: 2, away: 2 },
     formationConfirmed: { offense: false, defense: false },
@@ -1094,6 +1098,7 @@ function handoff(state: GameState, fromId: string, toId: string, action: Action)
 }
 
 function kick(state: GameState, action: Extract<Action, { type: 'kick' }>): GameState {
+  if (state.conversion) throw new Error('Kicks are not allowed during a two-point try');
   const kicker = findPiece(state, action.kickerId);
   if (kicker.team !== state.possession || kicker.team !== state.turn) throw new Error('Only the offense may kick on its turn');
   if (state.ball.kind !== 'controlled' || state.ball.pieceId !== kicker.id) throw new Error('Kicker must control the ball');

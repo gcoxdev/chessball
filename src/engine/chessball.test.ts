@@ -1896,3 +1896,43 @@ describe('game flow', () => {
     expect(next.lineOfScrimmage).toBe(9);
   });
 });
+
+
+describe('series and conversion regression coverage', () => {
+  it.each(['home', 'away'] as const)('preserves short gains and losses through Next for %s', (team) => {
+    const direction = team === 'home' ? 1 : -1;
+    const defense = team === 'home' ? 'away' : 'home';
+    const origin = team === 'home' ? 6 : 17;
+    for (const gain of [-1, 1, 2]) {
+      const at = origin + gain * direction;
+      const state = createGame({ phase: 'live', possession: team, turn: defense, direction,
+        down: 1, lineOfScrimmage: origin, firstDownLine: origin + 2 * direction,
+        ball: { kind: 'controlled', pieceId: `${team}-rb` },
+        pieces: [
+          { id: `${team}-rb`, team, role: 'rb', label: 'RB', coord: { x: at, y: 5 } },
+          { id: `${defense}-rb`, team: defense, role: 'rb', label: 'MLB', coord: { x: at, y: 6 } },
+        ],
+      });
+      const stopped = applyAction(state, { type: 'tackle', defenderId: `${defense}-rb`, targetId: `${team}-rb`, roll: { die1: 5, die2: 5 } });
+      const next = startNextDown(stopped);
+      expect(next.down).toBe(gain === 2 ? 1 : 2);
+      expect(next.firstDownLine).toBe(gain === 2 ? at + 2 * direction : state.firstDownLine);
+      expect(moveDistanceToFirstDown(next, { x: at, y: 5 })).toBe(gain === 2 ? 2 : 2 - gain);
+      // An incomplete pass on the next down must also preserve the same target.
+      const incomplete = applyAction(liveGame(next), { type: 'pass', passerId: `${team}-qb`, receiverId: `${team}-wr1`, roll: { die1: 1, die2: 2 } });
+      expect(startNextDown(incomplete).firstDownLine).toBe(next.firstDownLine);
+    }
+  });
+
+  it.each(['home', 'away'] as const)('rejects field goals and punts during a %s two-point try', (team) => {
+    const touchdown = createGame({ phase: 'betweenDowns', possession: team, turn: team,
+      score: { home: 6, away: 6 }, play: { actions: [], result: { type: 'touchdown', team } },
+    });
+    const state = liveGame(applyAction(touchdown, { type: 'startTwoPointTry', team }));
+    expect(generateLegalActions(state).some(action => action.type === 'kick')).toBe(false);
+    for (const kind of ['fieldGoal', 'punt'] as const) {
+      expect(() => applyAction(state, { type: 'kick', kickerId: `${team}-qb`, kind, roll: { die1: 6, die2: 6 } })).toThrow(/two-point/i);
+    }
+    expect(state.score).toEqual({ home: 6, away: 6 });
+  });
+});

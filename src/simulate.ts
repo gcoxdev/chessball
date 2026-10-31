@@ -119,7 +119,7 @@ function requireDecimalSyntax(flag: string, value: string): void {
 }
 
 function policy(flag: string, value: string): SimulationPolicy {
-  if (value !== 'heuristic' && value !== 'random') throw new Error(`${flag} must be heuristic or random; received ${JSON.stringify(value)}`);
+  if (value !== 'heuristic' && value !== 'random' && value !== 'computer') throw new Error(`${flag} must be heuristic, random, or computer; received ${JSON.stringify(value)}`);
   return value;
 }
 
