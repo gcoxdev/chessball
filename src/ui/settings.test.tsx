@@ -31,12 +31,12 @@ describe('player appearance settings', () => {
     const board = screen.getByRole('grid', { name: 'Chessball board' });
     const signature = () => Array.from(board.querySelectorAll('.square.occupied')).map(node => `${node.getAttribute('title')}:${node.getAttribute('aria-label')}`);
     const before = signature();
-    expect(board.querySelectorAll('.piece--circle')).toHaveLength(22);
+    expect(board.querySelectorAll('.piece--player')).toHaveLength(22);
     const trigger = screen.getByRole('button', { name: 'Settings' });
     trigger.focus();
     fireEvent.click(trigger);
     const dialog = screen.getByRole('dialog', { name: 'Settings' });
-    expect(within(dialog).getByRole('radio', { name: 'Circles' })).toBeChecked();
+    expect(within(dialog).getByRole('radio', { name: 'Football players' })).toBeChecked();
     for (const [label, style] of [['Football players', 'player'], ['Helmets', 'helmet'], ['Circles', 'circle']]) {
       fireEvent.click(within(dialog).getByRole('radio', { name: label }));
       expect(board.querySelectorAll(`.piece--${style}`)).toHaveLength(22);
@@ -62,9 +62,9 @@ describe('player appearance settings', () => {
     expect(screen.getByRole('grid').querySelectorAll('.piece--helmet')).toHaveLength(22);
   });
 
-  it.each(['invalid JSON', '{"pieceStyle":"unknown"}', 'null', '42'])('uses circles for an invalid stored preference: %s', value => {
+  it.each(['invalid JSON', '{"pieceStyle":"unknown"}', 'null', '42'])('uses football players for an invalid stored preference: %s', value => {
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, value);
-    expect(loadPieceStyle()).toBe('circle');
+    expect(loadPieceStyle()).toBe('player');
   });
 
   it('allows changing styles even when browser storage is unavailable', () => {

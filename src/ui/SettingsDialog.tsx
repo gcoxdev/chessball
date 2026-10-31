@@ -5,9 +5,9 @@ import type { MatchLength } from './settings';
 import { PieceToken, type PieceStyle } from './PieceToken';
 
 const styles: { value: PieceStyle; label: string; description: string }[] = [
-  { value: 'circle', label: 'Circles', description: 'Classic board pieces' },
   { value: 'player', label: 'Football players', description: 'Side-profile players in full pads' },
   { value: 'helmet', label: 'Helmets', description: 'Contoured shells and face masks' },
+  { value: 'circle', label: 'Circles', description: 'Classic board pieces' },
 ];
 
 export function SettingsDialog({ pieceStyle, onPieceStyleChange, matchLength, onMatchLengthChange, fallbackFocus, onClose }: {

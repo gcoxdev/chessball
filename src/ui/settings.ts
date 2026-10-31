@@ -15,7 +15,7 @@ function storedSettings(): Record<string, unknown> {
 
 export function loadPieceStyle(): PieceStyle {
   const style = storedSettings().pieceStyle;
-  return style === 'player' || style === 'helmet' ? style : 'circle';
+  return style === 'circle' || style === 'helmet' ? style : 'player';
 }
 
 export function loadMatchLength(): MatchLength {

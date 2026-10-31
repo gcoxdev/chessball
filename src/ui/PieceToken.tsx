@@ -78,7 +78,7 @@ function PlayerProfile({ id }: { id: string }) {
   );
 }
 
-export function PieceToken({ team, label, style = 'circle', selected = false }: {
+export function PieceToken({ team, label, style = 'player', selected = false }: {
   team: Team;
   label: string;
   style?: PieceStyle;
