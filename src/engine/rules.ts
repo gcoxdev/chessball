@@ -14,6 +14,7 @@ import type {
   RollResult,
   Team,
 } from './types';
+import { specialTeamsDefensiveFormations, specialTeamsFormations } from './special-teams';
 
 const WIDTH = 24;
 const HEIGHT = 11;
@@ -334,6 +335,7 @@ export function createGame(overrides: Partial<GameState> = {}): GameState {
     drivesRemaining: { home: DEFAULT_DRIVES, away: DEFAULT_DRIVES },
     forwardPassUsed: false,
     formation,
+    playType: 'normal',
     formationConfirmed: { offense: false, defense: false },
     formationShiftsRemaining: { home: 2, away: 2 },
     conversion: undefined,
@@ -341,7 +343,12 @@ export function createGame(overrides: Partial<GameState> = {}): GameState {
     play: { actions: [] },
   };
 
-  return { ...base, ...overrides, pieces: overrides.pieces ?? base.pieces };
+  const state = { ...base, ...overrides, pieces: overrides.pieces ?? base.pieces };
+  if (state.playType !== 'normal' && !overrides.pieces) {
+    state.pieces = formationPieces(possession, lineOfScrimmage, { ...specialTeamsFormations[state.playType], defense: kickingDefenseFormation(state) });
+  }
+  if (state.playType !== 'normal' && !overrides.formationShiftsRemaining) state.formationShiftsRemaining = { home: 0, away: 0 };
+  return state;
 }
 
 export function fieldZone(coord: Coord): FieldZone {
@@ -365,18 +372,33 @@ export function gridDistance(a: Coord, b: Coord): number {
 }
 
 export function activeRoleCode(state: GameState, piece: Piece): string {
+  if (state.fakeFieldGoal && !state.conversion) {
+    const team = state.fakeFieldGoal.team;
+    if (piece.id === `${team}-qb`) return 'K';
+    if (piece.id === `${team}-fb`) return 'H';
+    if (piece.id === `${team}-ol3`) return 'LS';
+  }
   // Possession changes when a kick lands, but the special-teams units stay
   // on the field until the next down. Use the kick's teams, not possession.
   const kickResult = state.play.result;
   const scoringKick = state.phase === 'betweenDowns' && (kickResult?.type === 'fieldGoal' || kickResult?.type === 'extraPoint')
     ? kickResult : undefined;
-  const kickKind = scoringKick?.type ?? (state.phase === 'kickoff' ? 'kickoff' : state.pendingKick?.kind);
-  const kickingTeam = scoringKick?.team ?? (state.phase === 'kickoff' ? state.possession : state.pendingKick?.kickingTeam);
+  // A return's kick metadata survives a two-point try for drive accounting.
+  // It must not keep special-teams labels on the conversion formation.
+  const pending = !state.conversion && ['kickPlacement', 'kickReturn', 'betweenDowns'].includes(state.phase) ? state.pendingKick : undefined;
+  const setupKick = state.phase === 'formation' && state.playType !== 'normal' ? state.playType : undefined;
+  const kickKind = scoringKick?.type ?? setupKick ?? (state.phase === 'kickoff' ? 'kickoff' : pending?.kind);
+  const kickingTeam = scoringKick?.team ?? (setupKick || state.phase === 'kickoff' ? state.possession : pending?.kickingTeam);
   if (kickKind && kickingTeam) {
     const kickAction = state.play.actions.find((action): action is Extract<Action, { type: 'kick' }> => action.type === 'kick' && action.kind === kickKind);
     const kickerId = kickAction?.kickerId ?? `${kickingTeam}-qb`;
     if (piece.id === kickerId) return kickKind === 'punt' ? 'P' : 'K';
-    if (scoringKick) return piece.team === kickingTeam ? 'BL' : 'ST';
+    if (piece.team === kickingTeam && state.playType !== 'normal' && kickKind !== 'kickoff' && kickKind !== 'extraPoint') {
+      if (piece.id === `${kickingTeam}-ol3`) return 'LS';
+      if (kickKind === 'fieldGoal' && piece.id === `${kickingTeam}-fb`) return 'H';
+      if (kickKind === 'punt') return piece.role === 'wr' ? 'ST' : 'BL';
+    }
+    if (scoringKick || kickKind === 'fieldGoal') return piece.team === kickingTeam ? 'BL' : 'ST';
     if (piece.team === kickingTeam) return 'ST';
     if (piece.role === 'wr') return kickKind === 'punt' ? 'PR' : 'KR';
     return 'BL';
@@ -398,6 +420,7 @@ export function activeRoleDescription(state: GameState, piece: Piece): string {
   const specialTeams: Record<string, string> = {
     K: 'Kicker', P: 'Punter', KR: 'Kick returner', PR: 'Punt returner',
     ST: 'Special teams coverage', BL: 'Special teams blocker',
+    LS: 'Long snapper', H: 'Holder',
   };
   return specialTeams[activeRoleCode(state, piece)] ?? piece.label;
 }
@@ -412,9 +435,24 @@ export function generateLegalActions(state: GameState): LegalAction[] {
   }
 
   if (state.phase === 'formation') {
+    const offenseChoices = [...offensiveFormations, ...(!state.conversion ? [specialTeamsFormations.fieldGoal.offense, specialTeamsFormations.punt.offense] : [])];
+    const playTypeChoices: Action[] = !state.conversion && !state.formationConfirmed.offense
+      ? (['normal', 'fieldGoal', 'punt'] as const).filter(playType => playType !== state.playType).map(playType => ({ type: 'choosePlayType', playType })) : [];
+    if (state.playType !== 'normal') {
+      return [
+        ...playTypeChoices,
+        ...(!state.formationConfirmed.offense ? offenseChoices.map(formation => ({ type: 'chooseFormation' as const, side: 'offense' as const, formationId: formation.id })) : []),
+        ...(!state.formationConfirmed.defense ? specialTeamsDefensiveFormations[state.playType].map(formation => ({ type: 'chooseFormation' as const, side: 'defense' as const, formationId: formation.id })) : []),
+        ...(!state.formationConfirmed.offense ? [{ type: 'confirmFormation' as const, side: 'offense' as const }] : []),
+        ...(!state.formationConfirmed.defense ? [{ type: 'confirmFormation' as const, side: 'defense' as const }] : []),
+        ...(formationsReady(state) ? [{ type: 'kick' as const, kickerId: `${state.possession}-qb`, kind: state.playType }] : []),
+        ...(formationsReady(state) && state.playType === 'fieldGoal' && !state.conversion ? [{ type: 'fakeFieldGoal' as const }] : []),
+      ];
+    }
     return [
+      ...playTypeChoices,
       ...(formationsReady(state) ? [{ type: 'snap' as const }] : []),
-      ...(!state.formationConfirmed.offense ? offensiveFormations.map((formation) => ({ type: 'chooseFormation' as const, side: 'offense' as const, formationId: formation.id })) : []),
+      ...(!state.formationConfirmed.offense ? offenseChoices.map((formation) => ({ type: 'chooseFormation' as const, side: 'offense' as const, formationId: formation.id })) : []),
       ...(!state.formationConfirmed.defense ? defensiveFormations.map((formation) => ({ type: 'chooseFormation' as const, side: 'defense' as const, formationId: formation.id })) : []),
       ...(!state.formationConfirmed.offense ? [{ type: 'confirmFormation' as const, side: 'offense' as const }] : []),
       ...(!state.formationConfirmed.defense ? [{ type: 'confirmFormation' as const, side: 'defense' as const }] : []),
@@ -462,10 +500,6 @@ export function generateLegalActions(state: GameState): LegalAction[] {
     actions.push(...state.pieces
       .filter((piece) => canLegallyPassToReceiver(state, carrier, piece))
       .map((receiver) => ({ type: 'pass' as const, passerId: carrier.id, receiverId: receiver.id })));
-    if (!state.conversion) {
-      actions.push({ type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' });
-      actions.push({ type: 'kick', kickerId: carrier.id, kind: 'punt' });
-    }
   }
 
   const ball = state.ball;
@@ -498,13 +532,22 @@ export function applyAction(state: GameState, action: Action): GameState {
   if (action.type === 'coinToss') return coinToss(state, action);
   if (action.type === 'chooseKickoffChoice') return chooseKickoffChoice(state, action);
   if (action.type === 'snap') return snap(state, action);
+  if (action.type === 'fakeFieldGoal') return fakeFieldGoal(state, action);
   if (action.type === 'shift') return shift(state, action);
   if (action.type === 'chooseFormation') return chooseFormation(state, action);
+  if (action.type === 'choosePlayType') return choosePlayType(state, action);
   if (action.type === 'confirmFormation') return confirmFormation(state, action);
   if (action.type === 'startTwoPointTry') return startTwoPointTry(state, action);
   if (action.type === 'placeKick') return placeKick(state, action);
   if (action.type === 'kick' && action.kind === 'extraPoint') return extraPointKick(state, action);
   if (action.type === 'kick' && action.kind === 'kickoff') return kickoff(state, action);
+  if (action.type === 'kick') {
+    if (state.conversion) throw new Error('Kicks are not allowed during a two-point try');
+    if (state.phase !== 'formation' || state.playType !== action.kind) throw new Error('Choose a matching kicking formation before the snap');
+    if (!formationsReady(state)) throw new Error('Both formations must be confirmed before the kick');
+    if (action.kickerId !== `${state.possession}-qb`) throw new Error('Only the designated kicker or punter may kick');
+    return kick({ ...state, turn: state.possession }, action);
+  }
   if (state.phase !== 'live' && state.phase !== 'kickReturn') throw new Error(`Cannot apply ${action.type} while phase is ${state.phase}`);
 
   switch (action.type) {
@@ -519,9 +562,6 @@ export function applyAction(state: GameState, action: Action): GameState {
     case 'handoff':
       if (state.phase !== 'live') throw new Error('Handoffs are only legal during normal live play');
       return handoff(state, action.fromId, action.toId, action);
-    case 'kick':
-      if (state.phase !== 'live') throw new Error('Kicks are only legal during normal live play');
-      return kick(state, action);
     case 'tackle':
       return tackle(state, action);
     case 'recover':
@@ -549,7 +589,7 @@ export function startNextDown(state: GameState): GameState {
     result?.type === 'turnoverOnDowns';
   const driveOwner = completedDriveOwner(state, result);
   const completedDriveState = driveOwner ? markDriveComplete(state, driveOwner) : state;
-  const quarterState = maybeAdvanceQuarter({ ...completedDriveState, pendingKick: undefined });
+  const quarterState = maybeAdvanceQuarter({ ...completedDriveState, pendingKick: undefined, playType: 'normal', kickDefenseId: undefined, fakeFieldGoal: undefined });
   if (quarterState.phase === 'kickoff' || quarterState.phase === 'final') return quarterState;
   const postScoreKickingTeam = nextKickoffTeam(result);
   if (postScoreKickingTeam) {
@@ -754,6 +794,24 @@ function nearestOpenFormationCoord(desired: Coord, bounds: { min: number; max: n
 function chooseFormation(state: GameState, action: Extract<Action, { type: 'chooseFormation' }>): GameState {
   if (state.phase !== 'formation') throw new Error('Formations can only be chosen before the snap');
   if (state.formationConfirmed[action.side]) throw new Error(`${action.side} formation is already confirmed`);
+  if (action.side === 'offense') {
+    const specialKind = (['fieldGoal', 'punt'] as const).find(kind => specialTeamsFormations[kind].offense.id === action.formationId);
+    if (specialKind) {
+      const chosen = choosePlayType(state, { type: 'choosePlayType', playType: specialKind });
+      return { ...chosen, play: appendAction(chosen, action) };
+    }
+    // Validate before switching so an unknown option cannot reset the setup.
+    findFormation('offense', action.formationId);
+    if (state.playType !== 'normal') return chooseFormation(choosePlayType(state, { type: 'choosePlayType', playType: 'normal' }), action);
+  } else if (state.playType !== 'normal') {
+    const defense = specialTeamsDefensiveFormations[state.playType].find(formation => formation.id === action.formationId);
+    if (!defense) throw new Error(`Unknown ${state.playType} defense ${action.formationId}`);
+    const positions = formationPieces(state.possession, state.lineOfScrimmage, { ...specialTeamsFormations[state.playType], defense });
+    return { ...state, kickDefenseId: defense.id,
+      pieces: state.pieces.map(piece => piece.team === state.possession ? piece : positions.find(next => next.id === piece.id)!),
+      play: appendAction(state, action),
+    };
+  }
   const formation = findFormation(action.side, action.formationId);
   const nextFormation = { ...state.formation, [action.side]: formation };
   const nextPossessionPieces = formationPieces(state.possession, state.lineOfScrimmage, nextFormation);
@@ -776,6 +834,32 @@ function chooseFormation(state: GameState, action: Extract<Action, { type: 'choo
     ball: { kind: 'controlled', pieceId: `${state.possession}-qb` },
     play: appendAction(state, action),
   };
+}
+
+function choosePlayType(state: GameState, action: Extract<Action, { type: 'choosePlayType' }>): GameState {
+  if (state.phase !== 'formation' || state.formationConfirmed.offense) throw new Error('Choose the play type before confirming offense');
+  if (state.conversion && action.playType !== 'normal') throw new Error('Kicks are not allowed during a two-point try');
+  if (!['normal', 'fieldGoal', 'punt'].includes(action.playType)) throw new Error('Unknown play type');
+  return {
+    ...state, playType: action.playType, kickDefenseId: undefined, fakeFieldGoal: undefined,
+    pieces: formationPieces(state.possession, state.lineOfScrimmage, action.playType === 'normal' ? state.formation : specialTeamsFormations[action.playType]),
+    formationConfirmed: { offense: false, defense: false },
+    formationShiftsRemaining: action.playType === 'normal' ? { home: 2, away: 2 } : { home: 0, away: 0 },
+    ball: { kind: 'controlled', pieceId: `${state.possession}-qb` },
+    play: { actions: [action] },
+  };
+}
+
+export function kickingDefenseFormation(state: GameState): Formation {
+  const kind = state.playType === 'punt' ? 'punt' : 'fieldGoal';
+  return specialTeamsDefensiveFormations[kind].find(formation => formation.id === state.kickDefenseId) ?? specialTeamsFormations[kind].defense;
+}
+
+export function scrimmageKickPreview(state: GameState, kind: 'fieldGoal' | 'punt') {
+  const pieces = formationPieces(state.possession, state.lineOfScrimmage, specialTeamsFormations[kind]);
+  const kicker = pieces.find(piece => piece.id === `${state.possession}-qb`)!;
+  const landingX = (roll: number) => clamp(kicker.coord.x + state.direction * roll, 0, WIDTH - 1);
+  return { kicker: kicker.coord, fieldGoal: fieldGoalAttempt(state.direction, kicker.coord), minLandingX: landingX(2), maxLandingX: landingX(12) };
 }
 
 function confirmFormation(state: GameState, action: Extract<Action, { type: 'confirmFormation' }>): GameState {
@@ -835,12 +919,24 @@ function chooseKickoffChoice(state: GameState, action: Extract<Action, { type: '
 
 function snap(state: GameState, action: Action): GameState {
   if (state.phase !== 'formation') throw new Error('Snap is only legal during formation');
+  if (state.playType !== 'normal') throw new Error('Use the combined snap and kick action for special teams');
   if (!formationsReady(state)) throw new Error('Both formations must be confirmed before the snap');
   return {
     ...state,
     phase: 'live',
     turn: state.possession,
     ball: { kind: 'controlled', pieceId: `${state.possession}-qb` },
+    play: appendAction(state, action),
+  };
+}
+
+function fakeFieldGoal(state: GameState, action: Extract<Action, { type: 'fakeFieldGoal' }>): GameState {
+  if (state.phase !== 'formation' || state.playType !== 'fieldGoal' || state.conversion) throw new Error('A fake requires a field-goal formation before the snap');
+  if (!formationsReady(state)) throw new Error('Both formations must be confirmed before the fake');
+  findPiece(state, `${state.possession}-fb`);
+  return { ...state, phase: 'live', turn: state.possession,
+    ball: { kind: 'controlled', pieceId: `${state.possession}-fb` },
+    forwardPassUsed: false, fakeFieldGoal: { team: state.possession },
     play: appendAction(state, action),
   };
 }
@@ -868,11 +964,15 @@ function startTwoPointTry(state: GameState, action: Extract<Action, { type: 'sta
     pieces: formationPieces(action.team, lineOfScrimmage, state.formation),
     ball: { kind: 'controlled', pieceId: `${action.team}-qb` },
     conversion: { team: action.team },
+    playType: 'normal',
     play: appendAction(state, action),
+    fakeFieldGoal: undefined,
+    kickDefenseId: undefined,
   };
 }
 
 function shift(state: GameState, action: Extract<Action, { type: 'shift' }>): GameState {
+  if (state.playType !== 'normal') throw new Error('Kicking formations cannot be shifted');
   if (state.phase !== 'formation') throw new Error('Shifts are only legal during formation');
   const target = findPiece(state, action.pieceId);
   if (!formationSideConfirmed(state, target)) throw new Error('Formation must be confirmed before shifting');

@@ -41,32 +41,32 @@ describe.each(['home', 'away'] as const)('%s special teams', team => {
     expect(role(next, `${receivingTeam}-wr1`)).toBe('WR');
   });
 
-  it('labels the actual punter even when a running back kicks', () => {
-    const state = createGame({ phase: 'live', possession: team, turn: team, lineOfScrimmage: team === 'home' ? 5 : 18, ball: { kind: 'controlled', pieceId: `${team}-rb` } });
-    const kicked = applyAction(state, { type: 'kick', kind: 'punt', kickerId: `${team}-rb`, roll: { die1: 3, die2: 4 } });
-    expect(role(kicked, `${team}-rb`)).toBe('P');
-    expect(role(kicked, `${team}-qb`)).toBe('ST');
+  it('labels the designated punter through placement and the return', () => {
+    const state = createGame({ phase: 'formation', playType: 'punt', formationConfirmed: { offense: true, defense: true }, possession: team, turn: team, lineOfScrimmage: team === 'home' ? 8 : 15 });
+    const kicked = applyAction(state, { type: 'kick', kind: 'punt', kickerId: `${team}-qb`, roll: { die1: 3, die2: 4 } });
+    expect(role(kicked, `${team}-qb`)).toBe('P');
+    expect(role(kicked, `${team}-wr1`)).toBe('ST');
     expect(role(kicked, `${receivingTeam}-wr1`)).toBe('PR');
     expect(role(kicked, `${receivingTeam}-ol1`)).toBe('BL');
     const placement = generateLegalActions(kicked).find(action => action.type === 'placeKick' && action.at.y === 5)!;
     const returned = applyAction(kicked, placement);
     expect(returned.phase).toBe('kickReturn');
     expect(labels(returned)).toEqual(labels(kicked));
-    expect(activeRoleDescription(returned, returned.pieces.find(piece => piece.id === `${team}-rb`)!)).toBe('Punter');
+    expect(activeRoleDescription(returned, returned.pieces.find(piece => piece.id === `${team}-qb`)!)).toBe('Punter');
   });
 
   it('keeps a missed field goal kicker labeled K after possession changes', () => {
-    const state = createGame({ phase: 'live', possession: team, turn: team, ball: { kind: 'controlled', pieceId: `${team}-rb` } });
-    const missed = applyAction(state, { type: 'kick', kind: 'fieldGoal', kickerId: `${team}-rb`, roll: { die1: 1, die2: 1 } });
+    const state = createGame({ phase: 'formation', playType: 'fieldGoal', formationConfirmed: { offense: true, defense: true }, possession: team, turn: team });
+    const missed = applyAction(state, { type: 'kick', kind: 'fieldGoal', kickerId: `${team}-qb`, roll: { die1: 1, die2: 1 } });
     expect(missed.possession).toBe(receivingTeam);
-    expect(role(missed, `${team}-rb`)).toBe('K');
+    expect(role(missed, `${team}-qb`)).toBe('K');
     expect(role(missed, `${team}-ol1`)).toBe('BL');
     expect(role(missed, `${receivingTeam}-wr1`)).toBe('ST');
     expect(role(startNextDown(missed), `${team}-rb`)).toBe('MLB');
   });
 
   it('keeps punt labels through a touchback and clears them for the next down', () => {
-    const state = createGame({ phase: 'live', possession: team, turn: team, lineOfScrimmage: team === 'home' ? 20 : 3 });
+    const state = createGame({ phase: 'formation', playType: 'punt', formationConfirmed: { offense: true, defense: true }, possession: team, turn: team, lineOfScrimmage: team === 'home' ? 20 : 3 });
     const kicked = applyAction(state, { type: 'kick', kind: 'punt', kickerId: `${team}-qb`, roll: { die1: 5, die2: 5 } });
     const placement = generateLegalActions(kicked).find(action => action.type === 'placeKick' && action.at.y === 5)!;
     const stopped = applyAction(kicked, placement);

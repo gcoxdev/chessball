@@ -267,6 +267,7 @@ button {
 .action-list button:disabled,
 .segmented-control button:disabled,
 .history-controls button:disabled,
+.confirm-button:disabled,
 .utility-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.38;
@@ -355,6 +356,7 @@ button {
 }
 
 .confirm-button {
+  cursor: pointer;
   min-height: 32px;
   border: 1px solid rgba(127, 208, 138, 0.38);
   border-radius: 6px;
@@ -1595,6 +1597,7 @@ button > svg { flex-shrink: 0; }
   gap: 10px;
   margin: 0;
 }
+.kick-preview { margin: 0; color: var(--gold); font-size: 0.85rem; line-height: 1.5; overflow-wrap: anywhere; }
 .control-rail .formation-heading { flex-direction: column; align-items: flex-start; gap: 4px; }
 .control-rail .formation-heading label { white-space: nowrap; }
 .control-rail .formation-status { margin: 0; }

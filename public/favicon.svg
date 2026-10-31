@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <path id="ball" d="M6 32C18 10 46 10 58 32C46 54 18 54 6 32Z"/>
+    <clipPath id="ball-edge"><use href="#ball"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#10291d"/>
+  <g transform="rotate(-40 32 32)">
+    <use href="#ball" fill="#d5a63a"/>
+    <path d="M22 10Q8 32 22 54M42 10Q56 32 42 54" fill="none" stroke="#f4f0de" stroke-width="4" clip-path="url(#ball-edge)"/>
+    <path d="M24 32H40M25 28V36M32 28V36M39 28V36" fill="none" stroke="#10291d" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

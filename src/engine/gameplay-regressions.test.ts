@@ -48,7 +48,7 @@ for (const team of ['home', 'away'] as const) {
     it('awards an untouched punt to the receiver when it lands under coverage', () => {
       const kickerX = dir === 1 ? 5 : 18;
       const landingX = kickerX + 7 * dir;
-      let state = arrange(createGame({ phase: 'live', possession: team, turn: team, ball: { kind: 'controlled', pieceId: `${team}-qb` } }), {
+      let state = arrange(createGame({ phase: 'formation', playType: 'punt', formationConfirmed: { offense: true, defense: true }, possession: team, turn: team, ball: { kind: 'controlled', pieceId: `${team}-qb` } }), {
         [`${team}-qb`]: { x: kickerX, y: 5 }, [`${team}-wr1`]: { x: landingX, y: 5 }, [`${opponent}-wr1`]: { x: landingX, y: 8 },
       });
       state = legalApply(state, { type: 'kick', kickerId: `${team}-qb`, kind: 'punt', roll: { die1: 3, die2: 4 } });
@@ -152,7 +152,7 @@ it('matches displayed success odds to all 36 rolls for passes, power moves, and 
   const cases: { game: GameState; action: Action; succeeded: (next: GameState) => boolean }[] = [
     { game: state, action: { type: 'pass', passerId: 'home-qb', receiverId: 'home-wr1' }, succeeded: next => next.ball.kind === 'controlled' && next.ball.pieceId === 'home-wr1' },
     { game: state, action: { type: 'powerMove', pieceId: 'home-rb', to: { x: 11, y: 7 } }, succeeded: next => next.pieces.find(piece => piece.id === 'home-rb')?.coord.x === 11 },
-    { game: state, action: { type: 'kick', kind: 'fieldGoal', kickerId: 'home-qb' }, succeeded: next => next.score.home === 3 },
+    { game: { ...state, phase: 'formation', playType: 'fieldGoal', formationConfirmed: { offense: true, defense: true } }, action: { type: 'kick', kind: 'fieldGoal', kickerId: 'home-qb' }, succeeded: next => next.score.home === 3 },
     { game: { ...state, phase: 'betweenDowns', play: { actions: [], result: { type: 'touchdown', team: 'home' } } }, action: { type: 'kick', kind: 'extraPoint', kickerId: 'home-qb' }, succeeded: next => next.score.home === 1 },
   ];
   for (const { game, action, succeeded } of cases) {

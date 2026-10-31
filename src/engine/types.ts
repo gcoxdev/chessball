@@ -24,6 +24,7 @@ export type RollResult = {
 
 export type Role = 'qb' | 'rb' | 'fb' | 'wr' | 'te' | 'ol';
 export type FormationSide = 'offense' | 'defense';
+export type PlayType = 'normal' | 'fieldGoal' | 'punt';
 
 export type Piece = {
   id: string;
@@ -119,6 +120,9 @@ export type GameState = {
   drivesRemaining: Record<Team, number>;
   forwardPassUsed: boolean;
   formation: FormationSelection;
+  playType: PlayType;
+  kickDefenseId?: string;
+  fakeFieldGoal?: { team: Team };
   formationConfirmed: Record<FormationSide, boolean>;
   formationShiftsRemaining: Record<Team, number>;
   conversion?: { team: Team };
@@ -187,10 +191,17 @@ export type SnapAction = {
   type: 'snap';
 };
 
+export type FakeFieldGoalAction = { type: 'fakeFieldGoal' };
+
 export type ChooseFormationAction = {
   type: 'chooseFormation';
   side: FormationSide;
   formationId: string;
+};
+
+export type ChoosePlayTypeAction = {
+  type: 'choosePlayType';
+  playType: PlayType;
 };
 
 export type ConfirmFormationAction = {
@@ -225,7 +236,9 @@ export type Action =
   | TackleAction
   | RecoverAction
   | SnapAction
+  | FakeFieldGoalAction
   | ChooseFormationAction
+  | ChoosePlayTypeAction
   | ConfirmFormationAction
   | CoinTossAction
   | ChooseKickoffChoiceAction

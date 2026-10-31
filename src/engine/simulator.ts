@@ -2,17 +2,15 @@ import {
   applyAction,
   createGame,
   defensiveFormations,
-  fieldGoalAttempt,
   firstDownTarget,
   generateLegalActions,
   gridDistance,
   isTouchdownSquare,
-  moveDistanceToFirstDown,
   offensiveFormations,
   startNextDown,
 } from './rules';
 import type { Action, Coord, DiceRoll, GameState, Piece, PlayResult, Team } from './types';
-import { chooseComputerAction } from './computer';
+import { chooseComputerAction, preferredPlayType } from './computer';
 
 type BatchPolicy = 'heuristic' | 'random';
 export type SimulationPolicy = BatchPolicy | 'computer';
@@ -249,7 +247,9 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       const before = state;
       const selectedContextKey = actionContextKey(before, policies[before.turn], resolvedAction.type);
       let formationChoice: { key: string; team: Team; side: 'offense' | 'defense'; formationId: string } | null = null;
-      if (resolvedAction.type === 'chooseFormation') {
+      // Formation-plan audits compare the normal-play catalogs; special-team
+      // choices remain in the action history rather than those catalog samples.
+      if (resolvedAction.type === 'chooseFormation' && (resolvedAction.side === 'offense' ? offensiveFormations : defensiveFormations).some(formation => formation.id === resolvedAction.formationId)) {
         const team = resolvedAction.side === 'offense' ? before.possession : otherTeam(before.possession);
         formationChoice = {
           key: `team=${team}|side=${resolvedAction.side}|quarter=${before.quarter}|formation=${resolvedAction.formationId}`,
@@ -792,6 +792,24 @@ function chooseFormationProtocolAction(
   const chooseFormation = legalActions.filter((action): action is Extract<Action, { type: 'chooseFormation' }> => action.type === 'chooseFormation');
   const confirm = legalActions.filter((action): action is Extract<Action, { type: 'confirmFormation' }> => action.type === 'confirmFormation');
   const snap = legalActions.find((action) => action.type === 'snap');
+  if (state.playType !== 'normal') {
+    const offenseConfirm = confirm.find(action => action.side === 'offense');
+    if (offenseConfirm) return offenseConfirm;
+    const defenseChoices = chooseFormation.filter(action => action.side === 'defense');
+    if (defenseChoices.length > 1 && !state.play.actions.some(action => action.type === 'chooseFormation' && action.side === 'defense')) {
+      return defenseChoices[randomInt(rng, defenseChoices.length)];
+    }
+    if (confirm.length) return confirm[0];
+    const fake = legalActions.find(action => action.type === 'fakeFieldGoal');
+    if (fake && policy === 'random' && rng() < 0.2) return fake;
+    return legalActions.find(action => action.type === 'kick') ?? null;
+  }
+  if (!state.play.actions.some(action => action.type === 'choosePlayType' || action.type === 'chooseFormation')) {
+    const desired = policy === 'random' && state.down === 4
+      ? (rng() < 0.6 ? (rng() < 0.5 ? 'punt' : 'fieldGoal') : 'normal') : preferredPlayType(state);
+    const choice = legalActions.find(action => action.type === 'choosePlayType' && action.playType === desired);
+    if (choice) return choice;
+  }
 
   for (const side of ['offense', 'defense'] as const) {
     const sideChosen = state.play.actions.some((action) => action.type === 'chooseFormation' && action.side === side);
@@ -910,13 +928,6 @@ function chooseHeuristicAction(state: GameState, legalActions: Action[], rng: Ra
       if (returnMove) return returnMove;
     }
 
-    if (state.down === 4 && moveDistanceToFirstDown(state, carrier.coord) > 1) {
-      const fieldGoal = legalActions.find((action) => action.type === 'kick' && action.kind === 'fieldGoal');
-      if (fieldGoal && inFieldGoalRange(state, carrier.coord)) return fieldGoal;
-      const punt = legalActions.find((action) => action.type === 'kick' && action.kind === 'punt');
-      if (punt) return punt;
-    }
-
     if (carrier.role === 'qb' && !state.forwardPassUsed && rng() < 0.3) {
       const pass = chooseHeuristicPass(state, legalActions, carrier);
       if (pass) return pass;
@@ -926,14 +937,11 @@ function chooseHeuristicAction(state: GameState, legalActions: Action[], rng: Ra
     if (handoff && rng() < 0.2) return handoff;
 
     if (!hasForwardCarrierMove(state, legalActions, carrier)) {
-      const fieldGoal = legalActions.find((action) => action.type === 'kick' && action.kind === 'fieldGoal');
-      if (fieldGoal && inFieldGoalRange(state, carrier.coord)) return fieldGoal;
-
       const powerMove = bestCarrierPowerMove(state, legalActions, carrier);
       if (powerMove) return powerMove;
-
-      const punt = legalActions.find((action) => action.type === 'kick' && action.kind === 'punt');
-      if (punt && moveDistanceToFirstDown(state, carrier.coord) > 1) return punt;
+      // A trapped carrier must use a live-play option, not an emergency kick.
+      const pass = chooseHeuristicPass(state, legalActions, carrier);
+      if (pass) return pass;
     }
 
     const move = bestCarrierMove(state, legalActions, carrier);
@@ -1040,6 +1048,11 @@ function stateSignature(state: GameState): string {
     .join('|');
   return [
     state.phase,
+    state.playType,
+    state.kickDefenseId ?? '',
+    state.fakeFieldGoal?.team ?? '',
+    state.formationConfirmed.offense,
+    state.formationConfirmed.defense,
     state.turn,
     state.possession,
     state.direction,
@@ -1071,10 +1084,6 @@ function carrierPiece(state: GameState): Piece | undefined {
 function progressScore(state: GameState, coord: Coord): number {
   if (isTouchdownSquare(coord, state.direction)) return 1_000;
   return state.direction === 1 ? coord.x : state.board.width - coord.x;
-}
-
-function inFieldGoalRange(state: GameState, coord: Coord): boolean {
-  return fieldGoalAttempt(state.direction, coord).distance <= 6;
 }
 
 function seededRandom(seed: number): Random {

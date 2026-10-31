@@ -901,7 +901,7 @@ describe('Chessball UI interactions', () => {
 
     const offense = screen.getByRole('combobox', { name: 'Offense formation' });
     const defense = screen.getByRole('combobox', { name: 'Defense formation' });
-    expect(within(offense).getAllByRole('option').map((option) => (option as HTMLOptionElement).value))
+    expect(within(within(offense).getByRole('group', { name: 'Normal play' })).getAllByRole('option').map((option) => (option as HTMLOptionElement).value))
       .toEqual(offensiveFormations.map(({ id }) => id));
     expect(within(defense).getAllByRole('option').map((option) => (option as HTMLOptionElement).value))
       .toEqual(defensiveFormations.map(({ id }) => id));
@@ -1213,21 +1213,87 @@ describe('Chessball UI interactions', () => {
     expect(scrimmageRule?.[1].trim().startsWith('inset -4px 0 0 var(--blue)')).toBe(true);
   });
 
-  it('exposes field goals but only enables them during live offensive play', () => {
-    const { unmount } = render(<App initialGame={createGame()} />);
-
-    expect(screen.queryByRole('button', { name: /field goal/i })).not.toBeInTheDocument();
-
-    unmount();
-    render(<App initialGame={createGame({ formationConfirmed: { offense: true, defense: true } })} />);
-    expect(screen.getByRole('button', { name: /field goal/i })).toBeDisabled();
-    expect(screen.getByText(/passes, tackles, and kicks roll 2d6/i)).toBeInTheDocument();
+  it('requires a field-goal formation and both confirmations before Snap & Kick', () => {
+    render(<App initialGame={createGame({ lineOfScrimmage: 19 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Offense formation' }), { target: { value: 'field-goal-unit' } });
+    expect(screen.getByRole('combobox', { name: 'Offense formation' })).toHaveValue('field-goal-unit');
+    expect(screen.getByText('Field goal unit')).toBeInTheDocument();
+    expect(screen.getByText(/Field goal: 35 yards/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Snap & Kick' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Offense' }));
+    expect(screen.getByRole('combobox', { name: 'Offense formation' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Defense' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Snap & Kick' }));
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Field Goal' })).not.toBeInTheDocument();
   });
 
-  it('exposes punts on any down during live offensive play', () => {
-    render(<App initialGame={createGame({ phase: 'live', down: 2 })} />);
+  it('groups offense formations in one selector and offers defensive choices for the selected unit', () => {
+    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    expect(screen.queryByRole('combobox', { name: 'Play type' })).not.toBeInTheDocument();
+    const offense = screen.getByRole('combobox', { name: 'Offense formation' });
+    expect(within(offense).getAllByRole('group').map(group => group.getAttribute('label'))).toEqual(['Normal play', 'Field goal', 'Punt']);
+    fireEvent.change(offense, { target: { value: 'field-goal-unit' } });
+    const defense = screen.getByRole('combobox', { name: 'Defense formation' });
+    expect(within(defense).getAllByRole('option').map(option => option.textContent)).toEqual(['Field goal defense', 'Safe field goal defense']);
+    fireEvent.change(defense, { target: { value: 'safe-field-goal-defense' } });
+    expect(defense).toHaveValue('safe-field-goal-defense');
+    fireEvent.change(offense, { target: { value: 'punt-unit' } });
+    expect(defense).toHaveValue('punt-return-unit');
+    expect(defense).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Confirm Defense' })).toBeEnabled();
+    fireEvent.change(offense, { target: { value: 'shotgun' } });
+    expect(offense).toHaveValue('shotgun');
+    expect(defense).toBeEnabled();
+  });
 
-    expect(screen.getByRole('button', { name: /punt/i })).toBeEnabled();
+  it('chooses a fake after lining up and immediately highlights receivers for the holder', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.8);
+    render(<App initialGame={createGame({ lineOfScrimmage: 12 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Offense formation' }), { target: { value: 'field-goal-unit' } });
+    expect(screen.queryByRole('button', { name: 'Fake & Pass' })).not.toBeInTheDocument();
+    confirmBothFormations();
+    expect(screen.getByRole('button', { name: 'Snap & Kick' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Fake & Pass' }));
+    expect(screen.getByText(/Fake field goal: home snapped to the holder/)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/live.*home to act/i);
+    expect(screen.getByTitle('11,5')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTitle('11,5')).toHaveAccessibleName(/home H\b/);
+    expect(screen.getByTitle('12,1')).toHaveClass('pass-target');
+    expect(screen.getByTitle('12,3')).not.toHaveClass('pass-target');
+    expect(screen.queryByRole('button', { name: 'Snap & Kick' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('12,1'));
+    expect(screen.getByText(/Completed pass: home hit WR/)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/away to act/i);
+    expect(within(screen.getByTitle('12,1')).getByLabelText('Ball: controlled by WR')).toBeInTheDocument();
+  });
+
+  it('previews punt units and starts placement directly from Snap & Punt on any down', () => {
+    render(<App initialGame={createGame({ down: 2, lineOfScrimmage: 10 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Offense formation' }), { target: { value: 'punt-unit' } });
+    expect(screen.getByText('Punt return unit')).toBeInTheDocument();
+    expect(screen.getByText(/Punt: 10–60 yards/)).toBeInTheDocument();
+    expect(screen.getByTitle('7,5')).toHaveAccessibleName(/home P\b/);
+    confirmBothFormations();
+    fireEvent.click(screen.getByRole('button', { name: 'Snap & Punt' }));
+    expect(screen.getByRole('status')).toHaveTextContent(/Kick Placement/);
+    expect(screen.queryByRole('button', { name: 'Punt' })).not.toBeInTheDocument();
+  });
+
+  it('resets confirmations when changing play type without changing pre-snap yards to gain', () => {
+    render(<App initialGame={createGame({ lineOfScrimmage: 10 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    const down = within(screen.getByText('Down').closest('.down-card') as HTMLElement);
+    expect(down.getByText('1 & 10')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Defense' }));
+    const choice = screen.getByRole('combobox', { name: 'Offense formation' });
+    fireEvent.change(choice, { target: { value: 'punt-unit' } });
+    expect(down.getByText('1 & 10')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirm Defense' })).toBeEnabled();
+    fireEvent.change(choice, { target: { value: 'field-goal-unit' } });
+    expect(down.getByText('1 & 10')).toBeInTheDocument();
+    fireEvent.change(choice, { target: { value: 'i-form' } });
+    expect(screen.getByRole('combobox', { name: 'Offense formation' })).toBeInTheDocument();
+    expect(screen.queryByText(/Landing range:/)).not.toBeInTheDocument();
   });
 
   it('identifies handoff targets by role and board coordinate', () => {
@@ -1494,9 +1560,9 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows the last 2d6 roll as dice on the screen', () => {
-    render(<App initialGame={createGame({ phase: 'live' })} />);
+    render(<App initialGame={createGame({ playType: 'fieldGoal', formationConfirmed: { offense: true, defense: true } })} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /field goal/i }));
+    fireEvent.click(screen.getByRole('button', { name: /snap & kick/i }));
 
     const dice = screen.getByLabelText(/last dice roll/i);
     expect(dice).toBeInTheDocument();
@@ -1504,7 +1570,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('reports field-goal distance in yards to the posts with the roll target', () => {
-    const base = createGame({ phase: 'live', lineOfScrimmage: 17 });
+    const base = createGame({ playType: 'fieldGoal', lineOfScrimmage: 19, formationConfirmed: { offense: true, defense: true } });
     const state = {
       ...base,
       pieces: base.pieces.map((piece) => (piece.id === 'home-qb' ? { ...piece, coord: { x: 17, y: 5 } } : piece)),
@@ -1513,7 +1579,7 @@ describe('Chessball UI interactions', () => {
     vi.spyOn(Math, 'random').mockReturnValueOnce(0.6).mockReturnValueOnce(0.8);
     render(<App initialGame={state} initialPlayers={{ home: 'human', away: 'human' }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /field goal/i }));
+    fireEvent.click(screen.getByRole('button', { name: /snap & kick/i }));
 
     expect(within(historyLog()).getByText(/35 yards to posts.*roll 9 vs 9/i)).toBeInTheDocument();
     expect(historyLog()).not.toHaveTextContent(/distance 7/i);
@@ -1771,7 +1837,7 @@ describe('Chessball UI interactions', () => {
 
   it('computer-controlled offense attempts a field goal on fourth down in range', async () => {
     render(<App initialGame={createGame({
-      phase: 'live',
+      phase: 'formation',
       possession: 'away',
       direction: -1,
       turn: 'away',
@@ -1780,31 +1846,32 @@ describe('Chessball UI interactions', () => {
       firstDownLine: 4,
     })} />);
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/field goal/i), { timeout: 1200 });
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Offense formation' })).toHaveValue('field-goal-unit'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Defense' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/field goal (good|missed)/i), { timeout: 2000 });
     expect(historyLog()).toHaveTextContent(/computer away: kick: away-qb attempted field goal/i);
   });
 
   it('uses canonical field-goal geometry at the computer fourth-down range boundary', () => {
     const players = { home: 'computer', away: 'computer' } as const;
     const at = (x: number) => {
-      const base = createGame({ phase: 'live', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x });
+      const base = createGame({ phase: 'formation', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x });
       return {
         ...base,
         pieces: base.pieces.map((piece) => (piece.id === 'home-qb' ? { ...piece, coord: { x, y: 5 } } : piece)),
         ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
       };
     };
-    const inRange = at(14);
-    const outOfRange = at(13);
+    const inRange = at(16);
+    const outOfRange = at(15);
 
     expect(chooseComputerAction(inRange, generateLegalActions(inRange), 0, players)).toEqual({
-      type: 'kick',
-      kickerId: 'home-qb',
-      kind: 'fieldGoal',
+      type: 'choosePlayType',
+      playType: 'fieldGoal',
     });
     expect(chooseComputerAction(outOfRange, generateLegalActions(outOfRange), 0, players)).not.toMatchObject({
-      type: 'kick',
-      kind: 'fieldGoal',
+      type: 'choosePlayType',
+      playType: 'fieldGoal',
     });
   });
 });
@@ -1824,8 +1891,8 @@ describe('opening and conversion regressions', () => {
     game = applyAction(game, { type: 'confirmFormation', side: 'defense' });
     game = applyAction(game, { type: 'snap' });
     render(<App initialGame={game} initialPlayers={{ home: 'human', away: 'human' }} />);
-    expect(screen.getByRole('button', { name: 'Field Goal' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Punt' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Field Goal' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Punt' })).not.toBeInTheDocument();
   });
 });
 

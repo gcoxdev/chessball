@@ -5,6 +5,7 @@ import {
   activeRoleCode,
   activeRoleDescription,
   isGoalToGo,
+  kickingDefenseFormation,
   applyAction,
   createGame,
   DRIVES_PER_TEAM_PER_QUARTER,
@@ -17,8 +18,10 @@ import {
   offensiveFormations,
   QUARTERS_PER_MATCH,
   startNextDown,
+  scrimmageKickPreview,
 } from './engine/rules';
 import type { Action, CoinFace, Coord, DiceRoll, Formation, FormationSide, GameState, Piece, Team } from './engine/types';
+import { specialTeamsDefensiveFormations, specialTeamsFormations } from './engine/special-teams';
 import { AccessibleBoard } from './ui/AccessibleBoard';
 import { Modal } from './ui/Modal';
 import { GameMenu } from './ui/GameMenu';
@@ -183,6 +186,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       } else if (next.phase !== 'live') {
         setTargetMode(null);
       }
+      if (resolvedAction.type === 'fakeFieldGoal' && source === 'human') {
+        setSelectedPieceId(`${next.possession}-fb`);
+        setTargetMode('pass');
+      }
     } catch (error) {
       const errorText = error instanceof Error ? error.message : 'Illegal action';
       pushEvent(`Illegal action: ${errorText}`);
@@ -282,13 +289,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const kickoff = () => {
     runAction({ type: 'kick', kickerId: `${game.turn}-qb`, kind: 'kickoff' });
   };
-  const fieldGoal = () => {
-    if (!ballCarrier) return;
-    runAction({ type: 'kick', kickerId: ballCarrier.id, kind: 'fieldGoal' });
-  };
-  const punt = () => {
-    if (!ballCarrier) return;
-    runAction({ type: 'kick', kickerId: ballCarrier.id, kind: 'punt' });
+  const snapAndKick = () => {
+    if (game.playType !== 'normal') runAction({ type: 'kick', kickerId: `${game.possession}-qb`, kind: game.playType });
   };
   const extraPoint = () => {
     const team = game.play.result?.type === 'touchdown' ? game.play.result.team : game.possession;
@@ -495,8 +497,13 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               <h2>Formations</h2>
               <FormationPicker
                 title="Offense"
-                formations={offensiveFormations}
-                activeId={game.formation.offense.id}
+                formations={[...offensiveFormations, specialTeamsFormations.fieldGoal.offense, specialTeamsFormations.punt.offense]}
+                groups={[
+                  { label: 'Normal play', formations: offensiveFormations },
+                  { label: 'Field goal', formations: [specialTeamsFormations.fieldGoal.offense], disabled: Boolean(game.conversion) },
+                  { label: 'Punt', formations: [specialTeamsFormations.punt.offense], disabled: Boolean(game.conversion) },
+                ]}
+                activeId={game.playType === 'normal' ? game.formation.offense.id : specialTeamsFormations[game.playType].offense.id}
                 confirmed={game.formationConfirmed.offense}
                 disabled={!canChooseFormationSide('offense') || game.formationConfirmed.offense}
                 onChoose={(formation) => chooseFormation('offense', formation)}
@@ -504,8 +511,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               />
               <FormationPicker
                 title="Defense"
-                formations={defensiveFormations}
-                activeId={game.formation.defense.id}
+                formations={game.playType === 'normal' ? defensiveFormations : specialTeamsDefensiveFormations[game.playType]}
+                activeId={game.playType === 'normal' ? game.formation.defense.id : kickingDefenseFormation(game).id}
                 confirmed={game.formationConfirmed.defense}
                 disabled={!canChooseFormationSide('defense') || game.formationConfirmed.defense}
                 onChoose={(formation) => chooseFormation('defense', formation)}
@@ -515,13 +522,28 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
             </div>
           )}
 
+          {game.phase === 'formation' && game.playType !== 'normal' && <KickPreview game={game} />}
+
           {showCommandPanel && (
             <div className="panel command-panel">
               <h2>Command</h2>
               <div className="button-grid">
-                <button type="button" onClick={snap} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'formation' || !canSnap}>
-                  <StepForward size={17} /> Snap
-                </button>
+                {game.phase === 'formation' && game.playType !== 'normal' ? (
+                  <>
+                    <button type="button" onClick={snapAndKick} disabled={isViewingHistory || players[game.possession] === 'computer' || !formationsConfirmed}>
+                      {game.playType === 'punt' ? <Flag size={17} /> : <Goal size={17} />} {game.playType === 'punt' ? 'Snap & Punt' : 'Snap & Kick'}
+                    </button>
+                    {game.playType === 'fieldGoal' && (
+                      <button type="button" onClick={() => runAction({ type: 'fakeFieldGoal' })} disabled={isViewingHistory || players[game.possession] === 'computer' || !formationsConfirmed}>
+                        <RadioTower size={17} /> Fake & Pass
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button type="button" onClick={snap} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'formation' || !canSnap}>
+                    <StepForward size={17} /> Snap
+                  </button>
+                )}
                 <button type="button" onClick={kickoff} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'kickoff'}>
                   <Goal size={17} /> Kickoff
                 </button>
@@ -541,14 +563,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                       <Flag size={17} /> Two-Point Try
                     </button>
                   </>
-                ) : (
-                  <button type="button" onClick={fieldGoal} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || Boolean(game.conversion) || ballCarrier?.team !== game.turn}>
-                    <Goal size={17} /> Field Goal
-                  </button>
-                )}
-                <button type="button" onClick={punt} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || Boolean(game.conversion) || ballCarrier?.team !== game.turn}>
-                  <Flag size={17} /> Punt
-                </button>
+                ) : null}
                 <button type="button" onClick={nextDown} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'betweenDowns' || game.play.result?.type === 'touchdown'}>
                   <Flag size={17} /> Next
                 </button>
@@ -556,14 +571,12 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               {game.phase === 'betweenDowns' && game.play.result?.type === 'touchdown' && (
                 <p className="hint">Extra point: {oddsText(game, { type: 'kick', kind: 'extraPoint', kickerId: `${game.possession}-qb` })}</p>
               )}
-              {game.phase === 'live' && !game.conversion && ballCarrier?.team === game.turn && (
-                <p className="hint">Field goal: {oddsText(game, { type: 'kick', kind: 'fieldGoal', kickerId: ballCarrier.id })}</p>
-              )}
               <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
               <div className="action-list">
                 {legalActions
                   .filter((action) => selectedPiece && actionForPiece(action, selectedPiece.id))
                   .filter((action) => targetMode !== 'pass' || action.type === 'pass')
+                  .filter((action) => !(action.type === 'kick' && game.phase === 'formation'))
                   .filter((action) => action.type !== 'move' && action.type !== 'shift' && action.type !== 'tackle' && (action.type !== 'pass' || targetMode === 'pass'))
                   .map((action, index) => (
                     <button key={`${action.type}-${index}`} type="button" disabled={isViewingHistory} onClick={() => runAction(action)}>
@@ -778,7 +791,7 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
           <li>Home attacks right and Away attacks left throughout the match. Each field column represents 5 yards.</li>
           <li>Gain 10 yards in four downs by reaching the highlighted line to gain. Short gains and losses keep the same target for the next down. Reaching it earns first down and a new target two columns ahead; failing on fourth down turns the ball over.</li>
           <li>When a new line to gain would reach or pass the end zone, it becomes goal-to-go. You must score within the remaining downs; reaching the last field column does not renew first down. Losses keep the goal-to-go target.</li>
-          <li>Each normal down starts with formations. Choose and preview a preset, then confirm each side. After confirming, each team may use up to two shifts to highlighted adjacent orthogonal squares on its own side of the line. Confirm both sides before snapping; shifts are optional.</li>
+          <li>Choose an offense formation from the Normal play, Field goal, or Punt groups before confirming. Changing groups resets both confirmations. Normal play lets each side choose a formation and use up to two optional shifts after confirming. Kicking formations do not allow shifts. Defense can choose a standard or safe field-goal alignment, or the punt-return unit. Confirm both sides before snapping.</li>
           <li>The offense acts first after the snap, then teams alternate one action at a time. A stopped play waits for Next; a touchdown first requires a conversion choice.</li>
           <li>A normal drive ends with a field-goal attempt, punt, interception, strip turnover, turnover on downs, safety, or completed touchdown conversion. Drive counts update on Next. Kickoff returns do not consume a normal drive; a punt return completes the kicking team's drive.</li>
         </ul>
@@ -803,11 +816,11 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
         </ul>
         <h3>Kicking and returns</h3>
         <ul>
-          <li>Special-teams labels: K = kicker, P = punter, KR = kick returner, PR = punt returner, ST = coverage, and BL = blocker. The two receiver pieces serve as returners; any receiving-team piece may recover the kick. These labels remain through the stopped play, then normal positions return for the next scrimmage down.</li>
+          <li>Special-teams labels: K = kicker, P = punter, KR = kick returner, PR = punt returner, ST = coverage, BL = blocker, LS = long snapper, and H = holder. The two receiver pieces serve as returners; any receiving-team piece may recover the kick. These labels remain through the stopped play, then normal positions return for the next scrimmage down.</li>
           <li>Kickoffs start from the kicking team's 35-yard line. Kickoffs and punts roll 2d6 for distance: each point moves the landing column 1 square, or 5 yards, from the kicker. The kicking team chooses the landing row on that column. Kicks beyond the board are capped at the farthest end-zone column.</li>
           <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, use Recover. If the kicking team moves onto or recovers an untouched loose kick first, the play ends and the receiving team starts there. A normally tackled returner starts a fresh first down at the tackle spot, regardless of return yardage; a strip or safety still applies.</li>
           <li>During returns, every role can move within a square radius: receiving team up to 2 squares, coverage team up to 3. Teammates may be crossed, opponents block the path, and the destination must be empty. Only movement, tackles, and recovery are available; passing, handoffs, power moves, and further kicks wait until normal play.</li>
-          <li>Punts and field goals may be attempted by the ball carrier on any normal live down. Punts proceed to placement and a possible return; field goals resolve immediately. Neither is allowed during a two-point try.</li>
+          <li>Select a formation in the Field goal or Punt group before the snap on any normal down. After both sides confirm, Snap & Kick resolves the field goal immediately; Snap & Punt rolls the kick and continues to placement and a possible return. The snap and kick are one action, with no intervening movement or block roll. Ordinary live plays and two-point tries do not allow kicks. After confirming a field-goal formation, Fake & Pass snaps the ball to the holder and starts normal live play from the same positions. Choose an eligible receiver using the normal passing rules, or continue with another legal live action. A fake cannot turn back into a kick. Safe field-goal defense protects against the fake but does not alter kick odds. Fake punts are not available.</li>
           <li>A field goal measures through the ten-yard end zone to the posts at the back edge/end line. Roll 2d6 and meet or beat 5 + half that grid distance, rounded up. A made field goal scores 3; a miss turns possession over at the kick spot.</li>
         </ul>
         <h3>Scoring and restarts</h3>
@@ -941,9 +954,20 @@ function createPregameGame(length: MatchLength): GameState {
   });
 }
 
+function KickPreview({ game }: { game: GameState }) {
+  const kind = game.playType === 'punt' ? 'punt' : 'fieldGoal';
+  const preview = scrimmageKickPreview(game, kind);
+  return <p className="kick-preview">
+    {kind === 'fieldGoal'
+      ? `Field goal: ${preview.fieldGoal.yards} yards · ${oddsText(game, { type: 'kick', kind, kickerId: `${game.possession}-qb` })}`
+      : `Punt: 10–60 yards from the punter · Landing range: ${markerYardLabel(game, preview.minLandingX)} to ${markerYardLabel(game, preview.maxLandingX)}. Choose the landing row after the roll.`}
+  </p>;
+}
+
 function FormationPicker({
   title,
   formations,
+  groups,
   activeId,
   confirmed,
   disabled,
@@ -952,6 +976,7 @@ function FormationPicker({
 }: {
   title: string;
   formations: Formation[];
+  groups?: { label: string; formations: Formation[]; disabled?: boolean }[];
   activeId: string;
   confirmed: boolean;
   disabled: boolean;
@@ -972,15 +997,17 @@ function FormationPicker({
         aria-describedby={`${slug}-formation-description`}
         title={active.description}
         value={active.id}
-        disabled={disabled}
+        disabled={disabled || formations.length === 1}
         onChange={(event) => {
           const formation = formations.find(({ id }) => id === event.target.value);
           if (formation) onChoose(formation);
         }}
       >
-        {formations.map((formation) => (
-          <option key={formation.id} value={formation.id}>{formation.name}</option>
-        ))}
+        {groups ? groups.map(group => (
+          <optgroup key={group.label} label={group.label} disabled={group.disabled}>
+            {group.formations.map(formation => <option key={formation.id} value={formation.id}>{formation.name}</option>)}
+          </optgroup>
+        )) : formations.map(formation => <option key={formation.id} value={formation.id}>{formation.name}</option>)}
       </select>
       <p id={`${slug}-formation-description`} className="visually-hidden">{active.description}</p>
       <button type="button" className="confirm-button" disabled={disabled || confirmed} onClick={onConfirm}>
@@ -1212,6 +1239,8 @@ function describeAction(before: GameState, action: Action, after: GameState): st
     const receivingTeam = kickingTeam === 'home' ? 'away' : 'home';
     return `Coin toss choice: ${capitalize(action.team)} chose to ${action.choice}. ${capitalize(receivingTeam)} will receive. ${capitalize(kickingTeam)} kicks off.`;
   }
+  if (action.type === 'choosePlayType') return `Play type: ${action.playType === 'normal' ? 'Normal play' : action.playType === 'punt' ? 'Punt' : 'Field goal'}. Both sides must confirm their formations.`;
+  if (action.type === 'fakeFieldGoal') return `Fake field goal: ${before.possession} snapped to the holder. Choose an eligible receiver; normal passing rules apply.`;
   if (action.type === 'snap') return `Snap: ${before.possession} started the play.`;
   if (action.type === 'confirmFormation') return `Formation: ${capitalize(action.side)} confirmed.`;
   if (action.type === 'startTwoPointTry') return `Two-point try: ${action.team} lines up from the goal line.`;
@@ -1222,8 +1251,8 @@ function describeAction(before: GameState, action: Action, after: GameState): st
   }
   if (action.type === 'chooseFormation') {
     const formation = action.side === 'offense'
-      ? offensiveFormations.find((item) => item.id === action.formationId)
-      : defensiveFormations.find((item) => item.id === action.formationId);
+      ? [...offensiveFormations, specialTeamsFormations.fieldGoal.offense, specialTeamsFormations.punt.offense].find(item => item.id === action.formationId)
+      : [...defensiveFormations, ...specialTeamsDefensiveFormations.fieldGoal, ...specialTeamsDefensiveFormations.punt].find(item => item.id === action.formationId);
     return `Formation: ${capitalize(action.side)} chose ${formation?.name ?? action.formationId}.`;
   }
   if (action.type === 'shift') {
@@ -1428,6 +1457,7 @@ function downDistanceLabel(game: GameState): string {
   if (game.phase === 'kickReturn') return 'Return';
   if (game.conversion) return '2PT Try';
   if (isGoalToGo(game)) return `${game.down} & Goal`;
+  if (game.phase === 'formation') return `${game.down} & ${moveDistanceToFirstDown(game, { x: game.lineOfScrimmage, y: 5 }) * 5}`;
   return `${game.down} & ${Math.max(1, Math.ceil(moveDistanceToFirstDown(game, ballCoord(game)) / 2) * 10)}`;
 }
 
@@ -1456,7 +1486,7 @@ function hideStoppedChangeOfPossessionBall(game: GameState): boolean {
 }
 
 function actionClearsSelection(action: Action): boolean {
-  return action.type === 'move' ||
+  return action.type === 'fakeFieldGoal' || action.type === 'chooseFormation' || action.type === 'choosePlayType' || action.type === 'move' ||
     action.type === 'shift' ||
     action.type === 'powerMove' ||
     action.type === 'pass' ||

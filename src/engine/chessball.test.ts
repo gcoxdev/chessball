@@ -15,6 +15,11 @@ import {
 } from './rules';
 import type { Action, Coord, GameState, Piece, PlayResult, Team } from './types';
 
+// Preserve arranged kick spots in resolution tests; setup is tested separately.
+const readyKick = (state: GameState, playType: 'fieldGoal' | 'punt'): GameState => ({
+  ...state, phase: 'formation', playType, formationConfirmed: { offense: true, defense: true },
+});
+
 const piece = (state: ReturnType<typeof createGame>, id: string): Piece => {
   const found = state.pieces.find((item) => item.id === id);
   if (!found) throw new Error(`Missing piece ${id}`);
@@ -950,8 +955,8 @@ describe('play resolution', () => {
       lineOfScrimmage: 17,
       pieces: fieldGoalState.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
     };
-    const missedFieldGoal = applyAction(fieldGoalState, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 4 } });
-    const madeFieldGoal = applyAction(fieldGoalState, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
+    const missedFieldGoal = applyAction(readyKick(fieldGoalState, 'fieldGoal'), { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 4 } });
+    const madeFieldGoal = applyAction(readyKick(fieldGoalState, 'fieldGoal'), { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
     expect(missedFieldGoal.score.home).toBe(0);
     expect(missedFieldGoal.play.result).toMatchObject({ type: 'fieldGoal', good: false, roll: { total: 8, required: 9, distance: 7 } });
     expect(madeFieldGoal.score.home).toBe(3);
@@ -992,7 +997,7 @@ describe('play resolution', () => {
       pieces: state.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
     };
 
-    const missed = applyAction(state, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 1, die2: 1 } });
+    const missed = applyAction(readyKick(state, 'fieldGoal'), { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 1, die2: 1 } });
     const next = startNextDown(missed);
 
     expect(missed.play.result).toMatchObject({ type: 'fieldGoal', team: 'home', good: false });
@@ -1010,7 +1015,7 @@ describe('play resolution', () => {
       ball: { kind: 'controlled', pieceId: 'away-qb' },
     };
 
-    const made = applyAction(state, { type: 'kick', kickerId: 'away-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
+    const made = applyAction(readyKick(state, 'fieldGoal'), { type: 'kick', kickerId: 'away-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
 
     expect(made.score.away).toBe(3);
     expect(made.play.result).toMatchObject({ type: 'fieldGoal', team: 'away', good: true, roll: { total: 9, required: 9, distance: 7 } });
@@ -1164,7 +1169,7 @@ describe('play resolution', () => {
       pieces: state.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
     };
 
-    const fieldGoal = applyAction(state, {
+    const fieldGoal = applyAction(readyKick(state, 'fieldGoal'), {
       type: 'kick',
       kickerId: 'home-qb',
       kind: 'fieldGoal',
@@ -1341,7 +1346,7 @@ describe('play resolution', () => {
       ...puntState,
       pieces: puntState.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
     };
-    const punt = applyAction(puntState, { type: 'kick', kickerId: 'home-qb', kind: 'punt', roll: { die1: 6, die2: 6 } });
+    const punt = applyAction(readyKick(puntState, 'punt'), { type: 'kick', kickerId: 'home-qb', kind: 'punt', roll: { die1: 6, die2: 6 } });
     const puntTouchback = applyAction(punt, { type: 'placeKick', at: { x: 23, y: 5 } });
 
     expect(puntTouchback.play.result).toEqual({ type: 'touchback', team: 'away', at: { x: 17, y: 5 } });
@@ -1537,7 +1542,7 @@ describe('play resolution', () => {
       pieces: state.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 8, y: 5 } } : item)),
     };
 
-    const next = applyAction(state, {
+    const next = applyAction(readyKick(state, 'punt'), {
       type: 'kick',
       kickerId: 'home-qb',
       kind: 'punt',

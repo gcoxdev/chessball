@@ -197,16 +197,16 @@ describe('headless simulator', () => {
     const select = (policies: TeamPolicies) => chooseActionForTeamPolicies(
       state,
       legalActions,
-      () => 0.5,
+      () => 0.75,
       policies,
       0,
     );
 
     expect(state.phase).toBe('formation');
     expect(state.turn).toBe('home');
-    expect(select({ home: 'heuristic', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
-    expect(select({ home: 'random', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'pistol' });
-    expect(select({ home: 'heuristic', away: 'random' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
+    expect(select({ home: 'heuristic', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'power' });
+    expect(select({ home: 'random', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'field-goal-unit' });
+    expect(select({ home: 'heuristic', away: 'random' })).toMatchObject({ type: 'chooseFormation', formationId: 'power' });
   });
 
   it('uses only the away policy for an away formation turn', () => {
@@ -215,16 +215,16 @@ describe('headless simulator', () => {
     const select = (policies: TeamPolicies) => chooseActionForTeamPolicies(
       state,
       legalActions,
-      () => 0.5,
+      () => 0.75,
       policies,
       0,
     );
 
     expect(state.phase).toBe('formation');
     expect(state.turn).toBe('away');
-    expect(select({ home: 'heuristic', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
-    expect(select({ home: 'heuristic', away: 'random' })).toMatchObject({ type: 'chooseFormation', formationId: 'pistol' });
-    expect(select({ home: 'random', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'trips' });
+    expect(select({ home: 'heuristic', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'power' });
+    expect(select({ home: 'heuristic', away: 'random' })).toMatchObject({ type: 'chooseFormation', formationId: 'field-goal-unit' });
+    expect(select({ home: 'random', away: 'heuristic' })).toMatchObject({ type: 'chooseFormation', formationId: 'power' });
   });
 
   it('gives team policies precedence over the legacy scalar policy', () => {
@@ -296,7 +296,7 @@ describe('headless simulator', () => {
   });
 
   it('records a real drive-ending action transition exactly once', () => {
-    const before = createGame({ phase: 'live', lineOfScrimmage: 17, ball: { kind: 'controlled', pieceId: 'home-qb' } });
+    const before = createGame({ phase: 'formation', playType: 'fieldGoal', formationConfirmed: { offense: true, defense: true }, lineOfScrimmage: 17, ball: { kind: 'controlled', pieceId: 'home-qb' } });
     const positioned = {
       ...before,
       pieces: before.pieces.map((item) => item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item),
@@ -309,15 +309,15 @@ describe('headless simulator', () => {
 
   it('uses canonical goalpost geometry for heuristic field-goal range', () => {
     const at = (x: number) => {
-      const base = createGame({ phase: 'live', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x, firstDownLine: 21 });
+      const base = createGame({ phase: 'formation', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x, firstDownLine: 21 });
       return {
         ...base,
         pieces: base.pieces.map((piece) => piece.id === 'home-qb' ? { ...piece, coord: { x, y: 5 } } : piece),
         ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
       };
     };
-    const inRange = at(18);
-    const outOfRange = at(17);
+    const inRange = at(16);
+    const outOfRange = at(15);
     const choose = (state: GameState) => chooseActionForTeamPolicies(
       state,
       generateLegalActions(state),
@@ -326,8 +326,8 @@ describe('headless simulator', () => {
       0,
     );
 
-    expect(choose(inRange)).toMatchObject({ type: 'kick', kind: 'fieldGoal' });
-    expect(choose(outOfRange)).not.toMatchObject({ type: 'kick', kind: 'fieldGoal' });
+    expect(choose(inRange)).toMatchObject({ type: 'choosePlayType', playType: 'fieldGoal' });
+    expect(choose(outOfRange)).not.toMatchObject({ type: 'choosePlayType', playType: 'fieldGoal' });
   });
 
   it('does not recount a persisted terminal result on a later transition', () => {

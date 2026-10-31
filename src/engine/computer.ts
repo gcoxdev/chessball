@@ -1,5 +1,6 @@
-import { applyAction, defensiveFormations, fieldGoalAttempt, offensiveFormations } from './rules';
-import type { Action, Coord, GameState, Piece, Team } from './types';
+import { actionOdds, applyAction, defensiveFormations, generateLegalActions, offensiveFormations, scrimmageKickPreview } from './rules';
+import { specialTeamsDefensiveFormations } from './special-teams';
+import type { Action, Coord, GameState, Piece, PlayType, Team } from './types';
 
 export type PlayerKind = 'human' | 'computer';
 export type PlayerControl = Record<Team, PlayerKind>;
@@ -36,6 +37,10 @@ export function chooseComputerAction(game: GameState, legalActions: Action[], se
   }
 
   if (carrier?.team === game.turn) {
+    if (game.play.actions[game.play.actions.length - 1]?.type === 'fakeFieldGoal') {
+      const pass = chooseComputerPass(game, carrier, seed);
+      if (pass) return pass;
+    }
     if (game.phase === 'kickReturn') {
       const carrierMoves = legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
         action.type === 'move' && action.pieceId === carrier.id,
@@ -44,10 +49,6 @@ export function chooseComputerAction(game: GameState, legalActions: Action[], se
       if (move) return move;
       // A boxed-in returner can still use a teammate's action to continue play.
       return pickSeeded(legalActions, seed) ?? null;
-    }
-
-    if (!game.conversion && game.down === 4 && fieldGoalAttempt(game.direction, carrier.coord).required <= 10) {
-      return { type: 'kick', kickerId: carrier.id, kind: 'fieldGoal' };
     }
 
     const carrierMoves = legalActions.filter((action): action is Extract<Action, { type: 'move' }> =>
@@ -100,7 +101,33 @@ function chooseComputerKickPlacement(game: GameState, legalActions: Action[], se
   }), seed, 6) ?? null;
 }
 
+export function preferredPlayType(game: GameState): PlayType {
+  if (game.conversion || game.down !== 4) return 'normal';
+  return scrimmageKickPreview(game, 'fieldGoal').fieldGoal.required <= 10 ? 'fieldGoal' : 'punt';
+}
+
 function chooseComputerFormationAction(game: GameState, seed: number, players: PlayerControl): Action | null {
+  if (!game.formationConfirmed.offense && players[game.possession] === 'computer' && !game.play.actions.some(action => action.type === 'choosePlayType')) {
+    const playType = preferredPlayType(game);
+    if (playType !== game.playType) return { type: 'choosePlayType', playType };
+  }
+  if (game.playType !== 'normal') {
+    if (!game.formationConfirmed.offense) return players[game.possession] === 'computer' ? { type: 'confirmFormation', side: 'offense' } : null;
+    if (!game.formationConfirmed.defense) {
+      if (players[otherTeam(game.possession)] !== 'computer') return null;
+      const choices = specialTeamsDefensiveFormations[game.playType];
+      if (choices.length > 1 && !game.play.actions.some(action => action.type === 'chooseFormation' && action.side === 'defense')) {
+        return { type: 'chooseFormation', side: 'defense', formationId: choices[seed % choices.length].id };
+      }
+      return { type: 'confirmFormation', side: 'defense' };
+    }
+    if (players[game.possession] !== 'computer') return null;
+    if (game.playType === 'fieldGoal' && seed % 7 === 0 && game.kickDefenseId !== 'safe-field-goal-defense') {
+      const fake = applyAction(game, { type: 'fakeFieldGoal' });
+      if (generateLegalActions(fake).some(action => action.type === 'pass' && (actionOdds(fake, action)?.successChance ?? 0) >= 0.5)) return { type: 'fakeFieldGoal' };
+    }
+    return { type: 'kick', kind: game.playType, kickerId: `${game.possession}-qb` };
+  }
   const offenseChosen = game.play.actions.some((action) => action.type === 'chooseFormation' && action.side === 'offense');
   if (!game.formationConfirmed.offense && !offenseChosen) {
     if (players[game.possession] !== 'computer') return null;
