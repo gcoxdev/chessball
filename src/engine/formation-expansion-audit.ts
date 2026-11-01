@@ -367,7 +367,7 @@ export function canonicalFormationExpansionArtifact(
   return deepFreeze({
     schema: 'chessball-formation-expansion-audit-v2' as const,
     runner: 'scripts/run-formation-expansion-audit.ts',
-    command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
+    command: 'npm run audit:expansion',
     policy: { primary: 'heuristic' as const, comparison: 'heuristic' as const },
     maxActions: FORMATION_EXPANSION_MAX_ACTIONS,
     pairsPerCell: FORMATION_EXPANSION_PAIRS_PER_CELL,
@@ -417,7 +417,7 @@ export function formationExpansionAuditOutput(
   args: readonly string[],
   runAudit: (options: RunMatchedAuditOptions) => MatchedAuditReport,
 ): string {
-  if (args.length) throw new Error('Usage: npm exec vite-node scripts/run-formation-expansion-audit.ts');
+  if (args.length) throw new Error('Usage: npm run audit:expansion');
   const groups = formationExpansionExperiments();
   const summaries = groups.map(group => summarizeFormationComparison(group, group.cells.map(cell => runAudit({
     pairs: cell.pairs,

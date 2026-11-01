@@ -455,7 +455,8 @@ describe('headless simulator', () => {
     expect(report.balance.warnings).toEqual(expect.any(Array));
   });
 
-  it('breaks balance down by kickoff, receiving, and direction factors', () => {
+  // This integration check completes 24 matches, rather than a single engine action.
+  it('breaks balance down by kickoff, receiving, and direction factors', { timeout: 30_000 }, () => {
     const report = simulateBatch({ games: 24, seed: 9, maxActionsPerGame: 1000 });
 
     expect(report.balanceByOpeningKickoff.home.games + report.balanceByOpeningKickoff.away.games).toBe(report.completed);

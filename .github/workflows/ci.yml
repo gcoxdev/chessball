@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm run simulate -- --games 2 --seed 17 --json
+      - run: npm audit
+      - name: Check the production app in Chromium
+        shell: bash
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4177 --strictPort > /tmp/chessball-preview.log 2>&1 &
+          preview_pid=$!
+          google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --remote-debugging-port=9224 --user-data-dir=/tmp/chessball-browser-smoke about:blank > /tmp/chessball-browser.log 2>&1 &
+          browser_pid=$!
+          trap 'kill "$preview_pid" "$browser_pid" 2>/dev/null || true' EXIT
+          npm run test:browser

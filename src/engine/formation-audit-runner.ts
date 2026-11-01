@@ -38,7 +38,7 @@ export function formationExperiments(mode: FormationAuditMode): FormationExperim
 
 export function parseFormationAuditMode(args: string[]): FormationAuditMode {
   if (args.length !== 2 || args[0] !== '--mode' || !['screen', 'followups', 'all'].includes(args[1])) {
-    throw new Error('Usage: npm exec vite-node scripts/run-formation-audit.ts -- --mode screen|followups|all');
+    throw new Error('Usage: npm run audit:formations -- --mode screen|followups|all');
   }
   return args[1] as FormationAuditMode;
 }
@@ -85,7 +85,7 @@ export function canonicalArtifact(reports: CompactFormationReport[]) {
   return {
     schema: 'chessball-formation-audit-v3' as const,
     runner: 'scripts/run-formation-audit.ts',
-    command: 'npm exec vite-node scripts/run-formation-audit.ts -- --mode all',
+    command: 'npm run audit:formations -- --mode all',
     policy: { primary: 'heuristic' as const, comparison: 'heuristic' as const },
     screen: reports.filter(report => report.group === 'screen'),
     followups: reports.filter(report => report.group === 'followups'),

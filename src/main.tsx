@@ -1037,7 +1037,7 @@ function FormationPicker({
   return (
     <div className="formation-picker">
       <div className="formation-heading">
-        <label htmlFor={`${slug}-formation`}>{title}<span className="visually-hidden"> formation</span></label>
+        <label htmlFor={`${slug}-formation`}>{title}{' '}<span className="visually-hidden">formation</span></label>
         <em className={`formation-status ${confirmed ? 'confirmed' : 'pending'}`}>{confirmed ? 'Confirmed' : 'Pending'}</em>
       </div>
       <select

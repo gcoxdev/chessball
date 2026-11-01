@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -1127,7 +1128,8 @@ describe('Chessball UI interactions', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Ready for Snap' }));
+    // The computer chooses and confirms its formation in separate scheduled actions.
+    fireEvent.click(await screen.findByRole('button', { name: 'Ready for Snap' }, { timeout: 3000 }));
     await waitFor(() => {
       expect(screen.getAllByText(/computer home: snap: home started the play/i).length).toBeGreaterThan(0);
     }, { timeout: 1800 });
@@ -1799,7 +1801,7 @@ describe('Chessball UI interactions', () => {
     });
     fireEvent.change(screen.getByRole('combobox', { name: 'Defense formation' }), { target: { value: 'nickel' } });
     fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Ready for Snap' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ready for Snap' }, { timeout: 3000 }));
 
     await waitFor(() => {
       expect(screen.getAllByText(/computer home: (move|handoff):/i).length).toBeGreaterThan(0);

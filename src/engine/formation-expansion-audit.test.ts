@@ -319,15 +319,17 @@ describe('formation comparison pooling and classification', () => {
   });
 });
 
+// Full artifacts calculate 10,000-sample intervals across all 72 cells.
+// Allow those CPU-bound checks time to complete on shared CI runners.
 describe('formation expansion artifact', () => {
-  it('serializes the complete v2 schema deterministically without raw pair arrays', () => {
+  it('serializes the complete v2 schema deterministically without raw pair arrays', { timeout: 30_000 }, () => {
     const groups = formationExpansionExperiments();
     const summaries = groups.map(group => summarizeFormationComparison(group, reportsForGroup(group, Array(6).fill(.5))));
     const artifact = canonicalFormationExpansionArtifact(groups, summaries);
     expect(artifact).toMatchObject({
       schema: 'chessball-formation-expansion-audit-v2',
       runner: 'scripts/run-formation-expansion-audit.ts',
-      command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
+      command: 'npm run audit:expansion',
       policy: { primary: 'heuristic', comparison: 'heuristic' },
       maxActions: 5_000, pairsPerCell: 100, totalRequestedPairs: 7_200,
       bootstrap: FORMATION_EXPANSION_BOOTSTRAP,
@@ -342,7 +344,7 @@ describe('formation expansion artifact', () => {
     expect(serialized).not.toContain('excludedPairDetails');
   });
 
-  it('protects every durable configuration, cell report, and pooled decision field', () => {
+  it('protects every durable configuration, cell report, and pooled decision field', { timeout: 30_000 }, () => {
     const groups = formationExpansionExperiments();
     const reportsByGroup = groups.map(group => reportsForGroup(group, Array(6).fill(.5), [2, 2, 2, 2, -1, -1]));
     const summaries = groups.map((group, index) => summarizeFormationComparison(group, reportsByGroup[index]));
@@ -352,7 +354,7 @@ describe('formation expansion artifact', () => {
     const firstReport = firstGroup.reports[0];
     expect(artifact).toMatchObject({
       schema: 'chessball-formation-expansion-audit-v2', runner: 'scripts/run-formation-expansion-audit.ts',
-      command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
+      command: 'npm run audit:expansion',
       policy: { primary: 'heuristic', comparison: 'heuristic' }, maxActions: 5_000,
       pairsPerCell: 100, totalRequestedPairs: 7_200,
       bootstrap: { samples: 10_000, confidence: .95 }, thresholds: FORMATION_EXPANSION_THRESHOLDS,
@@ -401,7 +403,7 @@ describe('formation expansion artifact', () => {
     visit(artifact);
   });
 
-  it('runs exactly 72 injected audits and returns canonical stdout content without file writes', () => {
+  it('runs exactly 72 injected audits and returns canonical stdout content without file writes', { timeout: 30_000 }, () => {
     const calls: RunMatchedAuditOptions[] = [];
     const returnedReports: MatchedAuditReport[] = [];
     const output = formationExpansionAuditOutput([], options => {
@@ -429,7 +431,7 @@ describe('formation expansion artifact', () => {
     expect(() => formationExpansionAuditOutput(['unexpected'], () => {
       calls++;
       return syntheticReport(.5);
-    })).toThrow('Usage: npm exec vite-node scripts/run-formation-expansion-audit.ts');
+    })).toThrow('Usage: npm run audit:expansion');
     expect(calls).toBe(0);
   });
 
