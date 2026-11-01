@@ -992,7 +992,6 @@ describe('Chessball UI interactions', () => {
     expect(cssText).not.toMatch(/\.square\.is-selected\s*{[^}]*box-shadow:/s);
     expect(cssText).toMatch(/\.square\.move-target::after\s*{[^}]*border-radius:\s*50%/s);
     expect(cssText).toMatch(/\.square\.power-target::after\s*{[^}]*transform:[^}]*rotate\(45deg\)/s);
-    expect(cssText).toMatch(/\.square\.kick-target::before\s*{[^}]*content:\s*"K"/s);
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO"/s);
     expect(cssText).not.toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*(?:background|background-image):/s);
     expect(cssText).toMatch(/\.field\[aria-readonly="true"\] \.square\s*{[^}]*outline:\s*1px dashed/s);
@@ -1015,20 +1014,20 @@ describe('Chessball UI interactions', () => {
     ]);
   });
 
-  it('pass and tackle badges do not alter piece geometry', () => {
+  it('highlights action targets without letter badges or changes to piece geometry', () => {
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
     expect(findTargetPieceGeometryViolations(cssText)).toEqual([]);
-    expect(cssText).toMatch(/\.square\.pass-target::before\s*{[^}]*content:\s*"P"/s);
-    expect(cssText).toMatch(/\.square\.tackle-target::before\s*{[^}]*content:\s*"T"/s);
-    expect(cssText).toMatch(/\.square\.pass-target::before,[\s\S]*?z-index:\s*3;[^}]*left:\s*1px;[^}]*width:\s*10px;[^}]*height:\s*10px;/s);
+    expect(cssText).not.toMatch(/\.square\.(?:pass|handoff|tackle|recovery|kick)-target::before/);
+    expect(cssText).toMatch(/\.square\.pass-target::after/);
+    expect(cssText).toMatch(/\.square\.tackle-target::after/);
   });
 
   it('keeps the read-only cue legible in the open bottom-right corner', () => {
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
     expect(cssText).toMatch(
-      /\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO";[^}]*left:\s*auto;[^}]*top:\s*auto;[^}]*right:\s*1px;[^}]*bottom:\s*1px;[^}]*min-width:\s*16px;[^}]*width:\s*16px;[^}]*font-size:\s*0\.45rem;[^}]*line-height:\s*10px;/s,
+      /\.field\[aria-readonly="true"\] \.square\[tabindex="0"\]::before\s*{[^}]*content:\s*"RO";[^}]*left:\s*auto;[^}]*top:\s*auto;[^}]*right:\s*1px;[^}]*bottom:\s*1px;[^}]*min-width:\s*16px;[^}]*width:\s*16px;[^}]*font-size:\s*0\.45rem;[^}]*line-height:\s*1;/s,
     );
   });
 

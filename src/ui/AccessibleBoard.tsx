@@ -32,7 +32,7 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
   const inspectedOdds = inspectedAction ? oddsText(props.game, inspectedAction) : undefined;
   const actionNames = { move: 'Move', shift: 'Shift', powerMove: 'Power move', pass: 'Pass', handoff: 'Handoff (no roll)', tackle: 'Tackle', recover: 'Recover ball', placeKick: 'Place kick' };
   const availableTypes = new Set([...targets.values()].map(action => action.type));
-  const legend = ([['move', '● Move'], ['shift', '● Shift'], ['powerMove', '◆ Power'], ['handoff', 'H Handoff'], ['pass', 'P Pass'], ['tackle', 'T Tackle'], ['recover', 'R Recover'], ['placeKick', 'K Place kick']] as const)
+  const legend = ([['move', '● Move'], ['shift', '● Shift'], ['powerMove', '◆ Power'], ['handoff', 'Handoff'], ['pass', 'Pass'], ['tackle', 'Tackle'], ['recover', 'Recover'], ['placeKick', 'Place kick']] as const)
     .filter(([type]) => availableTypes.has(type)).map(([, label]) => label).join(' · ');
   const initialBall = props.showBallMarker ? props.ballCoord : undefined;
   const [activeCoord, setActiveCoord] = useState<Coord>(() => chooseBoardFocus({
