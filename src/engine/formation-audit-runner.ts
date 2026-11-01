@@ -52,6 +52,7 @@ export function compactFormationReport(experiment: FormationExperiment, report: 
     comparisonPlan: experiment.comparisonPlan,
     maxActions: FORMATION_AUDIT_MAX_ACTIONS,
     bootstrap: { seed: experiment.bootstrapSeed, ...FORMATION_AUDIT_BOOTSTRAP },
+    gamesPerPair: report.gamesPerPair,
     seedConvention: report.seedConvention,
     seedRange: report.seedRange,
     requestedPairs: report.requestedPairs,
@@ -82,7 +83,7 @@ export type CompactFormationReport = ReturnType<typeof compactFormationReport>;
 
 export function canonicalArtifact(reports: CompactFormationReport[]) {
   return {
-    schema: 'chessball-formation-audit-v2' as const,
+    schema: 'chessball-formation-audit-v3' as const,
     runner: 'scripts/run-formation-audit.ts',
     command: 'npm exec vite-node scripts/run-formation-audit.ts -- --mode all',
     policy: { primary: 'heuristic' as const, comparison: 'heuristic' as const },

@@ -150,8 +150,8 @@ describe('runCli', () => {
     const lines: string[] = [];
     runCli(['--audit', '--json'], { simulateBatch: vi.fn(), runMatchedAudit: () => auditReport(), write: line => lines.push(line) });
     const output = JSON.parse(lines.join('\n')) as MatchedAuditReport;
-    expect(output).toMatchObject({ requestedPairs: 2, completedPairs: 2, excludedPairs: 0, attemptedGames: 4 });
-    expect(output.statusCounts).toEqual({ completed: 4, stalled: 0, crashed: 0 });
+    expect(output).toMatchObject({ requestedPairs: 2, completedPairs: 2, excludedPairs: 0, attemptedGames: 8 });
+    expect(output.statusCounts).toEqual({ completed: 8, stalled: 0, crashed: 0 });
   });
 });
 
@@ -170,8 +170,8 @@ function batchReport(overrides: Partial<SimulationBatchReport> = {}): Simulation
 
 function auditReport(overrides: Partial<MatchedAuditReport> = {}): MatchedAuditReport {
   return {
-    matchup: { primary: 'heuristic', comparison: 'random', formationPlan: null }, requestedPairs: 2, completedPairs: 2, excludedPairs: 0, attemptedGames: 4,
-    seedConvention: 'base-seed-plus-pair-index', seedList: [1, 2], seedRange: { first: 1, last: 2 }, statusCounts: { completed: 4, stalled: 0, crashed: 0 }, excludedPairDetails: [], anomalies: [],
+    matchup: { primary: 'heuristic', comparison: 'random', formationPlan: null }, requestedPairs: 2, completedPairs: 2, excludedPairs: 0, attemptedGames: 8,
+    gamesPerPair: 4, seedConvention: 'base-seed-plus-pair-index', seedList: [1, 2], seedRange: { first: 1, last: 2 }, statusCounts: { completed: 8, stalled: 0, crashed: 0 }, excludedPairDetails: [], anomalies: [],
     symmetry: { pairEffects: [.5, .5], scoreDeltaEffects: [0, 0], winShareInterval: null, scoreDeltaInterval: null, classification: 'inconclusive' },
     skillGap: { pairEffects: [.5, .5], scoreDeltaEffects: [0, 0], primaryWins: 0, comparisonWins: 0, ties: 4, winShareInterval: null, scoreDeltaInterval: null, classification: null },
     telemetry: { actionTypes: { total: 0 }, actionOpportunities: { total: 0 }, formationChoices: { total: 0 }, driveOutcomes: { total: 0 }, selectionRates: {}, formationStratifiedOutcomes: {}, completion: { games: 4, actions: 0, averageActions: 0 }, tacticCohorts: {} },

@@ -20,10 +20,22 @@ export function chooseComputerAction(game: GameState, legalActions: Action[], se
 
   const ball = game.ball;
   const carrier = ball.kind === 'controlled' ? game.pieces.find((piece) => piece.id === ball.pieceId) : undefined;
+  const tackles = carrier && carrier.team !== game.turn
+    ? legalActions.filter((action): action is Extract<Action, { type: 'tackle' }> => action.type === 'tackle')
+      .map(action => ({ action, chance: actionOdds(game, action)!.successChance }))
+      .sort((a, b) => b.chance - a.chance)
+    : [];
   if (carrier && carrier.team !== game.turn) {
-    const tackles = legalActions.filter((action): action is Extract<Action, { type: 'tackle' }> => action.type === 'tackle');
-    const tackle = pickSeeded(tackles, seed);
-    if (tackle) return tackle;
+    // Reposition instead of repeatedly attempting a blocked, low-odds tackle.
+    // After two approach moves, engage even at poor odds so a circling carrier
+    // cannot keep the defense repositioning forever.
+    const approachMoves = game.play.actions.slice(-4).filter(action =>
+      action.type === 'move' && game.pieces.some(piece => piece.id === action.pieceId && piece.team === game.turn),
+    ).length;
+    const best = tackles[0];
+    if (best && (best.chance >= 0.5 || approachMoves >= 2)) {
+      return pickSeeded(tackles.filter(tackle => tackle.chance === best.chance), seed)!.action;
+    }
   }
 
   const recovery = pickSeeded(legalActions.filter((action) => action.type === 'recover'), seed);
@@ -82,11 +94,21 @@ export function chooseComputerAction(game: GameState, legalActions: Action[], se
   const ballAt = ballCoord(game);
   const recentMoverIds = recentMovingPieceIds(game);
   const moves = legalActions.filter((action): action is Extract<Action, { type: 'move' | 'powerMove' }> => action.type === 'move' || action.type === 'powerMove');
-  const nonRepeatingMoves = moves.filter((action) => !recentMoverIds.has(action.pieceId));
-  const candidateMoves = nonRepeatingMoves.length > 0 ? nonRepeatingMoves : moves;
+  // Close on the carrier through open squares; do not wander back and forth
+  // indefinitely just to avoid a difficult tackle.
+  const openMoves = carrier && carrier.team !== game.turn ? moves.filter(action => {
+    if (action.type !== 'move') return false;
+    const piece = game.pieces.find(piece => piece.id === action.pieceId)!;
+    return chebyshevDistance(action.to, ballAt) < chebyshevDistance(piece.coord, ballAt);
+  }) : [];
+  if (tackles.length && !openMoves.length) return tackles[0].action;
+  const availableMoves = openMoves.length ? openMoves : moves;
+  const nonRepeatingMoves = availableMoves.filter((action) => !recentMoverIds.has(action.pieceId));
+  const candidateMoves = nonRepeatingMoves.length > 0 ? nonRepeatingMoves : availableMoves;
   const bestMove = pickFromTopSeeded(candidateMoves.sort((a, b) => chebyshevDistance(a.to, ballAt) - chebyshevDistance(b.to, ballAt)), seed, 4);
   if (bestMove) return bestMove;
 
+  if (tackles.length) return tackles[0].action;
   return legalActions[0] ?? null;
 }
 

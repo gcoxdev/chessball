@@ -40,7 +40,8 @@ for (const team of ['home', 'away'] as const) {
           [`${team}-wr1`]: { x: at, y: 5 }, [`${opponent}-wr1`]: { x: at, y: 6 },
         });
         const next = startNextDown(legalApply(returned, { type: 'tackle', defenderId: `${opponent}-wr1`, targetId: `${team}-wr1`, roll }));
-        expect(next).toMatchObject({ phase: 'formation', possession: team, down: 1, lineOfScrimmage: at, firstDownLine: firstDownTarget(at, dir) });
+        const line = at + dir;
+        expect(next).toMatchObject({ phase: 'formation', possession: team, down: 1, lineOfScrimmage: line, firstDownLine: firstDownTarget(line, dir) });
         expect(next.drivesThisQuarter[opponent]).toBe(kind === 'punt' ? 1 : 0);
       });
     }

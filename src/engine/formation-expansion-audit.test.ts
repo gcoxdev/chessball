@@ -43,16 +43,16 @@ function syntheticReport(win: number, score = 0, overrides: Partial<MatchedAudit
   const bootstrapSeed = cell?.bootstrapSeed ?? 1;
   return {
     matchup: { primary: 'heuristic', comparison: 'heuristic', formationPlan: cell ? { home: cell.primaryPlan, away: cell.comparisonPlan } : null },
-    requestedPairs: 100, completedPairs: 100, excludedPairs: 0, attemptedGames: 200,
-    seedConvention: 'base-seed-plus-pair-index', seedList: Array.from({ length: 100 }, (_, index) => seedRange.first + index), seedRange: { ...seedRange },
-    statusCounts: { completed: 200, stalled: 0, crashed: 0 }, excludedPairDetails: [], anomalies: [],
+    requestedPairs: 100, completedPairs: 100, excludedPairs: 0, attemptedGames: 400,
+    gamesPerPair: 4, seedConvention: 'base-seed-plus-pair-index', seedList: Array.from({ length: 100 }, (_, index) => seedRange.first + index), seedRange: { ...seedRange },
+    statusCounts: { completed: 400, stalled: 0, crashed: 0 }, excludedPairDetails: [], anomalies: [],
     symmetry: { pairEffects: Array(100).fill(.5), scoreDeltaEffects: Array(100).fill(0), winShareInterval: interval(.5, bootstrapSeed), scoreDeltaInterval: interval(0, bootstrapSeed), classification: 'inconclusive' },
     skillGap: {
-      pairEffects, scoreDeltaEffects, primaryWins: 0, comparisonWins: 0, ties: 200,
+      pairEffects, scoreDeltaEffects, primaryWins: 0, comparisonWins: 0, ties: 400,
       winShareInterval: interval(win, bootstrapSeed), scoreDeltaInterval: interval(score, bootstrapSeed),
       classification: { state: win > .5 ? 'supported' : 'inconclusive', effect: win - .5, interval: interval(win, bootstrapSeed) },
     },
-    telemetry: { actionTypes: { total: 0 }, actionOpportunities: { total: 0 }, formationChoices: { total: 0 }, driveOutcomes: { total: 0 }, selectionRates: {}, formationStratifiedOutcomes: {}, tacticCohorts: {}, completion: { games: 200, actions: 2_000, averageActions: 10 } },
+    telemetry: { actionTypes: { total: 0 }, actionOpportunities: { total: 0 }, formationChoices: { total: 0 }, driveOutcomes: { total: 0 }, selectionRates: {}, formationStratifiedOutcomes: {}, tacticCohorts: {}, completion: { games: 400, actions: 4_000, averageActions: 10 } },
     ...overrides,
   };
 }
@@ -286,9 +286,9 @@ describe('formation comparison pooling and classification', () => {
     ['nonfinite win effect', (report: MatchedAuditReport) => { report.skillGap.pairEffects[0] = Number.NaN; }, /nonfinite win-share effect/i],
     ['missing score effect', (report: MatchedAuditReport) => { report.skillGap.scoreDeltaEffects[0] = undefined as unknown as number; }, /nonfinite score-delta effect/i],
     ['requested relationship', (report: MatchedAuditReport) => { report.requestedPairs = 99; }, /requested 99 pairs; expected 100/i],
-    ['attempted relationship', (report: MatchedAuditReport) => { report.attemptedGames = 199; }, /attempted 199 games; expected 200/i],
-    ['status total', (report: MatchedAuditReport) => { report.statusCounts.completed = 199; }, /status counts total 199 games; expected 200/i],
-    ['completion games', (report: MatchedAuditReport) => { report.telemetry.completion.games = 199; }, /completion telemetry records 199 games; expected 200/i],
+    ['attempted relationship', (report: MatchedAuditReport) => { report.attemptedGames = 199; }, /attempted 199 games; expected 400/i],
+    ['status total', (report: MatchedAuditReport) => { report.statusCounts.completed = 199; }, /status counts total 199 games; expected 400/i],
+    ['completion games', (report: MatchedAuditReport) => { report.telemetry.completion.games = 199; }, /completion telemetry records 199 games; expected 400/i],
     ['seed convention', (report: MatchedAuditReport) => { report.seedConvention = 'wrong' as MatchedAuditReport['seedConvention']; }, /seed convention.*wrong/i],
     ['seed range', (report: MatchedAuditReport) => { report.seedRange.first++; }, /seed range.*does not match/i],
     ['win bootstrap seed', (report: MatchedAuditReport) => { report.skillGap.winShareInterval!.seed++; }, /win-share interval bootstrap seed/i],
@@ -320,12 +320,12 @@ describe('formation comparison pooling and classification', () => {
 });
 
 describe('formation expansion artifact', () => {
-  it('serializes the complete v1 schema deterministically without raw pair arrays', () => {
+  it('serializes the complete v2 schema deterministically without raw pair arrays', () => {
     const groups = formationExpansionExperiments();
     const summaries = groups.map(group => summarizeFormationComparison(group, reportsForGroup(group, Array(6).fill(.5))));
     const artifact = canonicalFormationExpansionArtifact(groups, summaries);
     expect(artifact).toMatchObject({
-      schema: 'chessball-formation-expansion-audit-v1',
+      schema: 'chessball-formation-expansion-audit-v2',
       runner: 'scripts/run-formation-expansion-audit.ts',
       command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
       policy: { primary: 'heuristic', comparison: 'heuristic' },
@@ -351,7 +351,7 @@ describe('formation expansion artifact', () => {
     const firstCell = firstGroup.cells[0];
     const firstReport = firstGroup.reports[0];
     expect(artifact).toMatchObject({
-      schema: 'chessball-formation-expansion-audit-v1', runner: 'scripts/run-formation-expansion-audit.ts',
+      schema: 'chessball-formation-expansion-audit-v2', runner: 'scripts/run-formation-expansion-audit.ts',
       command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
       policy: { primary: 'heuristic', comparison: 'heuristic' }, maxActions: 5_000,
       pairsPerCell: 100, totalRequestedPairs: 7_200,
@@ -369,12 +369,12 @@ describe('formation expansion artifact', () => {
     expect(firstReport).toEqual({
       id: firstCell.id, opposingFormationId: firstCell.opposingFormationId,
       primaryPlan: firstCell.primaryPlan, comparisonPlan: firstCell.comparisonPlan,
-      requestedPairs: 100, completedPairs: 100, excludedPairs: 0, attemptedGames: 200,
-      seedConvention: 'base-seed-plus-pair-index', seedRange: firstCell.seedRange,
+      requestedPairs: 100, completedPairs: 100, excludedPairs: 0, attemptedGames: 400,
+      gamesPerPair: 4, seedConvention: 'base-seed-plus-pair-index', seedRange: firstCell.seedRange,
       bootstrap: { seed: firstCell.bootstrapSeed, samples: 10_000, confidence: .95 },
-      statusCounts: { completed: 200, stalled: 0, crashed: 0 }, anomalyCount: 0,
-      completion: { games: 200, actions: 2_000, averageActions: 10 },
-      primaryWins: 0, comparisonWins: 0, ties: 200,
+      statusCounts: { completed: 400, stalled: 0, crashed: 0 }, anomalyCount: 0,
+      completion: { games: 400, actions: 4_000, averageActions: 10 },
+      primaryWins: 0, comparisonWins: 0, ties: 400,
       winShareInterval: { low: .5, high: .5, mean: .5, seed: firstCell.bootstrapSeed, samples: 10_000, confidence: .95 },
       scoreDeltaInterval: { low: 2, high: 2, mean: 2, seed: firstCell.bootstrapSeed, samples: 10_000, confidence: .95 },
     });

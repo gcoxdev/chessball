@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chooseComputerAction } from './computer';
-import { applyAction, createGame, generateLegalActions } from './rules';
+import { startNextDown, applyAction, createGame, generateLegalActions } from './rules';
 import { actionOpportunityKeys, actingTeamFieldBand, chooseActionForTeamPolicies, driveOutcomeForTransition, driveOutcomeKey, simulateBatch, simulateGame, validateGameStateInvariants } from './simulator';
 import type { Action, GameState, PlayResult } from './types';
 import type { SimulationFormationPlan, SimulationOpening, TeamPolicies } from './simulator';
@@ -303,7 +303,8 @@ describe('headless simulator', () => {
     };
     const after = applyAction(positioned, { type: 'kick', kickerId: 'home-qb', kind: 'fieldGoal', roll: { die1: 4, die2: 5 } });
 
-    expect(driveOutcomeForTransition(positioned, after)).toBe('fieldGoalGood');
+    expect(driveOutcomeForTransition(positioned, after)).toBeNull();
+    expect(driveOutcomeForTransition(after, startNextDown(after))).toBe('fieldGoalGood');
     expect(driveOutcomeForTransition(after, after)).toBeNull();
   });
 
@@ -316,8 +317,8 @@ describe('headless simulator', () => {
         ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
       };
     };
-    const inRange = at(16);
-    const outOfRange = at(15);
+    const inRange = at(17);
+    const outOfRange = at(16);
     const choose = (state: GameState) => chooseActionForTeamPolicies(
       state,
       generateLegalActions(state),
@@ -348,7 +349,9 @@ describe('headless simulator', () => {
     };
     const touchdown = applyAction(positioned, { type: 'move', pieceId: 'home-rb', to: { x: 22, y: 4 } });
 
-    expect(driveOutcomeForTransition(positioned, touchdown)).toBe('touchdown');
+    expect(driveOutcomeForTransition(positioned, touchdown)).toBeNull();
+    const conversion = applyAction(touchdown, { type: 'kick', kind: 'extraPoint', kickerId: 'home-qb' });
+    expect(driveOutcomeForTransition(conversion, startNextDown(conversion))).toBe('touchdown');
     expect(driveOutcomeForTransition(touchdown, touchdown)).toBeNull();
   });
 
@@ -398,10 +401,10 @@ describe('headless simulator', () => {
 
     expect(driveOutcomeKey(result('fieldGoal', true))).toBe('fieldGoalGood');
     expect(driveOutcomeKey(result('fieldGoal', false))).toBe('fieldGoalMissed');
-    expect(driveOutcomeKey(result('extraPoint', true))).toBe('extraPointGood');
-    expect(driveOutcomeKey(result('extraPoint', false))).toBe('extraPointMissed');
-    expect(driveOutcomeKey(result('twoPoint', true))).toBe('twoPointGood');
-    expect(driveOutcomeKey(result('twoPoint', false))).toBe('twoPointFailed');
+    expect(driveOutcomeKey(result('extraPoint', true))).toBe('touchdown');
+    expect(driveOutcomeKey(result('extraPoint', false))).toBe('touchdown');
+    expect(driveOutcomeKey(result('twoPoint', true))).toBe('touchdown');
+    expect(driveOutcomeKey(result('twoPoint', false))).toBe('touchdown');
   });
 
   it('normalizes a legacy random policy for both teams repeatably', () => {

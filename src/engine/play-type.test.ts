@@ -19,8 +19,8 @@ describe.each(['home', 'away'] as const)('%s pre-snap kicking', team => {
         expect(piece.coord.y).toBeGreaterThanOrEqual(0);
         expect(piece.coord.y).toBeLessThan(11);
         const relative = (piece.coord.x - lineOfScrimmage) * setup.direction;
-        if (piece.team === team) expect(relative).toBeLessThanOrEqual(0);
-        else expect(relative).toBeGreaterThan(0);
+        if (piece.team === team) expect(relative).toBeLessThan(0);
+        else expect(relative).toBeGreaterThanOrEqual(0);
       }
       expect(generateLegalActions(setup).some(action => ['move', 'shift', 'snap', 'kick', 'fakeFieldGoal'].includes(action.type))).toBe(false);
       const kicker = setup.pieces.find(piece => piece.id === `${team}-qb`)!;

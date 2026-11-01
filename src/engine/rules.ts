@@ -16,10 +16,7 @@ import type {
 } from './types';
 import { specialTeamsDefensiveFormations, specialTeamsFormations } from './special-teams';
 
-const WIDTH = 24;
-const HEIGHT = 11;
-const FIELD_START = 2;
-const FIELD_END = 21;
+import { FIELD_WIDTH as WIDTH, FIELD_HEIGHT as HEIGHT, FIELD_START, FIELD_END, distanceToPosts, isIntegerCoord, ownYardLineColumn, offensiveFrontColumn } from './field';
 const RIGHT_END_ZONE_START = 22;
 const FIRST_DOWN_COLUMNS = 2;
 const DEFAULT_DRIVES = 4;
@@ -36,7 +33,7 @@ export function isGoalToGo(state: GameState): boolean {
 }
 
 export function fieldGoalAttempt(direction: Direction, ballAt: Coord) {
-  const distance = Math.max(0, direction === 1 ? WIDTH - ballAt.x : ballAt.x + 1);
+  const distance = distanceToPosts(direction, ballAt);
   return { distance, yards: distance * 5, required: 5 + Math.ceil(distance / 2) };
 }
 
@@ -310,7 +307,9 @@ const defaultFormation = {
 };
 
 export function createGame(overrides: Partial<GameState> = {}): GameState {
+  if (overrides.board && (overrides.board.width !== WIDTH || overrides.board.height !== HEIGHT)) throw new Error('Only the 24 by 11 field is supported');
   const possession = overrides.possession ?? 'home';
+  if (overrides.direction !== undefined && overrides.direction !== directionFor(possession)) throw new Error('Direction must match possession');
   const direction = overrides.direction ?? directionFor(possession);
   const lineOfScrimmage = overrides.lineOfScrimmage ?? 5;
   const formation = overrides.formation ?? defaultFormation;
@@ -529,6 +528,9 @@ function canLegallyPassToReceiver(state: GameState, passer: Piece, receiver: Pie
 }
 
 export function applyAction(state: GameState, action: Action): GameState {
+  if ('roll' in action && action.roll && !validDiceRoll(action.roll)) throw new Error('Dice must be integers from 1 to 6');
+  if ('to' in action && !isIntegerCoord(action.to)) throw new Error('Coordinates must be integers');
+  if ('at' in action && !isIntegerCoord(action.at)) throw new Error('Coordinates must be integers');
   if (action.type === 'coinToss') return coinToss(state, action);
   if (action.type === 'chooseKickoffChoice') return chooseKickoffChoice(state, action);
   if (action.type === 'snap') return snap(state, action);
@@ -694,7 +696,7 @@ function kickoffFormationPieces(kickingTeam: Team): Piece[] {
 }
 
 function kickoffCoverageCoords(team: Team): Record<string, Coord> {
-  const kickerX = ownYardLineColumn('home', 35) - 1;
+  const kickerX = ownYardLineColumn('home', 35);
   const coverageX = kickerX - 1;
   const homeCoords = {
     wr1: { x: coverageX, y: 0 },
@@ -733,13 +735,6 @@ function kickoffReturnCoords(team: Team): Record<string, Coord> {
   return team === 'home' ? homeCoords : mirrorFormationCoords(homeCoords);
 }
 
-function ownYardLineColumn(team: Team, yardsFromOwnGoal: number): number {
-  const columnsFromOwnGoal = Math.round(yardsFromOwnGoal / 5);
-  return team === 'home'
-    ? clamp(FIELD_START + columnsFromOwnGoal, FIELD_START, FIELD_END)
-    : clamp(RIGHT_END_ZONE_START - columnsFromOwnGoal, FIELD_START, FIELD_END);
-}
-
 function mirrorFormationCoords(coords: Record<string, Coord>): Record<string, Coord> {
   return Object.fromEntries(
     Object.entries(coords).map(([key, coord]) => [key, { x: WIDTH - 1 - coord.x, y: coord.y }]),
@@ -749,11 +744,16 @@ function mirrorFormationCoords(coords: Record<string, Coord>): Record<string, Co
 function projectFormation(lineOfScrimmage: number, direction: Direction, formation: Formation): Record<string, Coord> {
   const bounds = formationSideBounds(lineOfScrimmage, direction, formation.side);
   const occupiedCoords = new Set<string>();
+  const front = offensiveFrontColumn(lineOfScrimmage, direction);
+  const lineOffset = formation.side === 'offense' ? 0 : 1;
+  // Reserve the line first when a deep back is squeezed by an end zone.
+  const positions = Object.entries(formation.positions)
+    .sort(([, a], [, b]) => Number(b.x === lineOffset) - Number(a.x === lineOffset));
 
   return Object.fromEntries(
-    Object.entries(formation.positions).map(([key, coord]) => {
+    positions.map(([key, coord]) => {
       const desired = {
-        x: clamp(lineOfScrimmage + coord.x * direction, bounds.min, bounds.max),
+        x: clamp(front + coord.x * direction, bounds.min, bounds.max),
         y: clamp(coord.y, 0, HEIGHT - 1),
       };
       const projected = nearestOpenFormationCoord(desired, bounds, occupiedCoords);
@@ -764,15 +764,17 @@ function projectFormation(lineOfScrimmage: number, direction: Direction, formati
 }
 
 function formationSideBounds(lineOfScrimmage: number, direction: Direction, side: FormationSide): { min: number; max: number } {
+  // The line is the near boundary of lineOfScrimmage. Formation offsets use
+  // the last offensive square as zero, so that square is one column behind it.
+  const offensiveFront = offensiveFrontColumn(lineOfScrimmage, direction);
   if (side === 'offense') {
     return direction === 1
-      ? { min: 0, max: clamp(lineOfScrimmage, 0, WIDTH - 1) }
-      : { min: clamp(lineOfScrimmage, 0, WIDTH - 1), max: WIDTH - 1 };
+      ? { min: 0, max: clamp(offensiveFront, 0, WIDTH - 1) }
+      : { min: clamp(offensiveFront, 0, WIDTH - 1), max: WIDTH - 1 };
   }
-
   return direction === 1
-    ? { min: clamp(lineOfScrimmage + 1, 0, WIDTH - 1), max: WIDTH - 1 }
-    : { min: 0, max: clamp(lineOfScrimmage - 1, 0, WIDTH - 1) };
+    ? { min: clamp(lineOfScrimmage, 0, WIDTH - 1), max: WIDTH - 1 }
+    : { min: 0, max: clamp(lineOfScrimmage, 0, WIDTH - 1) };
 }
 
 function nearestOpenFormationCoord(desired: Coord, bounds: { min: number; max: number }, occupiedCoords: Set<string>): Coord {
@@ -965,7 +967,7 @@ function startTwoPointTry(state: GameState, action: Extract<Action, { type: 'sta
     ball: { kind: 'controlled', pieceId: `${action.team}-qb` },
     conversion: { team: action.team },
     playType: 'normal',
-    play: appendAction(state, action),
+    play: { actions: [action] },
     fakeFieldGoal: undefined,
     kickDefenseId: undefined,
   };
@@ -975,8 +977,9 @@ function shift(state: GameState, action: Extract<Action, { type: 'shift' }>): Ga
   if (state.playType !== 'normal') throw new Error('Kicking formations cannot be shifted');
   if (state.phase !== 'formation') throw new Error('Shifts are only legal during formation');
   const target = findPiece(state, action.pieceId);
-  if (!formationSideConfirmed(state, target)) throw new Error('Formation must be confirmed before shifting');
+  if (!formationSideConfirmed(state, target)) throw new Error('Confirm the formation before shifting');
   if (state.formationShiftsRemaining[target.team] <= 0) throw new Error(`${target.team} has no formation shifts remaining`);
+  if (Math.abs(action.to.x - target.coord.x) + Math.abs(action.to.y - target.coord.y) !== 1) throw new Error('A formation shift must be one orthogonal square');
   if (!inBounds(action.to) || occupied(state, action.to, target.id)) throw new Error('Illegal formation shift target');
   if (!staysOnFormationSide(state, target, action.to)) throw new Error('Cannot cross the line of scrimmage before the snap');
 
@@ -1099,7 +1102,8 @@ function passBall(state: GameState, action: Extract<Action, { type: 'pass' }>): 
     if (state.down === 4) {
       const nextPossession = otherTeam(state.possession);
       const nextDirection = directionFor(nextPossession);
-      const lineOfScrimmage = clamp(state.lineOfScrimmage, FIELD_START, FIELD_END);
+      // Reversing possession changes which cell represents the same boundary.
+      const lineOfScrimmage = clamp(state.lineOfScrimmage - state.direction, FIELD_START, FIELD_END);
       return endPlay(
         {
           ...withPassUsed,
@@ -1397,7 +1401,7 @@ function recover(state: GameState, pieceId: string, action: Action): GameState {
     possession: piece.team,
     direction,
     turn: piece.team,
-    down: possessionChanged || moveDistanceToFirstDown(state, recoveryCoord) === 0 ? 1 : state.down,
+    down: possessionChanged || moveDistanceToFirstDown(state, { x: lineOfScrimmage, y: recoveryCoord.y }) === 0 ? 1 : state.down,
     lineOfScrimmage,
     firstDownLine: firstDownTarget(lineOfScrimmage, direction),
     ball: { kind: 'controlled', pieceId },
@@ -1492,6 +1496,22 @@ function baseMovementRange(role: Role): number {
   if (role === 'fb') return 2;
   if (role === 'rb' || role === 'te') return 3;
   return 5;
+}
+
+export function validDiceRoll(roll: DiceRoll): boolean {
+  return [roll.die1, roll.die2].every(die => Number.isInteger(die) && die >= 1 && die <= 6);
+}
+
+// Setup has two independent owners even though the offense retains the turn.
+export function actionTeam(state: GameState, action: Action): Team {
+  if ('side' in action) return action.side === 'offense' ? state.possession : otherTeam(state.possession);
+  if ('pieceId' in action) return findPiece(state, action.pieceId).team;
+  if ('team' in action) return action.team;
+  return state.phase === 'betweenDowns' ? state.possession : state.turn;
+}
+
+export function setupDecisionTeam(state: GameState): Team {
+  return state.formationConfirmed.offense && !state.formationConfirmed.defense ? otherTeam(state.possession) : state.possession;
 }
 
 function defaultRoll(): DiceRoll {
@@ -1598,7 +1618,7 @@ function nextKickoffTeam(result: PlayResult | undefined): Team | undefined {
   return undefined;
 }
 
-function completedDriveOwner(state: GameState, result: PlayResult | undefined): Team | undefined {
+export function completedDriveOwner(state: GameState, result: PlayResult | undefined): Team | undefined {
   if (!result) return undefined;
   if (state.pendingKick?.kind === 'kickoff') return undefined;
   if (state.pendingKick?.kind === 'punt') return state.pendingKick.kickingTeam;
@@ -1739,12 +1759,9 @@ function formationSideConfirmed(state: GameState, piece: Piece): boolean {
 }
 
 function staysOnFormationSide(state: GameState, piece: Piece, coord: Coord): boolean {
-  const offense = piece.team === state.possession;
-  if (state.direction === 1) {
-    return offense ? coord.x <= state.lineOfScrimmage : coord.x > state.lineOfScrimmage;
-  }
-
-  return offense ? coord.x >= state.lineOfScrimmage : coord.x < state.lineOfScrimmage;
+  const side = piece.team === state.possession ? 'offense' : 'defense';
+  const bounds = formationSideBounds(state.lineOfScrimmage, state.direction, side);
+  return coord.x >= bounds.min && coord.x <= bounds.max;
 }
 
 function catchPriority(role: Role): number {
@@ -1755,7 +1772,9 @@ function catchPriority(role: Role): number {
 }
 
 function lineInFrontOfBall(state: GameState, ballAt: Coord): number {
-  return clamp(ballAt.x, FIELD_START, FIELD_END);
+  // A line is stored as the cell across the boundary from the offense.
+  // A stopped carrier occupies the cell behind that boundary.
+  return clamp(ballAt.x + state.direction, FIELD_START, FIELD_END);
 }
 
 function endPlayOrTurnover(state: GameState, result: PlayResult, ballAt: Coord): GameState {
@@ -1764,13 +1783,14 @@ function endPlayOrTurnover(state: GameState, result: PlayResult, ballAt: Coord):
   if (state.phase === 'kickReturn') {
     return endPlay({ ...state, down: 1, lineOfScrimmage, firstDownLine: firstDownTarget(lineOfScrimmage, state.direction) }, result);
   }
-  const gained = !isGoalToGo(state) && moveDistanceToFirstDown(state, ballAt) === 0;
+  const gained = !isGoalToGo(state) && moveDistanceToFirstDown(state, { x: lineOfScrimmage, y: ballAt.y }) === 0;
   if (gained) {
     return endPlay({ ...state, down: 1, lineOfScrimmage, firstDownLine: firstDownTarget(lineOfScrimmage, state.direction) }, result);
   }
   if (state.down === 4) {
     const nextPossession = otherTeam(state.possession);
     const nextDirection = directionFor(nextPossession);
+    const turnoverLine = clamp(lineOfScrimmage - state.direction, FIELD_START, FIELD_END);
     return endPlay(
       {
         ...state,
@@ -1778,8 +1798,8 @@ function endPlayOrTurnover(state: GameState, result: PlayResult, ballAt: Coord):
         direction: nextDirection,
         turn: nextPossession,
         down: 1 as const,
-        lineOfScrimmage,
-        firstDownLine: firstDownTarget(lineOfScrimmage, nextDirection),
+        lineOfScrimmage: turnoverLine,
+        firstDownLine: firstDownTarget(turnoverLine, nextDirection),
         ball: { kind: 'controlled' as const, pieceId: `${nextPossession}-qb` },
       },
       { type: 'turnoverOnDowns', team: nextPossession },
@@ -1882,7 +1902,7 @@ function pieceAt(state: GameState, coord: Coord, excludeId?: string): Piece | un
 }
 
 function inBounds(coord: Coord): boolean {
-  return coord.x >= 0 && coord.x < WIDTH && coord.y >= 0 && coord.y < HEIGHT;
+  return isIntegerCoord(coord) && coord.x >= 0 && coord.x < WIDTH && coord.y >= 0 && coord.y < HEIGHT;
 }
 
 function sameCoord(a: Coord, b: Coord): boolean {

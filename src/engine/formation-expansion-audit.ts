@@ -111,6 +111,7 @@ export type FormationExpansionCellReport = Readonly<{
   completedPairs: number;
   excludedPairs: number;
   attemptedGames: number;
+  gamesPerPair: number;
   seedConvention: MatchedAuditReport['seedConvention'];
   seedRange: Readonly<MatchedAuditReport['seedRange']>;
   bootstrap: Readonly<{ seed: number; samples: number; confidence: number }>;
@@ -221,11 +222,12 @@ function hasSkillGapIntervals(report: MatchedAuditReport): report is ReportWithI
 
 function validateCellReport(cell: FormationExpansionCell | undefined, report: MatchedAuditReport, cellId: string): string[] {
   const reasons: string[] = [];
+  if (report.gamesPerPair !== 4) reasons.push(`${cellId} must use four games per seed group.`);
   if (report.requestedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) reasons.push(`${cellId} requested ${report.requestedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
   if (report.completedPairs !== FORMATION_EXPANSION_PAIRS_PER_CELL) reasons.push(`${cellId} completed ${report.completedPairs} pairs; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL}.`);
   if (report.excludedPairs) reasons.push(`${cellId} excluded ${report.excludedPairs} pairs.`);
   if (report.completedPairs + report.excludedPairs !== report.requestedPairs) reasons.push(`${cellId} completed-plus-excluded pairs do not equal requested pairs.`);
-  if (report.attemptedGames !== FORMATION_EXPANSION_PAIRS_PER_CELL * 2) reasons.push(`${cellId} attempted ${report.attemptedGames} games; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL * 2}.`);
+  if (report.attemptedGames !== FORMATION_EXPANSION_PAIRS_PER_CELL * 4) reasons.push(`${cellId} attempted ${report.attemptedGames} games; expected ${FORMATION_EXPANSION_PAIRS_PER_CELL * 4}.`);
   const statusTotal = report.statusCounts.completed + report.statusCounts.stalled + report.statusCounts.crashed;
   if (statusTotal !== report.attemptedGames) reasons.push(`${cellId} status counts total ${statusTotal} games; expected ${report.attemptedGames}.`);
   if (report.statusCounts.stalled) reasons.push(`${cellId} recorded ${report.statusCounts.stalled} stalled ${plural(report.statusCounts.stalled, 'game')}.`);
@@ -234,7 +236,7 @@ function validateCellReport(cell: FormationExpansionCell | undefined, report: Ma
     reasons.push(`${cellId} recorded ${report.anomalies.length} ${plural(report.anomalies.length, 'anomaly', 'anomalies')}.`);
     report.anomalies.forEach(anomaly => reasons.push(`${cellId} anomaly ${anomaly.type}: ${anomaly.message}`));
   }
-  if (report.telemetry.completion.games !== report.completedPairs * 2) reasons.push(`${cellId} completion telemetry records ${report.telemetry.completion.games} games; expected ${report.completedPairs * 2}.`);
+  if (report.telemetry.completion.games !== report.completedPairs * 4) reasons.push(`${cellId} completion telemetry records ${report.telemetry.completion.games} games; expected ${report.completedPairs * 4}.`);
   if (report.seedConvention !== 'base-seed-plus-pair-index') reasons.push(`${cellId} seed convention is ${String(report.seedConvention)}; expected base-seed-plus-pair-index.`);
   if (cell && (report.seedRange.first !== cell.seedRange.first || report.seedRange.last !== cell.seedRange.last)) reasons.push(`${cellId} seed range ${report.seedRange.first}-${report.seedRange.last} does not match ${cell.seedRange.first}-${cell.seedRange.last}.`);
   if (report.matchup.primary !== 'heuristic' || report.matchup.comparison !== 'heuristic') reasons.push(`${cellId} matchup policies do not match heuristic/heuristic.`);
@@ -322,6 +324,7 @@ function compactCellReport(cell: FormationExpansionCell, report: MatchedAuditRep
     completedPairs: report?.completedPairs ?? 0,
     excludedPairs: report?.excludedPairs ?? cell.pairs,
     attemptedGames: report?.attemptedGames ?? 0,
+    gamesPerPair: report?.gamesPerPair ?? 4,
     seedConvention: report?.seedConvention ?? 'base-seed-plus-pair-index',
     seedRange: Object.freeze({ ...(report?.seedRange ?? cell.seedRange) }),
     bootstrap: Object.freeze({ seed: cell.bootstrapSeed, ...FORMATION_EXPANSION_BOOTSTRAP }),
@@ -362,7 +365,7 @@ export function canonicalFormationExpansionArtifact(
   summaries: readonly FormationComparisonSummary[],
 ) {
   return deepFreeze({
-    schema: 'chessball-formation-expansion-audit-v1' as const,
+    schema: 'chessball-formation-expansion-audit-v2' as const,
     runner: 'scripts/run-formation-expansion-audit.ts',
     command: 'npm exec vite-node scripts/run-formation-expansion-audit.ts',
     policy: { primary: 'heuristic' as const, comparison: 'heuristic' as const },

@@ -864,11 +864,11 @@ button {
 }
 
 .square.scrimmage-forward {
-  box-shadow: inset -4px 0 0 var(--blue), var(--yard-line-shadow, none);
+  box-shadow: inset 4px 0 0 var(--blue), var(--yard-line-shadow, none);
 }
 
 .square.scrimmage-backward {
-  box-shadow: inset 4px 0 0 var(--blue), var(--yard-line-shadow, none);
+  box-shadow: inset -4px 0 0 var(--blue), var(--yard-line-shadow, none);
 }
 
 .square.first-down {
@@ -876,11 +876,11 @@ button {
 }
 
 .square.first-down-forward {
-  box-shadow: inset -4px 0 0 var(--gold), var(--yard-line-shadow, none);
+  box-shadow: inset 4px 0 0 var(--gold), var(--yard-line-shadow, none);
 }
 
 .square.first-down-backward {
-  box-shadow: inset 4px 0 0 var(--gold), var(--yard-line-shadow, none);
+  box-shadow: inset -4px 0 0 var(--gold), var(--yard-line-shadow, none);
 }
 
 .square.legal::after {
@@ -1539,10 +1539,10 @@ button > svg { flex-shrink: 0; }
     --yard-line-visible-width: 2px;
     --yard-line-shadow: inset 2px 0 0 rgba(244, 240, 222, 0.8);
   }
-  .square.scrimmage-forward { box-shadow: inset -2px 0 0 var(--blue), var(--yard-line-shadow, none); }
-  .square.scrimmage-backward { box-shadow: inset 2px 0 0 var(--blue), var(--yard-line-shadow, none); }
-  .square.first-down-forward { box-shadow: inset -2px 0 0 var(--gold), var(--yard-line-shadow, none); }
-  .square.first-down-backward { box-shadow: inset 2px 0 0 var(--gold), var(--yard-line-shadow, none); }
+  .square.scrimmage-forward { box-shadow: inset 2px 0 0 var(--blue), var(--yard-line-shadow, none); }
+  .square.scrimmage-backward { box-shadow: inset -2px 0 0 var(--blue), var(--yard-line-shadow, none); }
+  .square.first-down-forward { box-shadow: inset 2px 0 0 var(--gold), var(--yard-line-shadow, none); }
+  .square.first-down-backward { box-shadow: inset -2px 0 0 var(--gold), var(--yard-line-shadow, none); }
   .square.goal-post-left { box-shadow: inset 3px 0 0 var(--gold); }
   .square.goal-post-right { box-shadow: inset -3px 0 0 var(--gold); }
   .piece.selected { outline-width: 1px; }

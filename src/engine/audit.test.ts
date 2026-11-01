@@ -89,7 +89,7 @@ describe('classifications', () => {
 });
 
 describe('runMatchedAudit', () => {
-  it('uses exact mirrored calls and swaps formation plans', () => {
+  it('balances sides and opening receivers in four games and swaps formation plans', () => {
     const calls: SimulateGameOptions[] = [];
     const simulator = (o: SimulateGameOptions) => { calls.push(o); return game(o, [7, 3]); };
     const plan = { home: { offense: 'p-o', defense: 'p-d' }, away: { offense: 'c-o', defense: 'c-d' } };
@@ -97,31 +97,43 @@ describe('runMatchedAudit', () => {
     expect(calls).toEqual([
       expect.objectContaining({ seed: 10, policies: { home: 'heuristic', away: 'random' }, opening: { coinWinner: 'home', choice: 'receive' }, formationPlan: plan }),
       expect.objectContaining({ seed: 10, policies: { home: 'random', away: 'heuristic' }, opening: { coinWinner: 'away', choice: 'receive' }, formationPlan: { home: plan.away, away: plan.home } }),
+      expect.objectContaining({ seed: 10, policies: { home: 'heuristic', away: 'random' }, opening: { coinWinner: 'away', choice: 'receive' }, formationPlan: plan }),
+      expect.objectContaining({ seed: 10, policies: { home: 'random', away: 'heuristic' }, opening: { coinWinner: 'home', choice: 'receive' }, formationPlan: { home: plan.away, away: plan.home } }),
     ]);
   });
 
-  it('excludes both mirrors from every estimate if either is incomplete', () => {
+  it('excludes the whole seed group if any of its four games is incomplete', () => {
     let call = 0;
     const report = runMatchedAudit({ pairs: 1, seed: 4, primary: 'heuristic', comparison: 'random', bootstrap: { seed: 2, samples: 100 }, simulator: o => game(o, [1, 0], call++ ? 'stalled' : 'completed') });
-    expect(report).toEqual(expect.objectContaining({ requestedPairs: 1, completedPairs: 0, excludedPairs: 1, attemptedGames: 2, statusCounts: { completed: 1, stalled: 1, crashed: 0 } }));
+    expect(report).toEqual(expect.objectContaining({ requestedPairs: 1, completedPairs: 0, excludedPairs: 1, attemptedGames: 4, statusCounts: { completed: 1, stalled: 3, crashed: 0 } }));
     expect(report.symmetry.pairEffects).toEqual([]);
     expect(report.skillGap.pairEffects).toEqual([]);
     expect(report.telemetry.actionTypes.total).toBe(0);
-    expect(report.excludedPairDetails[0].mirrors.map(m => m.status)).toEqual(['completed', 'stalled']);
+    expect(report.excludedPairDetails[0].mirrors.map(m => m.status)).toEqual(['completed', 'stalled', 'stalled', 'stalled']);
     expect(report.matchup).toEqual({ primary: 'heuristic', comparison: 'random', formationPlan: null });
   });
 
   it('orients outcomes to primary, scores ties as halves, and aggregates completed pairs', () => {
-    const scores: [number, number][] = [[7, 3], [3, 3]];
+    const scores: [number, number][] = [[7, 3], [3, 3], [7, 3], [3, 3]];
     const report = runMatchedAudit({ pairs: 1, seed: 10, primary: 'heuristic', comparison: 'random', bootstrap: { seed: 9, samples: 100 }, simulator: o => game(o, scores.shift()!) });
-    expect(report.skillGap.primaryWins).toBe(1);
-    expect(report.skillGap.ties).toBe(1);
+    expect(report.skillGap.primaryWins).toBe(2);
+    expect(report.skillGap.ties).toBe(2);
     expect(report.skillGap.pairEffects).toEqual([.75]);
     expect(report.skillGap.scoreDeltaEffects).toEqual([2]);
     expect(report.symmetry.pairEffects).toEqual([.75]);
-    expect(report.telemetry.actionTypes.total).toBe(4);
+    expect(report.telemetry.actionTypes.total).toBe(8);
     expect(report.telemetry.selectionRates['policy=heuristic|action=move']).toBe(.5);
     expect(report.seedList).toEqual([10]);
+  });
+
+  it('does not mistake an opening receiver advantage for policy strength', () => {
+    const report = runMatchedAudit({ pairs: 2, seed: 9, primary: 'heuristic', comparison: 'random',
+      simulator: o => game(o, o.opening?.coinWinner === 'home' ? [7, 0] : [0, 7]), bootstrap: { seed: 7, samples: 100 } });
+    expect(report.skillGap.pairEffects).toEqual([.5, .5]);
+    expect(report.skillGap.scoreDeltaEffects).toEqual([0, 0]);
+    expect(report.symmetry.pairEffects).toEqual([.5, .5]);
+    expect(report.attemptedGames).toBe(8);
+    expect(report.gamesPerPair).toBe(4);
   });
 
   it('returns identical reports for identical inputs', () => {
@@ -151,8 +163,8 @@ describe('runMatchedAudit', () => {
         return result;
       },
     });
-    expect(report.telemetry.formationStratifiedOutcomes['heuristic:home|formation=x']).toEqual({ games: 1, wins: 1, losses: 0, ties: 0 });
-    expect(report.telemetry.formationChoices.total).toBe(2);
+    expect(report.telemetry.formationStratifiedOutcomes['heuristic:home|formation=x']).toEqual({ games: 2, wins: 2, losses: 0, ties: 0 });
+    expect(report.telemetry.formationChoices.total).toBe(4);
   });
 
   it('builds exploratory selected-vs-not-selected cohorts once per completed game', () => {
@@ -171,9 +183,9 @@ describe('runMatchedAudit', () => {
       },
     });
     expect(report.telemetry.tacticCohorts[context]).toEqual({
-      exploratory: true, policy: 'heuristic', team: 'home', selections: 3, opportunities: 10,
+      exploratory: true, policy: 'heuristic', team: 'home', selections: 3, opportunities: 20,
       selected: { games: 1, wins: 1, ties: 0, losses: 0, averageScoreDifferential: 7 },
-      notSelected: { games: 1, wins: 0, ties: 0, losses: 1, averageScoreDifferential: -3 },
+      notSelected: { games: 3, wins: 0, ties: 0, losses: 3, averageScoreDifferential: -3 },
       winRateDifference: 1,
     });
   });
@@ -195,8 +207,8 @@ describe('runMatchedAudit', () => {
     });
 
     expect(report.telemetry.selectionRates[always]).toBe(1);
-    expect(report.telemetry.selectionRates[half]).toBe(.5);
-    expect(report.telemetry.tacticCohorts[half]).toEqual(expect.objectContaining({ selections: 1, opportunities: 2 }));
+    expect(report.telemetry.selectionRates[half]).toBe(.25);
+    expect(report.telemetry.tacticCohorts[half]).toEqual(expect.objectContaining({ selections: 1, opportunities: 4 }));
   });
 
   it('does not leak excluded games into tactic cohorts', () => {
@@ -246,7 +258,7 @@ describe('runMatchedAudit', () => {
     }});
     expect(report.telemetry.tacticCohorts[context]).toEqual(expect.objectContaining({
       selected: { games: 1, wins: 0, ties: 1, losses: 0, averageScoreDifferential: 0 },
-      notSelected: { games: 1, wins: 0, ties: 0, losses: 1, averageScoreDifferential: -5 },
+      notSelected: { games: 3, wins: 0, ties: 0, losses: 3, averageScoreDifferential: -5 },
       winRateDifference: .5,
     }));
   });

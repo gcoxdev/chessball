@@ -1,4 +1,8 @@
 import {
+  actionTeam,
+  completedDriveOwner,
+  setupDecisionTeam,
+  validDiceRoll,
   applyAction,
   createGame,
   defensiveFormations,
@@ -10,6 +14,7 @@ import {
   startNextDown,
 } from './rules';
 import type { Action, Coord, DiceRoll, GameState, Piece, PlayResult, Team } from './types';
+import { FIELD_WIDTH, FIELD_HEIGHT, isIntegerCoord } from './field';
 import { chooseComputerAction, preferredPlayType } from './computer';
 
 type BatchPolicy = 'heuristic' | 'random';
@@ -204,14 +209,17 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
     try {
       const legalActions = generateLegalActions(state);
-      for (const contextKey of actionOpportunityKeys(state, policies[state.turn], legalActions)) increment(actionOpportunities, contextKey);
+      for (const contextKey of actionOpportunityKeys(state, policies, legalActions)) increment(actionOpportunities, contextKey);
       const action = chooseActionForTeamPolicies(state, legalActions, rng, policies, actionIndex, options.opening, options.formationPlan);
 
       if (!action) {
         if (state.phase === 'betweenDowns') {
-          const contextKey = actionContextKey(state, policies[state.turn], 'nextDown');
+          const contextKey = actionContextKey(state, policies[state.possession], 'nextDown', state.possession);
           increment(actionOpportunities, contextKey);
+          const stopped = state;
           state = startNextDown(state);
+          const outcome = driveOutcomeForTransition(stopped, state);
+          if (outcome) increment(driveOutcomes, outcome);
           pushRecentAction(recentActions, `nextDown -> ${state.phase} ${state.possession} Q${state.quarter} D${state.down}`);
           increment(actionTypes, contextKey);
           actionIndex += 1;
@@ -245,7 +253,8 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
 
       const resolvedAction = withRandomResolution(action, rng, options.opening);
       const before = state;
-      const selectedContextKey = actionContextKey(before, policies[before.turn], resolvedAction.type);
+      const owner = actionTeam(before, resolvedAction);
+      const selectedContextKey = actionContextKey(before, policies[owner], resolvedAction.type, owner);
       let formationChoice: { key: string; team: Team; side: 'offense' | 'defense'; formationId: string } | null = null;
       // Formation-plan audits compare the normal-play catalogs; special-team
       // choices remain in the action history rather than those catalog samples.
@@ -261,7 +270,7 @@ export function simulateGame(options: SimulateGameOptions): SimulatedGame {
       state = applyAction(state, resolvedAction);
       pushRecentAction(recentActions, actionSummary(before, resolvedAction, state));
       const resultType = state.play.result?.type;
-      if (resultType) increment(resultTypes, resultType);
+      if (resultType && state.play.result !== before.play.result) increment(resultTypes, resultType);
       const driveOutcome = driveOutcomeForTransition(before, state);
       increment(actionTypes, selectedContextKey);
       if (formationChoice) {
@@ -374,6 +383,18 @@ function normalizePolicies(options: SimulateGameOptions): TeamPolicies {
 
 export function validateGameStateInvariants(state: GameState): string[] {
   const errors: string[] = [];
+  if (state.board.width !== FIELD_WIDTH || state.board.height !== FIELD_HEIGHT) errors.push('Unsupported board dimensions');
+  if (state.direction !== (state.possession === 'home' ? 1 : -1)) errors.push('Direction does not match possession');
+  if (!Number.isInteger(state.down) || state.down < 1 || state.down > 4) errors.push('Invalid down');
+  if (!Number.isInteger(state.quarter) || state.quarter < 1 || state.quarter > 4) errors.push('Invalid quarter');
+  if (!Number.isInteger(state.lineOfScrimmage) || !Number.isInteger(state.firstDownLine)) errors.push('Field lines must be integers');
+  if (Object.values(state.score).some(score => !Number.isInteger(score) || score < 0)) errors.push('Scores must be nonnegative integers');
+  if (Object.values(state.formationShiftsRemaining).some(count => !Number.isInteger(count) || count < 0 || count > 2)) errors.push('Invalid shift count');
+  if (state.play.actions.some(action => 'roll' in action && action.roll && !validDiceRoll(action.roll))) errors.push('Invalid action dice');
+  if (state.pendingKick && !validDiceRoll(state.pendingKick.roll)) errors.push('Invalid kick dice');
+  if (state.play.result && 'roll' in state.play.result && state.play.result.roll && !validDiceRoll(state.play.result.roll.roll)) errors.push('Invalid result dice');
+  if (['formation', 'live'].includes(state.phase) && state.play.result) errors.push('Active play retains a completed result');
+
   const ids = new Set<string>();
   const occupied = new Set<string>();
   const fieldStart = 2;
@@ -383,6 +404,7 @@ export function validateGameStateInvariants(state: GameState): string[] {
   for (const piece of state.pieces) {
     if (ids.has(piece.id)) errors.push(`Duplicate piece id ${piece.id}`);
     ids.add(piece.id);
+    if (!isIntegerCoord(piece.coord)) errors.push(`Piece ${piece.id} has noninteger coordinates`);
     if (!inBounds(state, piece.coord)) errors.push(`Piece ${piece.id} is out of bounds at ${piece.coord.x},${piece.coord.y}`);
     const coordKey = `${piece.coord.x},${piece.coord.y}`;
     if (occupied.has(coordKey)) errors.push(`Multiple pieces occupy ${coordKey}`);
@@ -643,29 +665,36 @@ export function actingTeamFieldBand(state: GameState, team: Team): FieldBand {
   return 'opponent';
 }
 
-function actionContextKey(state: GameState, policy: SimulationPolicy, actionType: Action['type'] | 'nextDown'): string {
-  const team = state.turn;
+function actionContextKey(state: GameState, policy: SimulationPolicy, actionType: Action['type'] | 'nextDown', team = state.turn): string {
   return `team=${team}|policy=${policy}|phase=${state.phase}|down=${state.down}|field=${actingTeamFieldBand(state, team)}|action=${actionType}`;
 }
 
-export function actionOpportunityKeys(state: GameState, policy: SimulationPolicy, legalActions: Action[]): string[] {
-  return [...new Set(legalActions.map((action) => action.type))]
-    .map((actionType) => actionContextKey(state, policy, actionType));
+export function actionOpportunityKeys(state: GameState, policy: SimulationPolicy | TeamPolicies, legalActions: Action[]): string[] {
+  const decisionTeam = state.phase === 'formation' ? setupDecisionTeam(state) : state.turn;
+  return [...new Set(legalActions.filter(action => actionTeam(state, action) === decisionTeam).map(action => {
+    const owner = actionTeam(state, action);
+    return actionContextKey(state, typeof policy === 'string' ? policy : policy[owner], action.type, owner);
+  }))];
 }
 
+// Drive outcomes exclude conversion results: the touchdown is the drive outcome.
 export function driveOutcomeKey(result: PlayResult | undefined): string | null {
   if (!result) return null;
   if (result.type === 'fieldGoal') return result.good ? 'fieldGoalGood' : 'fieldGoalMissed';
-  if (result.type === 'extraPoint') return result.good ? 'extraPointGood' : 'extraPointMissed';
-  if (result.type === 'twoPoint') return result.good ? 'twoPointGood' : 'twoPointFailed';
-  if (result.type === 'touchdown' || result.type === 'punt' || result.type === 'safety' || result.type === 'interception') return result.type;
-  if (result.type === 'turnoverOnDowns') return 'turnoverOnDowns';
+  if (result.type === 'extraPoint' || result.type === 'twoPoint') return 'touchdown';
+  if (result.type === 'fumble') return result.recoveredBy ? 'fumble' : null;
+  if (['touchdown', 'punt', 'safety', 'interception', 'turnoverOnDowns'].includes(result.type)) return result.type;
   return null;
 }
 
 export function driveOutcomeForTransition(before: GameState, after: GameState): string | null {
-  if (before.play.result === after.play.result) return null;
-  return driveOutcomeKey(after.play.result);
+  // Count when Next consumes a stopped drive, including halftime/final. A try
+  // starts a fresh play but does not finish the drive until the try is resolved.
+  if (before === after || before.phase !== 'betweenDowns' || before.play.result?.type === 'touchdown') return null;
+  if (!['formation', 'kickoff', 'final'].includes(after.phase)) return null;
+  if (!completedDriveOwner(before, before.play.result)) return null;
+  if (before.pendingKick?.kind === 'punt') return 'punt';
+  return driveOutcomeKey(before.play.result);
 }
 
 function balanceReport(input: {
@@ -717,7 +746,9 @@ export function chooseActionForTeamPolicies(
   opening?: SimulationOpening,
   formationPlan?: SimulationFormationPlan,
 ): Action | null {
-  return chooseSimulationAction(state, legalActions, rng, policies[state.turn], actionIndex, opening, formationPlan);
+  const owner = state.phase === 'formation' ? setupDecisionTeam(state) : state.turn;
+  const ownedActions = legalActions.filter(action => actionTeam(state, action) === owner);
+  return chooseSimulationAction(state, ownedActions, rng, policies[owner], actionIndex, opening, formationPlan);
 }
 
 function chooseSimulationAction(
@@ -804,7 +835,7 @@ function chooseFormationProtocolAction(
     if (fake && policy === 'random' && rng() < 0.2) return fake;
     return legalActions.find(action => action.type === 'kick') ?? null;
   }
-  if (!state.play.actions.some(action => action.type === 'choosePlayType' || action.type === 'chooseFormation')) {
+  if (!state.formationConfirmed.offense && !state.play.actions.some(action => action.type === 'choosePlayType' || action.type === 'chooseFormation')) {
     const desired = policy === 'random' && state.down === 4
       ? (rng() < 0.6 ? (rng() < 0.5 ? 'punt' : 'fieldGoal') : 'normal') : preferredPlayType(state);
     const choice = legalActions.find(action => action.type === 'choosePlayType' && action.playType === desired);

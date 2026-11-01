@@ -16,6 +16,9 @@ import {
 import type { Action, Coord, GameState, Piece, PlayResult, Team } from './types';
 
 // Preserve arranged kick spots in resolution tests; setup is tested separately.
+// Fixed midfield-side fixture keeps movement/interaction coordinates explicit.
+const fixtureGame = (overrides: Parameters<typeof createGame>[0] = {}) => createGame({ lineOfScrimmage: 6, ...overrides });
+
 const readyKick = (state: GameState, playType: 'fieldGoal' | 'punt'): GameState => ({
   ...state, phase: 'formation', playType, formationConfirmed: { offense: true, defense: true },
 });
@@ -26,17 +29,17 @@ const piece = (state: ReturnType<typeof createGame>, id: string): Piece => {
   return found;
 };
 
-const readyFormation = (state = createGame()) => applyAction(
+const readyFormation = (state = fixtureGame()) => applyAction(
   applyAction(state, { type: 'confirmFormation', side: 'offense' }),
   { type: 'confirmFormation', side: 'defense' },
 );
-const liveGame = (state = createGame()) => applyAction(readyFormation(state), { type: 'snap' });
+const liveGame = (state = fixtureGame()) => applyAction(readyFormation(state), { type: 'snap' });
 
 const stoppedFor = (
   possession: Team,
   result: PlayResult,
   overrides: Partial<GameState> = {},
-) => createGame({
+) => fixtureGame({
   phase: 'betweenDowns',
   possession,
   direction: possession === 'home' ? 1 : -1,
@@ -71,7 +74,7 @@ describe('field geometry', () => {
   });
 
   it('models the 50-yard line as the center boundary of a 5-yard grid field', () => {
-    const state = createGame();
+    const state = fixtureGame();
 
     expect(state.board.width).toBe(24);
     expect(state.board.height).toBe(11);
@@ -80,7 +83,7 @@ describe('field geometry', () => {
   });
 
   it('tracks first-down progress in 10-yard chunks', () => {
-    const state = createGame();
+    const state = fixtureGame({ lineOfScrimmage: 5 });
 
     expect(moveDistanceToFirstDown(state, { x: 5, y: 5 })).toBe(2);
     expect(moveDistanceToFirstDown(state, { x: 6, y: 5 })).toBe(1);
@@ -225,7 +228,7 @@ describe('formation catalog', () => {
       for (const formationId of ids) {
         for (const lineOfScrimmage of [2, 5, 21]) {
           for (const [possession, direction] of [['home', 1], ['away', -1]] as const) {
-            const initial = createGame({ possession, direction, lineOfScrimmage });
+            const initial = fixtureGame({ possession, direction, lineOfScrimmage });
             const state = applyAction(initial, { type: 'chooseFormation', side, formationId });
             const projected = state.pieces.map((item) => item.coord);
 
@@ -235,8 +238,8 @@ describe('formation catalog', () => {
             for (const item of state.pieces) {
               const isOffense = item.team === possession;
               const isLegalSide = direction === 1
-                ? (isOffense ? item.coord.x <= lineOfScrimmage : item.coord.x > lineOfScrimmage)
-                : (isOffense ? item.coord.x >= lineOfScrimmage : item.coord.x < lineOfScrimmage);
+                ? (isOffense ? item.coord.x < lineOfScrimmage : item.coord.x >= lineOfScrimmage)
+                : (isOffense ? item.coord.x > lineOfScrimmage : item.coord.x <= lineOfScrimmage);
               expect(isLegalSide).toBe(true);
             }
           }
@@ -248,38 +251,38 @@ describe('formation catalog', () => {
 
 describe('piece movement', () => {
   it('starts in football-shaped formations around the line of scrimmage', () => {
-    const state = createGame();
+    const state = fixtureGame();
 
-    expect(state.lineOfScrimmage).toBe(5);
-    expect(state.firstDownLine).toBe(7);
-    expect(piece(state, 'home-ol3').coord).toEqual({ x: state.lineOfScrimmage, y: 5 });
-    expect(piece(state, 'home-qb').coord).toEqual({ x: state.lineOfScrimmage - 1, y: 5 });
-    expect(piece(state, 'home-rb').coord).toEqual({ x: state.lineOfScrimmage - 2, y: 5 });
-    expect(piece(state, 'home-fb').coord).toEqual({ x: state.lineOfScrimmage - 1, y: 6 });
-    expect(piece(state, 'away-ol3').coord).toEqual({ x: state.lineOfScrimmage + 1, y: 5 });
-    expect(piece(state, 'away-rb').coord).toEqual({ x: state.lineOfScrimmage + 2, y: 5 });
+    expect(state.lineOfScrimmage).toBe(6);
+    expect(state.firstDownLine).toBe(8);
+    expect(piece(state, 'home-ol3').coord).toEqual({ x: state.lineOfScrimmage - 1, y: 5 });
+    expect(piece(state, 'home-qb').coord).toEqual({ x: state.lineOfScrimmage - 2, y: 5 });
+    expect(piece(state, 'home-rb').coord).toEqual({ x: state.lineOfScrimmage - 3, y: 5 });
+    expect(piece(state, 'home-fb').coord).toEqual({ x: state.lineOfScrimmage - 2, y: 6 });
+    expect(piece(state, 'away-ol3').coord).toEqual({ x: state.lineOfScrimmage, y: 5 });
+    expect(piece(state, 'away-rb').coord).toEqual({ x: state.lineOfScrimmage + 1, y: 5 });
   });
 
   it('can choose separate offensive and defensive formation presets before the snap', () => {
-    let state = createGame();
+    let state = fixtureGame();
 
     state = applyAction(state, { type: 'chooseFormation', side: 'offense', formationId: 'shotgun' });
     expect(state.formation.offense.id).toBe('shotgun');
     expect(state.formationConfirmed.offense).toBe(false);
-    expect(piece(state, 'home-qb').coord).toEqual({ x: state.lineOfScrimmage - 2, y: 5 });
-    expect(piece(state, 'home-rb').coord).toEqual({ x: state.lineOfScrimmage - 2, y: 6 });
+    expect(piece(state, 'home-qb').coord).toEqual({ x: state.lineOfScrimmage - 3, y: 5 });
+    expect(piece(state, 'home-rb').coord).toEqual({ x: state.lineOfScrimmage - 3, y: 6 });
     expect(state.formationShiftsRemaining.home).toBe(2);
 
     state = applyAction(state, { type: 'chooseFormation', side: 'defense', formationId: 'nickel' });
     expect(state.formation.defense.id).toBe('nickel');
     expect(state.formationConfirmed.defense).toBe(false);
-    expect(piece(state, 'away-wr1').coord).toEqual({ x: state.lineOfScrimmage + 4, y: 0 });
-    expect(piece(state, 'away-qb').coord).toEqual({ x: state.lineOfScrimmage + 5, y: 5 });
+    expect(piece(state, 'away-wr1').coord).toEqual({ x: state.lineOfScrimmage + 3, y: 0 });
+    expect(piece(state, 'away-qb').coord).toEqual({ x: state.lineOfScrimmage + 4, y: 5 });
     expect(state.formationShiftsRemaining.away).toBe(2);
   });
 
   it('requires both formations to be confirmed before the snap', () => {
-    let state = createGame();
+    let state = fixtureGame();
 
     expect(generateLegalActions(state)).not.toContainEqual({ type: 'snap' });
     expect(() => applyAction(state, { type: 'snap' })).toThrow('confirmed');
@@ -296,7 +299,7 @@ describe('piece movement', () => {
   });
 
   it('prevents changing a formation after that side is confirmed', () => {
-    let state = createGame();
+    let state = fixtureGame();
 
     state = applyAction(state, { type: 'chooseFormation', side: 'offense', formationId: 'shotgun' });
     state = applyAction(state, { type: 'confirmFormation', side: 'offense' });
@@ -307,21 +310,25 @@ describe('piece movement', () => {
     expect(state.formation.offense.id).toBe('shotgun');
   });
 
-  it('prevents formation shifts until that side is confirmed', () => {
-    let state = createGame();
-
-    expect(generateLegalActions(state)).not.toContainEqual({ type: 'shift', pieceId: 'home-wr1', to: { x: 4, y: 0 } });
-    expect(() => applyAction(state, { type: 'shift', pieceId: 'home-wr1', to: { x: 4, y: 0 } })).toThrow('confirmed');
-
+  it('unlocks optional shifts only after that side confirms its formation', () => {
+    let state = fixtureGame();
+    const homeShift = { type: 'shift', pieceId: 'home-wr1', to: { x: 4, y: 0 } } as const;
+    const awayShift = { type: 'shift', pieceId: 'away-wr1', to: { x: 9, y: 0 } } as const;
+    expect(generateLegalActions(state)).not.toContainEqual(homeShift);
+    expect(() => applyAction(state, homeShift)).toThrow('Confirm');
     state = applyAction(state, { type: 'confirmFormation', side: 'offense' });
-
-    expect(generateLegalActions(state)).toContainEqual({ type: 'shift', pieceId: 'home-wr1', to: { x: 4, y: 0 } });
-    expect(generateLegalActions(state)).not.toContainEqual({ type: 'shift', pieceId: 'away-wr1', to: { x: 9, y: 0 } });
-    expect(() => applyAction(state, { type: 'shift', pieceId: 'away-wr1', to: { x: 9, y: 0 } })).toThrow('confirmed');
+    expect(generateLegalActions(state)).toContainEqual(homeShift);
+    state = applyAction(state, homeShift);
+    expect(state.formationConfirmed.offense).toBe(true);
+    expect(generateLegalActions(state)).not.toContainEqual(awayShift);
+    expect(() => applyAction(state, awayShift)).toThrow('Confirm');
+    state = applyAction(state, { type: 'confirmFormation', side: 'defense' });
+    expect(generateLegalActions(state)).toContainEqual(awayShift);
+    expect(() => applyAction(state, awayShift)).not.toThrow();
   });
 
   it('shows offensive or defensive role codes based on current possession', () => {
-    let state = createGame();
+    let state = fixtureGame();
 
     expect(activeRoleCode(state, piece(state, 'home-wr1'))).toBe('WR');
     expect(activeRoleCode(state, piece(state, 'away-wr1'))).toBe('CB');
@@ -481,7 +488,7 @@ describe('ball actions', () => {
   });
 
   it('scores a touchdown on a completed pass caught in the first end-zone column', () => {
-    let state = liveGame(createGame({ lineOfScrimmage: 20, firstDownLine: 21 }));
+    let state = liveGame(fixtureGame({ lineOfScrimmage: 20, firstDownLine: 21 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => {
@@ -578,7 +585,7 @@ describe('ball actions', () => {
   });
 
   it('does not award a first down at the receiver spot on an incomplete forward pass', () => {
-    let state = liveGame(createGame({ down: 2, lineOfScrimmage: 5, firstDownLine: 7 }));
+    let state = liveGame(fixtureGame({ down: 2, lineOfScrimmage: 5, firstDownLine: 7 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => {
@@ -719,7 +726,7 @@ describe('ball actions', () => {
 
 describe('play resolution', () => {
   it('resolves the opening coin toss from a coin flip', () => {
-    const state = createGame({ phase: 'coinToss' });
+    const state = fixtureGame({ phase: 'coinToss' });
 
     const homeWin = applyAction(state, { type: 'coinToss', result: 'heads' });
     const awayWin = applyAction(state, { type: 'coinToss', result: 'tails' });
@@ -734,7 +741,7 @@ describe('play resolution', () => {
   });
 
   it('lets the coin toss winner choose whether to kick or receive', () => {
-    const tossed = applyAction(createGame({ phase: 'coinToss' }), {
+    const tossed = applyAction(fixtureGame({ phase: 'coinToss' }), {
       type: 'coinToss',
       result: 'tails',
     });
@@ -750,7 +757,7 @@ describe('play resolution', () => {
   });
 
   it('shows a kickoff alignment with the kicker on the 35, coverage on the 30, and receivers behind their 35', () => {
-    const tossed = applyAction(createGame({ phase: 'coinToss' }), {
+    const tossed = applyAction(fixtureGame({ phase: 'coinToss' }), {
       type: 'coinToss',
       result: 'heads',
     });
@@ -758,8 +765,8 @@ describe('play resolution', () => {
     const homeReceives = applyAction(tossed, { type: 'chooseKickoffChoice', team: 'home', choice: 'receive' });
 
     expect(homeReceives.turn).toBe('away');
-    expect(piece(homeReceives, 'away-qb').coord).toEqual({ x: 15, y: 5 });
-    expect(homeReceives.pieces.filter((item) => item.team === 'away' && item.id !== 'away-qb').every((item) => item.coord.x === 16)).toBe(true);
+    expect(piece(homeReceives, 'away-qb').coord).toEqual({ x: 14, y: 5 });
+    expect(homeReceives.pieces.filter((item) => item.team === 'away' && item.id !== 'away-qb').every((item) => item.coord.x === 15)).toBe(true);
     expect(homeReceives.pieces.filter((item) => item.team === 'home').every((item) => item.coord.x <= 9)).toBe(true);
     expect(piece(homeReceives, 'home-ol3').coord).toEqual({ x: 9, y: 5 });
     expect(piece(homeReceives, 'home-qb').coord).toEqual({ x: 9, y: 4 });
@@ -769,8 +776,8 @@ describe('play resolution', () => {
   });
 
   it('mirrors kickoff formations for home and away teams', () => {
-    const homeToss = applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
-    const awayToss = applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'tails' });
+    const homeToss = applyAction(fixtureGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
+    const awayToss = applyAction(fixtureGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'tails' });
     const homeKicks = applyAction(homeToss, { type: 'chooseKickoffChoice', team: 'home', choice: 'kick' });
     const awayKicks = applyAction(awayToss, { type: 'chooseKickoffChoice', team: 'away', choice: 'kick' });
     const mirrorX = (x: number) => homeKicks.board.width - 1 - x;
@@ -978,8 +985,8 @@ describe('play resolution', () => {
     expect(applyAction(safetyState, { type: 'tackle', defenderId: 'home-fb', targetId: 'away-rb', roll: { die1: 3, die2: 3 } }).score.home).toBe(2);
 
     const turnoverState = {
-      ...liveGame(createGame({ down: 4, firstDownLine: 8 })),
-      pieces: liveGame(createGame({ down: 4, firstDownLine: 8 })).pieces.map((item) => {
+      ...liveGame(fixtureGame({ down: 4, firstDownLine: 8 })),
+      pieces: liveGame(fixtureGame({ down: 4, firstDownLine: 8 })).pieces.map((item) => {
         if (item.id === 'home-qb') return item;
         if (item.team === 'home') return { ...item, coord: { x: 3, y: item.coord.y } };
         return { ...item, coord: { x: 18, y: item.coord.y } };
@@ -991,7 +998,7 @@ describe('play resolution', () => {
   });
 
   it('turns missed field goals over to the defense without a kickoff', () => {
-    let state = liveGame(createGame({ lineOfScrimmage: 17 }));
+    let state = liveGame(fixtureGame({ lineOfScrimmage: 17 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
@@ -1008,7 +1015,7 @@ describe('play resolution', () => {
   });
 
   it('uses the same field-goal geometry when the offense moves left', () => {
-    let state = liveGame(createGame({ possession: 'away', direction: -1, turn: 'away', lineOfScrimmage: 6 }));
+    let state = liveGame(fixtureGame({ possession: 'away', direction: -1, turn: 'away', lineOfScrimmage: 6 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => (item.id === 'away-qb' ? { ...item, coord: { x: 6, y: 5 } } : item)),
@@ -1023,7 +1030,7 @@ describe('play resolution', () => {
 
   it('resolves the post-touchdown extra point as a simple kick roll', () => {
     const touchdown = {
-      ...createGame(),
+      ...fixtureGame(),
       phase: 'betweenDowns' as const,
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
@@ -1042,7 +1049,7 @@ describe('play resolution', () => {
 
   it('requires a conversion choice after a touchdown before kickoff', () => {
     const touchdown = {
-      ...createGame(),
+      ...fixtureGame(),
       phase: 'betweenDowns' as const,
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
@@ -1054,7 +1061,7 @@ describe('play resolution', () => {
   });
 
   it('does not consume a drive on ordinary stopped downs', () => {
-    let state = liveGame(createGame({ down: 1, lineOfScrimmage: 5, firstDownLine: 7 }));
+    let state = liveGame(fixtureGame({ down: 1, lineOfScrimmage: 5, firstDownLine: 7 }));
     state = {
       ...state,
       turn: 'away',
@@ -1074,7 +1081,7 @@ describe('play resolution', () => {
 
   it('sets up a two-point try as a goal-line formation play', () => {
     const touchdown = {
-      ...createGame(),
+      ...fixtureGame(),
       phase: 'betweenDowns' as const,
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
@@ -1087,12 +1094,12 @@ describe('play resolution', () => {
     expect(next.conversion).toEqual({ team: 'home' });
     expect(next.lineOfScrimmage).toBe(21);
     expect(next.firstDownLine).toBe(22);
-    expect(piece(next, 'home-qb').coord.x).toBe(20);
+    expect(piece(next, 'home-qb').coord.x).toBe(19);
   });
 
   it('awards two points when a two-point try reaches the end zone', () => {
     const tryState = liveGame(applyAction({
-      ...createGame(),
+      ...fixtureGame(),
       phase: 'betweenDowns' as const,
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
@@ -1117,7 +1124,7 @@ describe('play resolution', () => {
 
   it('fails a two-point try when the offense is stopped', () => {
     const tryState = liveGame(applyAction({
-      ...createGame(),
+      ...fixtureGame(),
       phase: 'betweenDowns' as const,
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
@@ -1143,7 +1150,7 @@ describe('play resolution', () => {
 
   it('sets up a kickoff by the scoring team after an extra point', () => {
     const touchdown = {
-      ...createGame(),
+      ...fixtureGame(),
       phase: 'betweenDowns' as const,
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown' as const, team: 'home' as const } },
@@ -1163,7 +1170,7 @@ describe('play resolution', () => {
   });
 
   it('sets up a kickoff by the scoring team after a field goal', () => {
-    let state = liveGame(createGame({ lineOfScrimmage: 17 }));
+    let state = liveGame(fixtureGame({ lineOfScrimmage: 17 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
@@ -1183,7 +1190,7 @@ describe('play resolution', () => {
   });
 
   it('resolves an opening kickoff placement into a live return', () => {
-    const state = createGame({
+    const state = fixtureGame({
       phase: 'kickoff',
       possession: 'home',
       turn: 'home',
@@ -1206,7 +1213,7 @@ describe('play resolution', () => {
   });
 
   it('lands an away kickoff on the left side when home receives', () => {
-    const state = createGame({
+    const state = fixtureGame({
       phase: 'kickoff',
       possession: 'away',
       turn: 'away',
@@ -1219,7 +1226,7 @@ describe('play resolution', () => {
       kind: 'kickoff',
       roll: { die1: 4, die2: 3 },
     });
-    const next = applyAction(kicked, { type: 'placeKick', at: { x: 0, y: 5 } });
+    const next = applyAction(kicked, { type: 'placeKick', at: { x: 1, y: 5 } });
 
     expect(next.phase).toBe('betweenDowns');
     expect(next.possession).toBe('home');
@@ -1229,7 +1236,7 @@ describe('play resolution', () => {
   });
 
   it('makes a poor kickoff land on the exact short-distance column', () => {
-    const next = applyAction(createGame({
+    const next = applyAction(fixtureGame({
       phase: 'kickoff',
       possession: 'home',
       turn: 'home',
@@ -1247,7 +1254,7 @@ describe('play resolution', () => {
   });
 
   it('keeps the return tackle spot when lining up the receiving team', () => {
-    const kicked = applyAction(createGame({
+    const kicked = applyAction(fixtureGame({
       phase: 'kickoff',
       possession: 'home',
       turn: 'home',
@@ -1274,13 +1281,13 @@ describe('play resolution', () => {
 
     expect(next.phase).toBe('formation');
     expect(next.possession).toBe('away');
-    expect(next.lineOfScrimmage).toBe(11);
+    expect(next.lineOfScrimmage).toBe(10);
     expect(piece(next, 'away-ol3').coord.x).toBe(11);
     expect(piece(next, 'away-qb').coord.x).toBe(12);
   });
 
   it('rolls a kickoff into a placement choice instead of immediately starting the drive', () => {
-    const state = createGame({
+    const state = fixtureGame({
       phase: 'kickoff',
       possession: 'home',
       turn: 'home',
@@ -1301,7 +1308,7 @@ describe('play resolution', () => {
   });
 
   it('starts a kickoff return with the ball loose at the chosen landing square', () => {
-    const kicked = applyAction(createGame({
+    const kicked = applyAction(fixtureGame({
       phase: 'kickoff',
       possession: 'home',
       turn: 'home',
@@ -1322,7 +1329,7 @@ describe('play resolution', () => {
   });
 
   it('treats kickoff and punt placements in the end zone as touchbacks', () => {
-    const kickoff = createGame({
+    const kickoff = fixtureGame({
       phase: 'kickPlacement',
       possession: 'home',
       turn: 'home',
@@ -1337,11 +1344,11 @@ describe('play resolution', () => {
     });
     const touchback = applyAction(kickoff, { type: 'placeKick', at: { x: 22, y: 5 } });
 
-    expect(touchback.play.result).toEqual({ type: 'touchback', team: 'away', at: { x: 17, y: 5 } });
-    expect(startNextDown(touchback).lineOfScrimmage).toBe(17);
+    expect(touchback.play.result).toEqual({ type: 'touchback', team: 'away', at: { x: 16, y: 5 } });
+    expect(startNextDown(touchback).lineOfScrimmage).toBe(16);
     expect(startNextDown(touchback).drivesThisQuarter).toEqual({ home: 0, away: 0 });
 
-    let puntState = liveGame(createGame({ lineOfScrimmage: 17, firstDownLine: 19 }));
+    let puntState = liveGame(fixtureGame({ lineOfScrimmage: 17, firstDownLine: 19 }));
     puntState = {
       ...puntState,
       pieces: puntState.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 17, y: 5 } } : item)),
@@ -1349,7 +1356,7 @@ describe('play resolution', () => {
     const punt = applyAction(readyKick(puntState, 'punt'), { type: 'kick', kickerId: 'home-qb', kind: 'punt', roll: { die1: 6, die2: 6 } });
     const puntTouchback = applyAction(punt, { type: 'placeKick', at: { x: 23, y: 5 } });
 
-    expect(puntTouchback.play.result).toEqual({ type: 'touchback', team: 'away', at: { x: 17, y: 5 } });
+    expect(puntTouchback.play.result).toEqual({ type: 'touchback', team: 'away', at: { x: 16, y: 5 } });
     expect(startNextDown(puntTouchback).drivesThisQuarter).toEqual({ home: 1, away: 0 });
   });
 
@@ -1479,7 +1486,7 @@ describe('play resolution', () => {
     expect(tackled.phase).toBe('betweenDowns');
     expect(tackled.play.result).toMatchObject({ type: 'tackle', at: { x: 12, y: 5 } });
     expect(next.phase).toBe('formation');
-    expect(next.lineOfScrimmage).toBe(12);
+    expect(next.lineOfScrimmage).toBe(11);
     expect(next.possession).toBe('away');
 
     const puntReturn = { ...returned, pendingKick: { ...returned.pendingKick, kind: 'punt' as const } };
@@ -1536,7 +1543,7 @@ describe('play resolution', () => {
   });
 
   it('rolls a punt on any down into a placement choice', () => {
-    let state = liveGame(createGame({ down: 2, lineOfScrimmage: 8, firstDownLine: 10 }));
+    let state = liveGame(fixtureGame({ down: 2, lineOfScrimmage: 8, firstDownLine: 10 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => (item.id === 'home-qb' ? { ...item, coord: { x: 8, y: 5 } } : item)),
@@ -1556,7 +1563,7 @@ describe('play resolution', () => {
   });
 
   it('advances to the third quarter with the opposite halftime kickoff team', () => {
-    const state = createGame({
+    const state = fixtureGame({
       phase: 'betweenDowns',
       quarter: 2,
       drivesThisQuarter: { home: 2, away: 1 },
@@ -1574,7 +1581,7 @@ describe('play resolution', () => {
   });
 
   it('requires two completed drives per team before advancing a quarter', () => {
-    const state = createGame({
+    const state = fixtureGame({
       phase: 'betweenDowns',
       quarter: 1,
       drivesThisQuarter: { home: 1, away: 1 },
@@ -1589,7 +1596,7 @@ describe('play resolution', () => {
   });
 
   it('ends the match after both teams complete their fourth-quarter drives', () => {
-    const state = createGame({
+    const state = fixtureGame({
       phase: 'betweenDowns',
       quarter: 4,
       drivesThisQuarter: { home: 2, away: 1 },
@@ -1707,23 +1714,23 @@ describe('play resolution', () => {
 
 describe('game flow', () => {
   it('keeps all pieces in bounds and on legal sides when the line is in an end zone', () => {
-    const leftPinned = createGame({ lineOfScrimmage: 1, firstDownLine: 3 });
+    const leftPinned = fixtureGame({ lineOfScrimmage: 1, firstDownLine: 3 });
     expect(leftPinned.pieces).toHaveLength(22);
     expect(leftPinned.pieces.every((item) => item.coord.x >= 0 && item.coord.x < leftPinned.board.width)).toBe(true);
     expect(new Set(leftPinned.pieces.map((item) => `${item.coord.x},${item.coord.y}`)).size).toBe(22);
-    expect(leftPinned.pieces.filter((item) => item.team === 'home').every((item) => item.coord.x <= leftPinned.lineOfScrimmage)).toBe(true);
-    expect(leftPinned.pieces.filter((item) => item.team === 'away').every((item) => item.coord.x > leftPinned.lineOfScrimmage)).toBe(true);
+    expect(leftPinned.pieces.filter((item) => item.team === 'home').every((item) => item.coord.x < leftPinned.lineOfScrimmage)).toBe(true);
+    expect(leftPinned.pieces.filter((item) => item.team === 'away').every((item) => item.coord.x >= leftPinned.lineOfScrimmage)).toBe(true);
 
-    const rightPinned = createGame({ possession: 'away', direction: -1, turn: 'away', lineOfScrimmage: 22, firstDownLine: 20 });
+    const rightPinned = fixtureGame({ possession: 'away', direction: -1, turn: 'away', lineOfScrimmage: 22, firstDownLine: 20 });
     expect(rightPinned.pieces).toHaveLength(22);
     expect(rightPinned.pieces.every((item) => item.coord.x >= 0 && item.coord.x < rightPinned.board.width)).toBe(true);
     expect(new Set(rightPinned.pieces.map((item) => `${item.coord.x},${item.coord.y}`)).size).toBe(22);
-    expect(rightPinned.pieces.filter((item) => item.team === 'away').every((item) => item.coord.x >= rightPinned.lineOfScrimmage)).toBe(true);
-    expect(rightPinned.pieces.filter((item) => item.team === 'home').every((item) => item.coord.x < rightPinned.lineOfScrimmage)).toBe(true);
+    expect(rightPinned.pieces.filter((item) => item.team === 'away').every((item) => item.coord.x > rightPinned.lineOfScrimmage)).toBe(true);
+    expect(rightPinned.pieces.filter((item) => item.team === 'home').every((item) => item.coord.x <= rightPinned.lineOfScrimmage)).toBe(true);
   });
 
   it('starts from formation, snaps to live play, and alternates turns', () => {
-    let state = createGame();
+    let state = fixtureGame();
     expect(state.phase).toBe('formation');
     expect(state.formationShiftsRemaining.home).toBe(2);
 
@@ -1741,18 +1748,15 @@ describe('game flow', () => {
   });
 
   it('prevents pre-snap shifts across the line of scrimmage', () => {
-    let state = createGame();
-    state = applyAction(state, { type: 'confirmFormation', side: 'offense' });
-    state = applyAction(state, { type: 'confirmFormation', side: 'defense' });
-
-    expect(() => applyAction(state, { type: 'shift', pieceId: 'home-rb', to: { x: 6, y: 2 } })).toThrow('line of scrimmage');
-    expect(() => applyAction(state, { type: 'shift', pieceId: 'away-fb', to: { x: 4, y: 2 } })).toThrow('line of scrimmage');
-    expect(generateLegalActions(state)).not.toContainEqual({ type: 'shift', pieceId: 'home-rb', to: { x: 6, y: 2 } });
-    expect(generateLegalActions(state)).not.toContainEqual({ type: 'shift', pieceId: 'away-fb', to: { x: 4, y: 2 } });
+    const state = fixtureGame({ formationConfirmed: { offense: true, defense: true } });
+    expect(() => applyAction(state, { type: 'shift', pieceId: 'home-te', to: { x: 6, y: 8 } })).toThrow('line of scrimmage');
+    expect(() => applyAction(state, { type: 'shift', pieceId: 'away-ol1', to: { x: 5, y: 3 } })).toThrow();
+    expect(generateLegalActions(state)).not.toContainEqual({ type: 'shift', pieceId: 'home-te', to: { x: 6, y: 8 } });
+    expect(generateLegalActions(state)).not.toContainEqual({ type: 'shift', pieceId: 'away-ol1', to: { x: 5, y: 3 } });
   });
 
   it('advances stopped plays into the next formation', () => {
-    let state = liveGame(createGame({ down: 2 }));
+    let state = liveGame(fixtureGame({ down: 2 }));
     state = {
       ...state,
       turn: 'away',
@@ -1767,8 +1771,8 @@ describe('game flow', () => {
     expect(next.formationShiftsRemaining).toEqual({ home: 2, away: 2 });
     expect(next.play.actions).toEqual([]);
     expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('home-qb');
-    expect(piece(next, 'home-qb').coord.x).toBe(next.lineOfScrimmage - 1);
-    expect(piece(next, 'away-fb').coord.x).toBe(next.lineOfScrimmage + 2);
+    expect(piece(next, 'home-qb').coord.x).toBe(next.lineOfScrimmage - 2);
+    expect(piece(next, 'away-fb').coord.x).toBe(next.lineOfScrimmage + 1);
   });
 
   it('places the next line of scrimmage in front of the stopped ball carrier', () => {
@@ -1788,12 +1792,12 @@ describe('game flow', () => {
     state = applyAction(state, { type: 'tackle', defenderId: 'away-fb', targetId: 'home-rb' });
     const next = startNextDown(state);
 
-    expect(next.lineOfScrimmage).toBe(9);
+    expect(next.lineOfScrimmage).toBe(10);
     expect(piece(next, 'home-qb').coord.x).toBe(8);
   });
 
-  it('places the next line of scrimmage at the stopped ball square when moving left', () => {
-    let state = liveGame(createGame({ possession: 'away', direction: -1, turn: 'away', lineOfScrimmage: 18, firstDownLine: 16 }));
+  it('places the next line of scrimmage in front of the stopped carrier when moving left', () => {
+    let state = liveGame(fixtureGame({ possession: 'away', direction: -1, turn: 'away', lineOfScrimmage: 18, firstDownLine: 16 }));
     state = applyAction(state, { type: 'handoff', fromId: 'away-qb', toId: 'away-rb' });
     state = {
       ...state,
@@ -1809,12 +1813,12 @@ describe('game flow', () => {
     state = applyAction(state, { type: 'tackle', defenderId: 'home-fb', targetId: 'away-rb' });
     const next = startNextDown(state);
 
-    expect(next.lineOfScrimmage).toBe(14);
+    expect(next.lineOfScrimmage).toBe(13);
     expect(piece(next, 'away-qb').coord.x).toBe(15);
   });
 
   it('starts a new possession at first down after a turnover on downs', () => {
-    let state = liveGame(createGame({ down: 4, firstDownLine: 8 }));
+    let state = liveGame(fixtureGame({ down: 4, firstDownLine: 8 }));
     state = {
       ...state,
       pieces: state.pieces.map((item) => {
@@ -1836,13 +1840,13 @@ describe('game flow', () => {
   });
 
   it('spots a fourth-down tackle turnover where the carrier was stopped', () => {
-    let state = liveGame(createGame({ down: 4, lineOfScrimmage: 5, firstDownLine: 8 }));
+    let state = liveGame(fixtureGame({ down: 4, lineOfScrimmage: 5, firstDownLine: 8 }));
     state = {
       ...state,
       turn: 'away',
       pieces: state.pieces.map((item) => {
-        if (item.id === 'home-rb') return { ...item, coord: { x: 7, y: 5 } };
-        if (item.id === 'away-fb') return { ...item, coord: { x: 7, y: 6 } };
+        if (item.id === 'home-rb') return { ...item, coord: { x: 6, y: 5 } };
+        if (item.id === 'away-fb') return { ...item, coord: { x: 6, y: 6 } };
         return item;
       }),
       ball: { kind: 'controlled', pieceId: 'home-rb' },
@@ -1854,7 +1858,7 @@ describe('game flow', () => {
     expect(stopped.play.result).toEqual({ type: 'turnoverOnDowns', team: 'away' });
     expect(stopped.ball).toEqual({ kind: 'controlled', pieceId: 'away-qb' });
     expect(next.possession).toBe('away');
-    expect(next.lineOfScrimmage).toBe(7);
+    expect(next.lineOfScrimmage).toBe(6);
   });
 
   it('starts a new possession at first down after an interception', () => {
@@ -1875,7 +1879,7 @@ describe('game flow', () => {
 
     expect(next.possession).toBe('away');
     expect(next.down).toBe(1);
-    expect(next.lineOfScrimmage).toBe(10);
+    expect(next.lineOfScrimmage).toBe(9);
     expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-qb');
   });
 
@@ -1898,7 +1902,7 @@ describe('game flow', () => {
     expect(piece(stopped, 'away-wr1').coord).toEqual({ x: 9, y: 5 });
     expect(piece(stopped, 'home-wr1').coord).toEqual({ x: 10, y: 5 });
     expect(stopped.ball).toEqual({ kind: 'controlled', pieceId: 'away-wr1' });
-    expect(next.lineOfScrimmage).toBe(9);
+    expect(next.lineOfScrimmage).toBe(8);
   });
 });
 
@@ -1909,8 +1913,8 @@ describe('series and conversion regression coverage', () => {
     const defense = team === 'home' ? 'away' : 'home';
     const origin = team === 'home' ? 6 : 17;
     for (const gain of [-1, 1, 2]) {
-      const at = origin + gain * direction;
-      const state = createGame({ phase: 'live', possession: team, turn: defense, direction,
+      const at = origin + (gain - 1) * direction;
+      const state = fixtureGame({ phase: 'live', possession: team, turn: defense, direction,
         down: 1, lineOfScrimmage: origin, firstDownLine: origin + 2 * direction,
         ball: { kind: 'controlled', pieceId: `${team}-rb` },
         pieces: [
@@ -1921,8 +1925,8 @@ describe('series and conversion regression coverage', () => {
       const stopped = applyAction(state, { type: 'tackle', defenderId: `${defense}-rb`, targetId: `${team}-rb`, roll: { die1: 5, die2: 5 } });
       const next = startNextDown(stopped);
       expect(next.down).toBe(gain === 2 ? 1 : 2);
-      expect(next.firstDownLine).toBe(gain === 2 ? at + 2 * direction : state.firstDownLine);
-      expect(moveDistanceToFirstDown(next, { x: at, y: 5 })).toBe(gain === 2 ? 2 : 2 - gain);
+      expect(next.firstDownLine).toBe(gain === 2 ? at + 3 * direction : state.firstDownLine);
+      expect(moveDistanceToFirstDown(next, { x: next.lineOfScrimmage, y: 5 })).toBe(gain === 2 ? 2 : 2 - gain);
       // An incomplete pass on the next down must also preserve the same target.
       const incomplete = applyAction(liveGame(next), { type: 'pass', passerId: `${team}-qb`, receiverId: `${team}-wr1`, roll: { die1: 1, die2: 2 } });
       expect(startNextDown(incomplete).firstDownLine).toBe(next.firstDownLine);
@@ -1930,7 +1934,7 @@ describe('series and conversion regression coverage', () => {
   });
 
   it.each(['home', 'away'] as const)('rejects field goals and punts during a %s two-point try', (team) => {
-    const touchdown = createGame({ phase: 'betweenDowns', possession: team, turn: team,
+    const touchdown = fixtureGame({ phase: 'betweenDowns', possession: team, turn: team,
       score: { home: 6, away: 6 }, play: { actions: [], result: { type: 'touchdown', team } },
     });
     const state = liveGame(applyAction(touchdown, { type: 'startTwoPointTry', team }));

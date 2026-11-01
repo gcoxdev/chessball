@@ -10,10 +10,10 @@ import {
 
 function report(): MatchedAuditReport {
   return {
-    seedConvention: 'base-seed-plus-pair-index', seedRange: { first: 1, last: 2 }, seedList: [1, 2],
-    requestedPairs: 2, completedPairs: 2, excludedPairs: 0, attemptedGames: 4,
+    gamesPerPair: 4, seedConvention: 'base-seed-plus-pair-index', seedRange: { first: 1, last: 2 }, seedList: [1, 2],
+    requestedPairs: 2, completedPairs: 2, excludedPairs: 0, attemptedGames: 8,
     matchup: { primary: 'heuristic', comparison: 'heuristic', formationPlan: null },
-    statusCounts: { completed: 4, stalled: 0, crashed: 0 }, excludedPairDetails: [], anomalies: [],
+    statusCounts: { completed: 8, stalled: 0, crashed: 0 }, excludedPairDetails: [], anomalies: [],
     symmetry: { pairEffects: [.5], scoreDeltaEffects: [0], winShareInterval: { low: .4, high: .6, mean: .5, seed: 9, samples: 100, confidence: .95 }, scoreDeltaInterval: { low: -1, high: 1, mean: 0, seed: 9, samples: 100, confidence: .95 }, classification: 'inconclusive' },
     skillGap: { pairEffects: [.75], scoreDeltaEffects: [2], primaryWins: 3, comparisonWins: 1, ties: 0, winShareInterval: { low: .6, high: .9, mean: .75, seed: 9, samples: 100, confidence: .95 }, scoreDeltaInterval: { low: 1, high: 3, mean: 2, seed: 9, samples: 100, confidence: .95 }, classification: { state: 'supported', effect: .25, interval: { low: .6, high: .9, mean: .75, seed: 9, samples: 100, confidence: .95 } } },
     telemetry: { actionTypes: { total: 0 }, actionOpportunities: { total: 0 }, formationChoices: { total: 0 }, driveOutcomes: { total: 4, touchdown: 4 }, selectionRates: {}, formationStratifiedOutcomes: {}, tacticCohorts: {}, completion: { games: 4, actions: 40, averageActions: 10 } },
@@ -39,7 +39,7 @@ describe('formation audit canonical output', () => {
 
   it('compacts reports without runtime or pair arrays while retaining classifications', () => {
     const compact = compactFormationReport(formationExperiments('screen')[0], report());
-    expect(compact).toMatchObject({ seedConvention: 'base-seed-plus-pair-index', requestedPairs: 2, completedPairs: 2, excludedPairs: 0, symmetry: { classification: 'inconclusive' }, primaryPlanEffect: { classification: { state: 'supported' } } });
+    expect(compact).toMatchObject({ gamesPerPair: 4, seedConvention: 'base-seed-plus-pair-index', requestedPairs: 2, completedPairs: 2, excludedPairs: 0, symmetry: { classification: 'inconclusive' }, primaryPlanEffect: { classification: { state: 'supported' } } });
     expect(compact).not.toHaveProperty('runtimeMs');
     expect(compact).not.toHaveProperty('pairEffects');
   });
@@ -47,7 +47,7 @@ describe('formation audit canonical output', () => {
   it('serializes the canonical root schema deterministically', () => {
     const experiment = formationExperiments('screen')[0], compact = compactFormationReport(experiment, report());
     const artifact = canonicalArtifact([compact]);
-    expect(artifact).toMatchObject({ schema: 'chessball-formation-audit-v2', policy: { primary: 'heuristic', comparison: 'heuristic' }, screen: [compact], followups: [] });
+    expect(artifact).toMatchObject({ schema: 'chessball-formation-audit-v3', policy: { primary: 'heuristic', comparison: 'heuristic' }, screen: [compact], followups: [] });
     expect(serializeCanonicalArtifact(artifact)).toBe(serializeCanonicalArtifact(canonicalArtifact([compact])));
     expect(serializeCanonicalArtifact(artifact).endsWith('\n')).toBe(true);
   });
@@ -57,7 +57,7 @@ describe('formation audit canonical output', () => {
     const artifact = canonicalArtifact(experiments.map(experiment => compactFormationReport(experiment, {
       ...report(), requestedPairs: experiment.pairs,
     })));
-    expect(artifact.schema).toBe('chessball-formation-audit-v2');
+    expect(artifact.schema).toBe('chessball-formation-audit-v3');
     expect([...artifact.screen, ...artifact.followups].map(item => item.name)).toEqual(experiments.map(item => item.name));
     expect([...artifact.screen, ...artifact.followups].map(item => item.requestedPairs)).toEqual(experiments.map(item => item.pairs));
     expect(JSON.stringify(artifact)).not.toContain('runtimeMs');

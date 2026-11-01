@@ -20,7 +20,7 @@ describe.each(['home', 'away'] as const)('%s special teams', team => {
     const kicked = applyAction(kickoff, { type: 'kick', kind: 'kickoff', kickerId: `${team}-qb`, roll: { die1: 3, die2: 4 } });
     expect(kicked.phase).toBe('kickPlacement');
     expect(labels(kicked)).toEqual(expected);
-    const at = { x: team === 'home' ? 15 : 8, y: 5 };
+    const at = { x: team === 'home' ? 16 : 7, y: 5 };
     const returned = applyAction(kicked, { type: 'placeKick', at });
     expect(returned.phase).toBe('kickReturn');
     expect(returned.possession).toBe(receivingTeam);

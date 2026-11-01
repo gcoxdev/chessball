@@ -10,6 +10,9 @@ import { AccessibleBoard } from './ui/AccessibleBoard';
 import { Modal } from './ui/Modal';
 import { useRef, useState } from 'react';
 
+// Fixed midfield-side fixture keeps movement/interaction coordinates explicit.
+const fixtureGame = (overrides: Parameters<typeof createGame>[0] = {}) => createGame({ lineOfScrimmage: 6, ...overrides });
+
 const openMenu = () => {
   if (!screen.queryByRole('dialog', { name: 'Game menu' })) fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
 };
@@ -203,7 +206,7 @@ describe('Modal lifecycle', () => {
 
 describe('Chessball UI interactions', () => {
   it('provides one main landmark and a first-link skip target for the named game workspace', () => {
-    const { container } = render(<App initialGame={createGame()} />);
+    const { container } = render(<App initialGame={fixtureGame()} />);
 
     const links = screen.getAllByRole('link');
     const appRoot = document.getElementById('chessball-app');
@@ -247,29 +250,30 @@ describe('Chessball UI interactions', () => {
   });
 
   it('uses one concise polite status without copying the event log', () => {
-    const { container } = render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    const { container } = render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
     const statuses = screen.getAllByRole('status');
     expect(statuses).toHaveLength(1);
     expect(container.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
-    expect(statuses[0]).not.toHaveTextContent(/snap: home started the play/i);
+    expect(statuses[0]).toHaveTextContent(/snap: home started the play/i);
     expect(statuses[0]).toHaveTextContent(/live.*home to act/i);
     expect(statuses[0]).toHaveTextContent(/home 0.*away 0/i);
     expect(statuses[0]).not.toHaveTextContent(/offense formation confirmed.*defense formation confirmed/i);
     expect(statuses[0].contains(historyLog())).toBe(false);
   });
 
-  it('keeps the event log implicit live behavior without echoing its newest entry in status', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+  it('keeps history silent while status announces the newest action', () => {
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
 
     const log = historyLog();
     const newestEntry = within(log).getAllByText(/snap: home started the play/i)[0].textContent ?? '';
     expect(log).toHaveAttribute('role', 'log');
-    expect(screen.getByRole('status')).not.toHaveTextContent(newestEntry);
+    expect(screen.getByRole('status')).toHaveTextContent(newestEntry);
+    expect(log).toHaveAttribute('aria-live', 'off');
     expect(screen.getByRole('status')).toHaveTextContent(/live.*home to act.*home 0.*away 0/i);
 
     closeMenu();
@@ -278,7 +282,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('announces and exposes read-only history, then restores actionable latest state', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
     fireEvent.click(menuButton(/previous move/i));
@@ -304,7 +308,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('keeps utility mutations disabled in history while Rules and Latest remain available', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
     fireEvent.click(menuButton(/previous move/i));
@@ -321,9 +325,9 @@ describe('Chessball UI interactions', () => {
   });
 
   it('cannot resume computer automation from history and restores it at Latest', async () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
     fireEvent.click(menuButton(/play auto/i));
-    await waitFor(() => expect(screen.getByText(/Computer home:/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText(/Computer home:/i)[0]).toBeInTheDocument());
     expect(menuButton(/previous move/i)).toBeEnabled();
     fireEvent.click(menuButton(/pause auto/i));
     const log = historyLog();
@@ -340,7 +344,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('exposes the field as one labelled roving-tab-stop grid', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     const grid = screen.getByRole('grid', { name: /chessball board/i });
     const rows = within(grid).getAllByRole('row');
@@ -355,7 +359,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('prioritizes a selected piece when the board initially chooses its tab stop', () => {
-    const game = createGame();
+    const game = fixtureGame();
     const selectedPiece = game.pieces.find((piece) => piece.id === 'home-wr1');
     render(
       <AccessibleBoard
@@ -380,7 +384,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('maps power, pass, tackle, and kick actions to distinct semantic cell classes', () => {
-    const game = { ...createGame(), phase: 'kickPlacement' as const };
+    const game = { ...fixtureGame(), phase: 'kickPlacement' as const };
     const qb = game.pieces.find((piece) => piece.id === 'home-qb');
     const receiver = game.pieces.find((piece) => piece.id === 'home-wr1');
     const tackleTarget = game.pieces.find((piece) => piece.id === 'away-wr1');
@@ -424,7 +428,7 @@ describe('Chessball UI interactions', () => {
   it('moves board focus with clamped arrow keys and preserves it across ordinary rerenders', () => {
     const scrollIntoView = vi.fn();
     Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
     const ballSquare = screen.getByTitle('4,5');
     const nextSquare = screen.getByTitle('5,5');
     const focus = vi.spyOn(nextSquare, 'focus');
@@ -461,7 +465,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('makes a clicked square the board tab stop without relying on browser focus behavior', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
     const target = screen.getByTitle('6,5');
 
     fireEvent.click(target);
@@ -471,7 +475,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('gives Enter and Space the same square behavior as pointer activation', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     const receiver = screen.getByTitle('4,1');
     fireEvent.keyDown(receiver, { key: 'Enter' });
@@ -484,11 +488,11 @@ describe('Chessball UI interactions', () => {
   });
 
   it('describes board occupants, ball, selection, and available square actions', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Offense' }));
 
     const qb = screen.getByTitle('4,5');
     expect(qb).toHaveAccessibleName(/square 4, 5; home qb; controlled ball/i);
-    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     fireEvent.click(screen.getByTitle('4,1'));
     expect(screen.getByTitle('4,1')).toHaveAccessibleName(/selected/i);
     expect(screen.getByTitle('4,1')).toHaveAttribute('aria-selected', 'true');
@@ -496,7 +500,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('keeps history board cells inspectable but prevents pointer and keyboard mutation', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
     fireEvent.click(screen.getByTitle('4,5'));
@@ -516,7 +520,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('selects a piece with one click before the snap without spending a formation shift', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     fireEvent.click(screen.getByTitle('4,1'));
 
@@ -525,7 +529,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('changes selected piece with one click instead of attempting a pre-snap move', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     fireEvent.click(screen.getByTitle('4,1'));
     fireEvent.click(screen.getByTitle('4,5'));
@@ -535,7 +539,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('deselects a selected piece when it is clicked again', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     fireEvent.click(screen.getByTitle('4,1'));
     fireEvent.click(screen.getByTitle('4,1'));
@@ -545,9 +549,9 @@ describe('Chessball UI interactions', () => {
   });
 
   it('clears selection after a pre-snap shift resolves', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Offense' }));
 
-    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     fireEvent.click(screen.getByTitle('4,1'));
     fireEvent.click(screen.getByTitle('4,0'));
 
@@ -555,8 +559,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it.each(['Cancel', 'Escape'])('asks before New Game and %s preserves the complete active match state', (dismissal) => {
-    render(<App initialGame={createGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
-    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
+    render(<App initialGame={fixtureGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.click(screen.getByTitle('4,1'));
 
     openMenu();
@@ -586,7 +589,7 @@ describe('Chessball UI interactions', () => {
   it('pauses computer automation while New Game confirmation is open', () => {
     vi.useFakeTimers();
     try {
-      render(<App initialGame={createGame({ phase: 'live' })} initialPlayers={{ home: 'computer', away: 'computer' }} />);
+      render(<App initialGame={fixtureGame({ phase: 'live' })} initialPlayers={{ home: 'computer', away: 'computer' }} />);
       fireEvent.click(menuButton(/play auto/i));
       fireEvent.click(menuButton(/new game/i));
 
@@ -608,7 +611,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('only resets an active match after New Game is confirmed', () => {
-    render(<App initialGame={createGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame({ score: { home: 7, away: 3 } })} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.click(screen.getByTitle('4,1'));
     const newGame = menuButton(/new game/i);
     const rules = menuButton(/rules/i);
@@ -618,8 +621,11 @@ describe('Chessball UI interactions', () => {
     fireEvent.click(within(screen.getByRole('dialog', { name: /new game/i })).getByRole('button', { name: /^confirm$/i }));
 
     expect(screen.queryByRole('dialog', { name: 'New Game' })).not.toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Game menu' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Game menu' })).not.toBeInTheDocument();
+    expect(document.getElementById('chessball-app')).not.toHaveAttribute('inert');
+    expect(screen.getByRole('heading', { name: 'Chessball' })).toHaveFocus();
     expect(screen.getByText('Press Start Game to play. Choose players and match options in the menu.')).toBeInTheDocument();
+    openMenu();
     expect(screen.getByText(/move 1 of 1/i)).toBeInTheDocument();
     expect(menuButton(/home human/i)).toBeEnabled();
     expect(menuButton(/away computer/i)).toBeEnabled();
@@ -632,7 +638,7 @@ describe('Chessball UI interactions', () => {
     expect(screen.queryByRole('button', { name: /new game/i })).not.toBeInTheDocument();
 
     unmount();
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     expect(menuButton(/new game/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /start game/i })).not.toBeInTheDocument();
@@ -799,15 +805,15 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows kickoff labels without scrimmage or first-down overlays', () => {
-    const tossed = applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
+    const tossed = applyAction(fixtureGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
     const kickoff = applyAction(tossed, { type: 'chooseKickoffChoice', team: 'home', choice: 'receive' });
 
     render(<App initialGame={kickoff} />);
 
     expect(within(screen.getByText('Down').closest('.down-card') as HTMLElement).getByText('Kickoff')).toBeInTheDocument();
     expect(screen.queryByText(/1 &/)).not.toBeInTheDocument();
-    expect(within(screen.getByTitle('15,5')).getByText('K')).toBeInTheDocument();
-    expect(screen.getByTitle('15,5')).not.toHaveClass('scrimmage-backward');
+    expect(within(screen.getByTitle('14,5')).getByText('K')).toBeInTheDocument();
+    expect(screen.getByTitle('14,5')).not.toHaveClass('scrimmage-backward');
     expect(screen.getByTitle('8,5')).not.toHaveClass('first-down-backward');
     expect(screen.queryByText(/Line of scrimmage/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Line to gain/)).not.toBeInTheDocument();
@@ -815,24 +821,24 @@ describe('Chessball UI interactions', () => {
 
   it('keeps special-teams labels on the board and in selected-piece details after choosing to kick', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.4);
-    const tossed = applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
+    const tossed = applyAction(fixtureGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' });
     const kickoff = applyAction(tossed, { type: 'chooseKickoffChoice', team: 'home', choice: 'kick' });
     render(<App initialGame={kickoff} initialPlayers={{ home: 'human', away: 'human' }} />);
-    const kicker = screen.getByTitle('8,5');
+    const kicker = screen.getByTitle('9,5');
     expect(kicker).toHaveAccessibleName(/home K\b/);
     fireEvent.click(screen.getByRole('button', { name: 'Kickoff' }));
     expect(kicker).toHaveAccessibleName(/home K\b/);
     expect(within(kicker).getByText('K')).toBeInTheDocument();
-    fireEvent.click(screen.getByTitle('14,5'));
+    fireEvent.click(screen.getByTitle('15,5'));
     expect(kicker).toHaveAccessibleName(/home K\b/);
     expect(screen.getByTitle('18,2')).toHaveAccessibleName(/away KR\b/);
     fireEvent.click(kicker);
-    expect(screen.getByText(/Kicker · 8,5/)).toBeInTheDocument();
-    expect(screen.queryByText(/QB\/FS · 8,5/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Kicker · 9,5/)).toBeInTheDocument();
+    expect(screen.queryByText(/QB\/FS · 9,5/)).not.toBeInTheDocument();
   });
 
   it('shows match progress through total drives and current-quarter drives', () => {
-    render(<App initialGame={createGame({
+    render(<App initialGame={fixtureGame({
       quarter: 3,
       drivesThisQuarter: { home: 1, away: 0 },
     })} />);
@@ -843,7 +849,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows a final result modal when the match ends', () => {
-    render(<App initialGame={createGame({
+    render(<App initialGame={fixtureGame({
       phase: 'final',
       score: { home: 14, away: 10 },
       quarter: 4,
@@ -856,7 +862,7 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText('Final: Drive 16 of 16')).toBeInTheDocument();
   });
 
-  it('keeps required coin toss and final result dialogs open on Escape and backdrop clicks', () => {
+  it('keeps the required toss open but lets the final result close for review', () => {
     const { unmount } = render(<App />);
     fireEvent.click(menuButton(/start game/i));
     const coinDialog = screen.getByRole('dialog', { name: /coin toss/i });
@@ -865,15 +871,15 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByRole('dialog', { name: /coin toss/i })).toBeInTheDocument();
 
     unmount();
-    render(<App initialGame={createGame({ phase: 'final' })} />);
+    render(<App initialGame={fixtureGame({ phase: 'final' })} />);
     const finalDialog = screen.getByRole('dialog', { name: /final result/i });
     fireEvent.keyDown(finalDialog, { key: 'Escape' });
     fireEvent.click(finalDialog.parentElement as HTMLElement);
-    expect(screen.getByRole('dialog', { name: /final result/i })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /final result/i })).not.toBeInTheDocument();
   });
 
   it('resets directly from the Final Result New Game action without stacking confirmation', () => {
-    const finalGame = createGame({
+    const finalGame = fixtureGame({
       phase: 'final',
       score: { home: 21, away: 17 },
       quarter: 4,
@@ -885,16 +891,16 @@ describe('Chessball UI interactions', () => {
     fireEvent.click(within(screen.getByRole('dialog', { name: /final result/i })).getByRole('button', { name: /new game/i }));
 
     expect(screen.queryByRole('dialog', { name: /final result/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Game menu' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Game menu' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start game/i })).toBeInTheDocument();
     expect(screen.getByText('Press Start Game to play. Choose players and match options in the menu.')).toBeInTheDocument();
     const heading = screen.getByRole('heading', { name: 'Chessball' });
     expect(heading).toHaveAttribute('tabindex', '-1');
-    expect(screen.getByRole('button', { name: 'Close menu' })).toHaveFocus();
+    expect(heading).toHaveFocus();
   });
 
   it('exposes catalog-backed formation selectors with strategic descriptions', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     expect(screen.getByRole('heading', { name: /formations/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /^command$/i })).not.toBeInTheDocument();
@@ -912,7 +918,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('previews and confirms human offense and defense selections through the formation action path', () => {
-    const { unmount } = render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    const { unmount } = render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     const offense = screen.getByRole('combobox', { name: 'Offense formation' });
     fireEvent.change(offense, { target: { value: 'trips' } });
@@ -934,7 +940,7 @@ describe('Chessball UI interactions', () => {
     expect(offense).toBeDisabled();
 
     unmount();
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
     const defense = screen.getByRole('combobox', { name: 'Defense formation' });
     fireEvent.change(defense, { target: { value: 'bear-front' } });
 
@@ -973,10 +979,10 @@ describe('Chessball UI interactions', () => {
   });
 
   it('defines distinct focus, selection, and non-color board state cues', () => {
-    const { container } = render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    const { container } = render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Offense' }));
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
 
-    fireEvent.click(screen.getByRole('button', { name: /confirm offense/i }));
     fireEvent.click(screen.getByTitle('4,1'));
     expect(container.querySelector('.square[aria-selected="true"]')).toHaveClass('is-selected');
     expect(container.querySelector('.square.legal')).toHaveClass('move-target');
@@ -1042,7 +1048,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('scrolls only the board while keeping the field toolbar and setup utility outside the scroller', () => {
-    const { container } = render(<App initialGame={createGame()} />);
+    const { container } = render(<App initialGame={fixtureGame()} />);
     const field = screen.getByRole('grid', { name: /chessball board/i });
     const scroller = field.parentElement;
     const fieldWrap = screen.getByRole('region', { name: /chessball field/i });
@@ -1074,7 +1080,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('renders history controls as one icon-only row with accessible labels', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
     openMenu();
     const controls = screen.getByRole('group', { name: /history controls/i });
@@ -1089,7 +1095,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('lets a user change formation before confirming it', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     const offense = screen.getByRole('combobox', { name: 'Offense formation' });
     fireEvent.change(offense, { target: { value: 'shotgun' } });
@@ -1102,7 +1108,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('lets a human defense choose formation against a computer offense', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
 
     expect(screen.getByRole('combobox', { name: 'Offense formation' })).toBeDisabled();
     const defense = screen.getByRole('combobox', { name: 'Defense formation' });
@@ -1113,14 +1119,15 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText('Defense formation: Nickel.')).toBeInTheDocument();
   });
 
-  it('computer offense snaps after a human confirms the default defensive formation', async () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
+  it('computer offense snaps after human defense confirms and is ready', async () => {
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /confirm defense/i })).toBeEnabled();
     });
     fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Ready for Snap' }));
     await waitFor(() => {
       expect(screen.getAllByText(/computer home: snap: home started the play/i).length).toBeGreaterThan(0);
     }, { timeout: 1800 });
@@ -1128,7 +1135,7 @@ describe('Chessball UI interactions', () => {
 
   it('waits for a human kick placement before a computer return', async () => {
     const kickoff = applyAction(
-      applyAction(createGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' }),
+      applyAction(fixtureGame({ phase: 'coinToss' }), { type: 'coinToss', result: 'heads' }),
       { type: 'chooseKickoffChoice', team: 'home', choice: 'kick' },
     );
     const { container } = render(<App initialGame={kickoff} initialPlayers={{ home: 'human', away: 'computer' }} />);
@@ -1151,7 +1158,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('computer returner moves onto a reachable loose kickoff even after chasing it last turn', () => {
-    const base = createGame();
+    const base = fixtureGame();
     const returned = {
       ...base,
       phase: 'kickReturn' as const,
@@ -1187,20 +1194,20 @@ describe('Chessball UI interactions', () => {
     expect(action).toEqual({ type: 'move', pieceId: 'away-wr1', to: { x: 11, y: 5 } });
   });
 
-  it('draws the line of scrimmage on the offense-facing edge of the formation', () => {
-    render(<App initialGame={createGame()} />);
+  it('draws the line of scrimmage at the canonical spot boundary', () => {
+    render(<App initialGame={fixtureGame()} />);
 
-    expect(screen.getByTitle('5,5')).toHaveClass('scrimmage-forward');
+    expect(screen.getByTitle('6,5')).toHaveClass('scrimmage-forward');
   });
 
-  it('draws the first-down marker on the same forward edge as the scrimmage line', () => {
-    render(<App initialGame={createGame()} />);
+  it('draws the first-down marker at the same boundary as the scrimmage line', () => {
+    render(<App initialGame={fixtureGame()} />);
 
-    expect(screen.getByTitle('7,5')).toHaveClass('first-down-forward');
+    expect(screen.getByTitle('8,5')).toHaveClass('first-down-forward');
   });
 
   it('keeps static midfield markings even when the line of scrimmage is at midfield', () => {
-    render(<App initialGame={createGame({ lineOfScrimmage: 12, firstDownLine: 14 })} />);
+    render(<App initialGame={fixtureGame({ lineOfScrimmage: 12, firstDownLine: 14 })} />);
 
     expect(screen.getByTitle('12,5')).toHaveClass('midfield');
     expect(screen.getByTitle('12,5')).toHaveClass('scrimmage-forward');
@@ -1210,15 +1217,15 @@ describe('Chessball UI interactions', () => {
     const cssText = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
     const scrimmageRule = cssText.match(/\.square\.scrimmage-forward\s*{\s*box-shadow:\s*([^;]+);/);
 
-    expect(scrimmageRule?.[1].trim().startsWith('inset -4px 0 0 var(--blue)')).toBe(true);
+    expect(scrimmageRule?.[1].trim().startsWith('inset 4px 0 0 var(--blue)')).toBe(true);
   });
 
   it('requires a field-goal formation and both confirmations before Snap & Kick', () => {
-    render(<App initialGame={createGame({ lineOfScrimmage: 19 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame({ lineOfScrimmage: 19 })} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.change(screen.getByRole('combobox', { name: 'Offense formation' }), { target: { value: 'field-goal-unit' } });
     expect(screen.getByRole('combobox', { name: 'Offense formation' })).toHaveValue('field-goal-unit');
     expect(screen.getByText('Field goal unit')).toBeInTheDocument();
-    expect(screen.getByText(/Field goal: 35 yards/)).toBeInTheDocument();
+    expect(screen.getByText(/Field goal: 40 yards/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Snap & Kick' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Offense' }));
     expect(screen.getByRole('combobox', { name: 'Offense formation' })).toBeDisabled();
@@ -1229,7 +1236,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('groups offense formations in one selector and offers defensive choices for the selected unit', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
     expect(screen.queryByRole('combobox', { name: 'Play type' })).not.toBeInTheDocument();
     const offense = screen.getByRole('combobox', { name: 'Offense formation' });
     expect(within(offense).getAllByRole('group').map(group => group.getAttribute('label'))).toEqual(['Normal play', 'Field goal', 'Punt']);
@@ -1249,31 +1256,31 @@ describe('Chessball UI interactions', () => {
 
   it('chooses a fake after lining up and immediately highlights receivers for the holder', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.8);
-    render(<App initialGame={createGame({ lineOfScrimmage: 12 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame({ lineOfScrimmage: 12 })} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.change(screen.getByRole('combobox', { name: 'Offense formation' }), { target: { value: 'field-goal-unit' } });
     expect(screen.queryByRole('button', { name: 'Fake & Pass' })).not.toBeInTheDocument();
     confirmBothFormations();
     expect(screen.getByRole('button', { name: 'Snap & Kick' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Fake & Pass' }));
-    expect(screen.getByText(/Fake field goal: home snapped to the holder/)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(/live.*home to act/i);
-    expect(screen.getByTitle('11,5')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByTitle('11,5')).toHaveAccessibleName(/home H\b/);
-    expect(screen.getByTitle('12,1')).toHaveClass('pass-target');
-    expect(screen.getByTitle('12,3')).not.toHaveClass('pass-target');
+    expect(screen.getByTitle('10,5')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTitle('10,5')).toHaveAccessibleName(/home H\b/);
+    expect(screen.getByTitle('11,1')).toHaveClass('pass-target');
+    expect(screen.getByTitle('11,3')).not.toHaveClass('pass-target');
     expect(screen.queryByRole('button', { name: 'Snap & Kick' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTitle('12,1'));
-    expect(screen.getByText(/Completed pass: home hit WR/)).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('11,1'));
+    expect(screen.getByRole('status')).toHaveTextContent(/Completed pass: home hit WR/);
     expect(screen.getByRole('status')).toHaveTextContent(/away to act/i);
-    expect(within(screen.getByTitle('12,1')).getByLabelText('Ball: controlled by WR')).toBeInTheDocument();
+    expect(within(screen.getByTitle('11,1')).getByLabelText('Ball: controlled by WR')).toBeInTheDocument();
   });
 
   it('previews punt units and starts placement directly from Snap & Punt on any down', () => {
-    render(<App initialGame={createGame({ down: 2, lineOfScrimmage: 10 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame({ down: 2, lineOfScrimmage: 10 })} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.change(screen.getByRole('combobox', { name: 'Offense formation' }), { target: { value: 'punt-unit' } });
     expect(screen.getByText('Punt return unit')).toBeInTheDocument();
     expect(screen.getByText(/Punt: 10–60 yards/)).toBeInTheDocument();
-    expect(screen.getByTitle('7,5')).toHaveAccessibleName(/home P\b/);
+    expect(screen.getByTitle('6,5')).toHaveAccessibleName(/home P\b/);
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: 'Snap & Punt' }));
     expect(screen.getByRole('status')).toHaveTextContent(/Kick Placement/);
@@ -1281,7 +1288,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('resets confirmations when changing play type without changing pre-snap yards to gain', () => {
-    render(<App initialGame={createGame({ lineOfScrimmage: 10 })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame({ lineOfScrimmage: 10 })} initialPlayers={{ home: 'human', away: 'human' }} />);
     const down = within(screen.getByText('Down').closest('.down-card') as HTMLElement);
     expect(down.getByText('1 & 10')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Defense' }));
@@ -1297,7 +1304,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('identifies handoff targets by role and board coordinate', () => {
-    const base = createGame({ phase: 'live' });
+    const base = fixtureGame({ phase: 'live' });
     const state = {
       ...base,
       pieces: base.pieces.map((piece) => {
@@ -1317,7 +1324,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('highlights legal power-move targets differently from normal moves', () => {
-    const afterHandoff = applyAction(createGame({ phase: 'live' }), { type: 'handoff', fromId: 'home-qb', toId: 'home-rb' });
+    const afterHandoff = applyAction(fixtureGame({ phase: 'live' }), { type: 'handoff', fromId: 'home-qb', toId: 'home-rb' });
     const state = {
       ...afterHandoff,
       turn: 'home' as const,
@@ -1340,7 +1347,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('requires an extra-point or two-point choice after touchdown', () => {
-    render(<App initialGame={createGame({
+    render(<App initialGame={fixtureGame({
       phase: 'betweenDowns',
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown', team: 'home' } },
@@ -1352,7 +1359,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('sets up a two-point formation from the conversion choice', () => {
-    render(<App initialGame={createGame({
+    render(<App initialGame={fixtureGame({
       phase: 'betweenDowns',
       score: { home: 6, away: 0 },
       play: { actions: [], result: { type: 'touchdown', team: 'home' } },
@@ -1366,27 +1373,27 @@ describe('Chessball UI interactions', () => {
   });
 
   it('labels marker yardage by the scrimmage square, not the painted edge', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
-    expect(screen.getByText('Line of scrimmage 20')).toBeInTheDocument();
-    expect(screen.getByText('Line to gain 30')).toBeInTheDocument();
+    expect(screen.getByText('Line of scrimmage Home 20')).toBeInTheDocument();
+    expect(screen.getByText('Line to gain Home 30')).toBeInTheDocument();
   });
 
   it('shows goal-to-go instead of a normal 10-yard distance at the goal line', () => {
-    render(<App initialGame={createGame({ lineOfScrimmage: 20 })} />);
+    render(<App initialGame={fixtureGame({ lineOfScrimmage: 20 })} />);
 
     expect(within(screen.getByText('Down').closest('.down-card') as HTMLElement).getByText('1 & Goal')).toBeInTheDocument();
     expect(screen.queryByText('1 & 10')).not.toBeInTheDocument();
   });
 
   it('uses compact down-card text for kick returns', () => {
-    render(<App initialGame={createGame({ phase: 'kickReturn', ball: { kind: 'loose', coord: { x: 10, y: 5 } } })} />);
+    render(<App initialGame={fixtureGame({ phase: 'kickReturn', ball: { kind: 'loose', coord: { x: 10, y: 5 } } })} />);
 
     expect(screen.getByText('Return')).toHaveClass('compact-status');
   });
 
   it('clears the selected piece when an action changes turns', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
@@ -1397,7 +1404,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('clears a pre-snap selected piece when the ball is snapped', () => {
-    render(<App initialGame={createGame({ formationConfirmed: { offense: true, defense: true } })} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame({ formationConfirmed: { offense: true, defense: true } })} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     fireEvent.click(screen.getByTitle('4,5'));
     expect(screen.getByText(/QB\/FS · 4,5/)).toBeInTheDocument();
@@ -1411,7 +1418,7 @@ describe('Chessball UI interactions', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.7);
     const ready = applyAction(
       applyAction(
-        applyAction(createGame(), { type: 'confirmFormation', side: 'offense' }),
+        applyAction(fixtureGame(), { type: 'confirmFormation', side: 'offense' }),
         { type: 'confirmFormation', side: 'defense' },
       ),
       { type: 'snap' },
@@ -1440,7 +1447,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('logs incomplete passes clearly in the event log', () => {
-    const base = createGame({ phase: 'live', formationConfirmed: { offense: true, defense: true } });
+    const base = fixtureGame({ phase: 'live', formationConfirmed: { offense: true, defense: true } });
     const longPass = {
       ...base,
       turn: 'home' as const,
@@ -1462,7 +1469,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('opens a rules and how-to-play panel', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     fireEvent.click(menuButton(/rules/i));
 
@@ -1478,7 +1485,7 @@ describe('Chessball UI interactions', () => {
 
   it('portals Rules outside the isolated app, locks scrolling, traps focus, and restores its trigger', () => {
     document.body.style.overflow = 'clip';
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
     const trigger = menuButton(/rules/i);
     trigger.focus();
     fireEvent.click(trigger);
@@ -1514,7 +1521,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows a football marker in the corner of the controlled ball square', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     const qbSquare = screen.getByTitle('4,5');
 
@@ -1522,7 +1529,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows a football marker in the corner of a loose ball square', () => {
-    render(<App initialGame={createGame({ ball: { kind: 'loose', coord: { x: 12, y: 5 } } })} />);
+    render(<App initialGame={fixtureGame({ ball: { kind: 'loose', coord: { x: 12, y: 5 } } })} />);
 
     const ballSquare = screen.getByTitle('12,5');
 
@@ -1530,7 +1537,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('keeps stopped turnover boards on the previous offensive role view without showing the next QB ball marker', () => {
-    const base = createGame();
+    const base = fixtureGame();
     render(<App initialGame={{
       ...base,
       phase: 'betweenDowns',
@@ -1545,7 +1552,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('does not show the next quarterback carrying the ball after a missed field goal before next down', () => {
-    const base = createGame();
+    const base = fixtureGame();
     render(<App initialGame={{
       ...base,
       phase: 'betweenDowns',
@@ -1560,7 +1567,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows the last 2d6 roll as dice on the screen', () => {
-    render(<App initialGame={createGame({ playType: 'fieldGoal', formationConfirmed: { offense: true, defense: true } })} />);
+    render(<App initialGame={fixtureGame({ playType: 'fieldGoal', formationConfirmed: { offense: true, defense: true } })} />);
 
     fireEvent.click(screen.getByRole('button', { name: /snap & kick/i }));
 
@@ -1570,7 +1577,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('reports field-goal distance in yards to the posts with the roll target', () => {
-    const base = createGame({ playType: 'fieldGoal', lineOfScrimmage: 19, formationConfirmed: { offense: true, defense: true } });
+    const base = fixtureGame({ playType: 'fieldGoal', lineOfScrimmage: 19, formationConfirmed: { offense: true, defense: true } });
     const state = {
       ...base,
       pieces: base.pieces.map((piece) => (piece.id === 'home-qb' ? { ...piece, coord: { x: 17, y: 5 } } : piece)),
@@ -1586,7 +1593,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows one clear tackle command for the selected defender only against the ball carrier', () => {
-    const base = createGame({ phase: 'live', turn: 'away' });
+    const base = fixtureGame({ phase: 'live', turn: 'away' });
     const state = {
       ...base,
       ball: { kind: 'controlled' as const, pieceId: 'home-wr2' },
@@ -1607,7 +1614,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('does not show tackle commands when selecting the ball carrier target', () => {
-    const base = createGame({ phase: 'live', turn: 'away' });
+    const base = fixtureGame({ phase: 'live', turn: 'away' });
     const state = {
       ...base,
       ball: { kind: 'controlled' as const, pieceId: 'home-wr2' },
@@ -1625,7 +1632,7 @@ describe('Chessball UI interactions', () => {
 
   it('tackles by clicking a legal ball carrier after selecting a defender', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.7);
-    const base = createGame({ phase: 'live', turn: 'away' });
+    const base = fixtureGame({ phase: 'live', turn: 'away' });
     const state = {
       ...base,
       ball: { kind: 'controlled' as const, pieceId: 'home-wr2' },
@@ -1680,14 +1687,14 @@ describe('Chessball UI interactions', () => {
   });
 
   it('shows friendly phase names instead of raw state values', () => {
-    render(<App initialGame={createGame()} />);
+    render(<App initialGame={fixtureGame()} />);
 
     expect(screen.getByText('Formation')).toBeInTheDocument();
     expect(within(screen.getByText('Phase').closest('.phase-card') as HTMLElement).queryByText('formation')).not.toBeInTheDocument();
   });
 
   it('logs every successful action and can step through board history', () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'human', away: 'human' }} />);
     confirmBothFormations();
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
     fireEvent.click(screen.getByTitle('4,5'));
@@ -1711,7 +1718,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('lets a computer-controlled team make a basic automatic move', async () => {
-    render(<App initialGame={createGame({ formationConfirmed: { offense: true, defense: true } })} />);
+    render(<App initialGame={fixtureGame({ formationConfirmed: { offense: true, defense: true } })} />);
 
     fireEvent.click(screen.getByRole('button', { name: /snap/i }));
     fireEvent.click(screen.getByTitle('4,5'));
@@ -1723,7 +1730,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('requires play before starting a computer versus computer loop and then allows pausing', async () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
 
     await new Promise((resolve) => setTimeout(resolve, 320));
 
@@ -1762,7 +1769,7 @@ describe('Chessball UI interactions', () => {
     const defenseIds: string[] = [];
 
     for (let seed = 0; seed < offensiveFormations.length; seed += 1) {
-      let game = createGame();
+      let game = fixtureGame();
       const offense = chooseComputerAction(game, generateLegalActions(game), seed, players);
       expect(offense).toMatchObject({ type: 'chooseFormation', side: 'offense' });
       if (!offense || offense.type !== 'chooseFormation') throw new Error('Expected computer offense formation');
@@ -1785,13 +1792,14 @@ describe('Chessball UI interactions', () => {
   });
 
   it('computer offense does not open live play with an immediate pass', async () => {
-    render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
+    render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'computer', away: 'human' }} />);
 
     await waitFor(() => {
       expect(screen.getByRole('combobox', { name: 'Defense formation' })).toBeEnabled();
     });
     fireEvent.change(screen.getByRole('combobox', { name: 'Defense formation' }), { target: { value: 'nickel' } });
     fireEvent.click(screen.getByRole('button', { name: /confirm defense/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ready for Snap' }));
 
     await waitFor(() => {
       expect(screen.getAllByText(/computer home: (move|handoff):/i).length).toBeGreaterThan(0);
@@ -1803,7 +1811,7 @@ describe('Chessball UI interactions', () => {
 
   it('computer versus computer does not open with a pass immediately followed by a tackle', () => {
     vi.useFakeTimers();
-    const view = render(<App initialGame={createGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
+    const view = render(<App initialGame={fixtureGame()} initialPlayers={{ home: 'computer', away: 'computer' }} />);
     try {
       fireEvent.click(menuButton(/play auto/i));
       for (let transition = 0; transition < 7; transition += 1) {
@@ -1823,7 +1831,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('computer-controlled teams attempt the extra point after a touchdown', async () => {
-    render(<App initialGame={createGame({
+    render(<App initialGame={fixtureGame({
       phase: 'betweenDowns',
       possession: 'away',
       turn: 'away',
@@ -1836,7 +1844,7 @@ describe('Chessball UI interactions', () => {
   });
 
   it('computer-controlled offense attempts a field goal on fourth down in range', async () => {
-    render(<App initialGame={createGame({
+    render(<App initialGame={fixtureGame({
       phase: 'formation',
       possession: 'away',
       direction: -1,
@@ -1855,15 +1863,15 @@ describe('Chessball UI interactions', () => {
   it('uses canonical field-goal geometry at the computer fourth-down range boundary', () => {
     const players = { home: 'computer', away: 'computer' } as const;
     const at = (x: number) => {
-      const base = createGame({ phase: 'formation', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x });
+      const base = fixtureGame({ phase: 'formation', possession: 'home', direction: 1, turn: 'home', down: 4, lineOfScrimmage: x });
       return {
         ...base,
         pieces: base.pieces.map((piece) => (piece.id === 'home-qb' ? { ...piece, coord: { x, y: 5 } } : piece)),
         ball: { kind: 'controlled' as const, pieceId: 'home-qb' },
       };
     };
-    const inRange = at(16);
-    const outOfRange = at(15);
+    const inRange = at(17);
+    const outOfRange = at(16);
 
     expect(chooseComputerAction(inRange, generateLegalActions(inRange), 0, players)).toEqual({
       type: 'choosePlayType',
@@ -1886,7 +1894,7 @@ describe('opening and conversion regressions', () => {
   });
 
   it('disables field goals and punts during a live two-point try', () => {
-    let game = applyAction(createGame({ phase: 'betweenDowns', play: { actions: [], result: { type: 'touchdown', team: 'home' } } }), { type: 'startTwoPointTry', team: 'home' });
+    let game = applyAction(fixtureGame({ phase: 'betweenDowns', play: { actions: [], result: { type: 'touchdown', team: 'home' } } }), { type: 'startTwoPointTry', team: 'home' });
     game = applyAction(game, { type: 'confirmFormation', side: 'offense' });
     game = applyAction(game, { type: 'confirmFormation', side: 'defense' });
     game = applyAction(game, { type: 'snap' });
@@ -1897,7 +1905,7 @@ describe('opening and conversion regressions', () => {
 });
 
 it('switches field size without changing the game or selection', () => {
-  const { container } = render(<App initialGame={createGame({ phase: 'live' })} initialPlayers={{ home: 'human', away: 'human' }} />);
+  const { container } = render(<App initialGame={fixtureGame({ phase: 'live' })} initialPlayers={{ home: 'human', away: 'human' }} />);
   fireEvent.click(screen.getByTitle('4,5'));
   const before = screen.getByRole('grid').innerHTML;
   expect(screen.queryByRole('button', { name: 'Fit field' })).not.toBeInTheDocument();

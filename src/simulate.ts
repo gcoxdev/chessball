@@ -202,6 +202,7 @@ function formatAuditReport(report: MatchedAuditReport): string {
     'Chessball matched audit',
     `Matchup: ${report.matchup.primary} vs ${report.matchup.comparison}`,
     `Pairs: ${report.requestedPairs} requested, ${report.completedPairs} completed, ${report.excludedPairs} excluded`,
+    `Design: ${report.gamesPerPair} games per seed group, balancing side and opening receiver`,
     `Attempted games: ${report.attemptedGames}`,
     `Statuses: ${report.statusCounts.completed} completed, ${report.statusCounts.stalled} stalled, ${report.statusCounts.crashed} crashed`,
     `Symmetry win-share interval: ${formatInterval(report.symmetry.winShareInterval)} (${report.symmetry.classification})`,

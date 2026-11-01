@@ -52,6 +52,7 @@ export function classifySkillGap(interval: BootstrapInterval): { state: 'support
 }
 
 export type RunMatchedAuditOptions = {
+  // Each seed group contains four games: both sides × both opening receivers.
   pairs: number;
   seed: number;
   primary: SimulationPolicy;
@@ -63,7 +64,7 @@ export type RunMatchedAuditOptions = {
   simulator?: (options: SimulateGameOptions) => SimulatedGame;
 };
 
-type MirrorDisclosure = { mirror: 'A' | 'B'; seed: number; status: SimulationStatus; anomalies: SimulationAnomaly[] };
+type MirrorDisclosure = { mirror: 'A' | 'B' | 'C' | 'D'; seed: number; status: SimulationStatus; anomalies: SimulationAnomaly[] };
 type OutcomeCohort = { games: number; wins: number; ties: number; losses: number; averageScoreDifferential: number | null };
 type TacticCohort = {
   exploratory: true; policy: SimulationPolicy; team: 'home' | 'away'; selections: number; opportunities: number;
@@ -73,10 +74,11 @@ type TacticCohort = {
 export type MatchedAuditReport = {
   readonly matchup: { readonly primary: SimulationPolicy; readonly comparison: SimulationPolicy; readonly formationPlan: ReadonlySimulationFormationPlan | null };
   requestedPairs: number; completedPairs: number; excludedPairs: number; attemptedGames: number;
+  gamesPerPair: 4;
   seedConvention: 'base-seed-plus-pair-index'; seedList: number[]; seedRange: { first: number; last: number };
   statusCounts: Record<SimulationStatus, number>;
   excludedPairDetails: Array<{ pair: number; seed: number; mirrors: MirrorDisclosure[] }>;
-  anomalies: Array<SimulationAnomaly & { pair: number; mirror: 'A' | 'B'; seed: number }>;
+  anomalies: Array<SimulationAnomaly & { pair: number; mirror: 'A' | 'B' | 'C' | 'D'; seed: number }>;
   symmetry: { pairEffects: number[]; scoreDeltaEffects: number[]; winShareInterval: BootstrapInterval | null; scoreDeltaInterval: BootstrapInterval | null; classification: 'actionable' | 'inconclusive' };
   skillGap: { pairEffects: number[]; scoreDeltaEffects: number[]; primaryWins: number; comparisonWins: number; ties: number; winShareInterval: BootstrapInterval | null; scoreDeltaInterval: BootstrapInterval | null; classification: ReturnType<typeof classifySkillGap> | null };
   telemetry: { actionTypes: CountMap; actionOpportunities: CountMap; formationChoices: CountMap; driveOutcomes: CountMap; selectionRates: Record<string, number>; formationStratifiedOutcomes: Record<string, { games: number; wins: number; losses: number; ties: number }>; completion: { games: number; actions: number; averageActions: number | null }; tacticCohorts: Record<string, TacticCohort> };
@@ -102,22 +104,27 @@ export function runMatchedAudit(options: RunMatchedAuditOptions): MatchedAuditRe
     const common = { seed, maxActions: options.maxActions, repeatLimit: options.repeatLimit };
     const aOptions: SimulateGameOptions = { ...common, policies: { home: options.primary, away: options.comparison }, opening: { coinWinner: 'home', choice: 'receive' }, formationPlan: options.formationPlan };
     const bOptions: SimulateGameOptions = { ...common, policies: { home: options.comparison, away: options.primary }, opening: { coinWinner: 'away', choice: 'receive' }, formationPlan: options.formationPlan && { home: options.formationPlan.away, away: options.formationPlan.home } };
-    const mirrors = [simulator(aOptions), simulator(bOptions)] as const;
+    const cells: SimulateGameOptions[] = [aOptions, bOptions,
+      { ...aOptions, opening: { coinWinner: 'away', choice: 'receive' } },
+      { ...bOptions, opening: { coinWinner: 'home', choice: 'receive' } },
+    ];
+    const labels = ['A', 'B', 'C', 'D'] as const;
+    const mirrors = cells.map(cell => simulator(cell));
     mirrors.forEach((game, index) => {
       statusCounts[game.status]++;
-      game.anomalies.forEach(anomaly => anomalies.push({ ...anomaly, pair, mirror: index ? 'B' : 'A', seed }));
+      game.anomalies.forEach(anomaly => anomalies.push({ ...anomaly, pair, mirror: labels[index], seed }));
     });
     if (mirrors.some(game => game.status !== 'completed')) {
-      excludedPairDetails.push({ pair, seed, mirrors: mirrors.map((game, index) => ({ mirror: index ? 'B' : 'A', seed, status: game.status, anomalies: game.anomalies })) });
+      excludedPairDetails.push({ pair, seed, mirrors: mirrors.map((game, index) => ({ mirror: labels[index], seed, status: game.status, anomalies: game.anomalies })) });
       continue;
     }
-    games.push({ game: mirrors[0], policyByTeam: aOptions.policies! }, { game: mirrors[1], policyByTeam: bOptions.policies! });
-    const [a, b] = mirrors.map(game => game.summary.finalScore);
-    homeShares.push(average([outcome(a.home, a.away), outcome(b.home, b.away)]));
-    homeScoreDeltas.push(average([a.home - a.away, b.home - b.away]));
-    const primaryOutcomes = [outcome(a.home, a.away), outcome(b.away, b.home)];
+    mirrors.forEach((game, index) => games.push({ game, policyByTeam: cells[index].policies! }));
+    const scores = mirrors.map(game => game.summary.finalScore);
+    homeShares.push(average(scores.map(score => outcome(score.home, score.away))));
+    homeScoreDeltas.push(average(scores.map(score => score.home - score.away)));
+    const primaryOutcomes = scores.map((score, index) => index % 2 === 0 ? outcome(score.home, score.away) : outcome(score.away, score.home));
     primaryShares.push(average(primaryOutcomes));
-    primaryScoreDeltas.push(average([a.home - a.away, b.away - b.home]));
+    primaryScoreDeltas.push(average(scores.map((score, index) => (score.home - score.away) * (index % 2 === 0 ? 1 : -1))));
     for (const result of primaryOutcomes) result === 1 ? primaryWins++ : result === 0 ? comparisonWins++ : ties++;
   }
 
@@ -128,8 +135,8 @@ export function runMatchedAudit(options: RunMatchedAuditOptions): MatchedAuditRe
   const telemetry = aggregateTelemetry(games);
   return {
     matchup: Object.freeze({ primary: options.primary, comparison: options.comparison, formationPlan: freezeFormationPlan(options.formationPlan) }),
-    requestedPairs: options.pairs, completedPairs: games.length / 2, excludedPairs: excludedPairDetails.length, attemptedGames: options.pairs * 2,
-    seedConvention: 'base-seed-plus-pair-index', seedList, seedRange: { first: seedList[0], last: seedList[seedList.length - 1] }, statusCounts,
+    requestedPairs: options.pairs, completedPairs: games.length / 4, excludedPairs: excludedPairDetails.length, attemptedGames: options.pairs * 4,
+    gamesPerPair: 4, seedConvention: 'base-seed-plus-pair-index', seedList, seedRange: { first: seedList[0], last: seedList[seedList.length - 1] }, statusCounts,
     excludedPairDetails, anomalies,
     symmetry: { pairEffects: homeShares, scoreDeltaEffects: homeScoreDeltas, winShareInterval: winInterval, scoreDeltaInterval: scoreInterval, classification: winInterval && scoreInterval ? classifySymmetry(winInterval, scoreInterval) : 'inconclusive' },
     skillGap: { pairEffects: primaryShares, scoreDeltaEffects: primaryScoreDeltas, primaryWins, comparisonWins, ties, winShareInterval: primaryInterval, scoreDeltaInterval: primaryScoreInterval, classification: primaryInterval ? classifySkillGap(primaryInterval) : null },
