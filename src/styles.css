@@ -222,7 +222,6 @@ button {
 }
 
 .button-grid,
-.action-list,
 .segmented-control,
 .history-controls,
 .utility-actions {
@@ -247,7 +246,6 @@ button {
 }
 
 .button-grid button,
-.action-list button,
 .segmented-control button,
 .history-controls button,
 .utility-actions button {
@@ -264,7 +262,6 @@ button {
 }
 
 .button-grid button:disabled,
-.action-list button:disabled,
 .segmented-control button:disabled,
 .history-controls button:disabled,
 .confirm-button:disabled,
@@ -274,7 +271,6 @@ button {
 }
 
 .button-grid button:not(:disabled):hover,
-.action-list button:not(:disabled):hover,
 .segmented-control button:not(:disabled):hover,
 .history-controls button:not(:disabled):hover,
 .utility-actions button:not(:disabled):hover {
@@ -925,6 +921,20 @@ button {
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
+.square.pass-target::after,
+.square.handoff-target::after,
+.square.tackle-target::after,
+.square.recovery-target::after {
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  border-radius: 2px;
+}
+
+.square.handoff-target::after { border-color: #83caff; }
+.square.tackle-target::after { border-color: #ff968e; }
+
+.square.handoff-target::before,
+.square.recovery-target::before,
 .square.pass-target::before,
 .square.tackle-target::before,
 .square.kick-target::before,
@@ -949,6 +959,18 @@ button {
 .square.pass-target::before {
   content: "P";
   border-radius: 50%;
+}
+
+.square.handoff-target::before {
+  content: "H";
+  border-radius: 2px;
+  background: #235b83;
+}
+
+.square.recovery-target::before {
+  content: "R";
+  border-radius: 2px;
+  background: #775114;
 }
 
 .square.tackle-target::before {
@@ -1372,8 +1394,6 @@ button {
 }
 
 
-.action-list button { flex-wrap: wrap; }
-.action-odds { flex-basis: 100%; font-size: 0.75rem; font-weight: normal; }
 .match-length-options { margin-top: 1.25rem; }
 
 /* Keep the board fluid by default; larger squares scroll only inside this region. */
@@ -1432,7 +1452,6 @@ button {
 }
 
 .button-grid button,
-.action-list button,
 .utility-actions button {
   padding: 8px 10px;
   overflow-wrap: anywhere;
@@ -1443,7 +1462,6 @@ button > svg { flex-shrink: 0; }
 
 :is(
   .button-grid button,
-  .action-list button,
   .formation-picker select,
   .confirm-button,
   .segmented-control button,
@@ -1546,10 +1564,11 @@ button > svg { flex-shrink: 0; }
   .square.goal-post-left { box-shadow: inset 3px 0 0 var(--gold); }
   .square.goal-post-right { box-shadow: inset -3px 0 0 var(--gold); }
   .piece.selected { outline-width: 1px; }
+  .square.handoff-target::before, .square.recovery-target::before,
   .square.pass-target::before, .square.tackle-target::before, .square.kick-target::before {
-    width: clamp(5px, 1.2cqw, 8px);
-    height: clamp(5px, 1.2cqw, 8px);
-    font-size: clamp(4px, 0.9cqw, 6px);
+    width: clamp(8px, 1.4cqw, 10px);
+    height: clamp(8px, 1.4cqw, 10px);
+    font-size: clamp(6px, 1cqw, 8px);
   }
 }
 
@@ -1577,7 +1596,10 @@ button > svg { flex-shrink: 0; }
 }
 .menu-trigger:hover { border-color: var(--gold); background: #23331e; }
 
-.control-rail .formation-panel {
+.control-rail .formation-controls {
+  min-width: 0;
+  padding: 6px;
+  margin: -6px;
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
@@ -1587,8 +1609,7 @@ button > svg { flex-shrink: 0; }
   scrollbar-width: thin;
   scrollbar-color: var(--gold) var(--field-dark);
 }
-.control-rail .formation-panel > h2,
-.control-rail .formation-panel > .selection-summary { flex-shrink: 0; margin: 0; }
+.control-rail .formation-controls > .selection-summary { flex-shrink: 0; margin: 0; }
 .control-rail .formation-picker {
   position: relative;
   display: flex;
@@ -1606,8 +1627,6 @@ button > svg { flex-shrink: 0; }
 .control-rail .formation-panel .piece-card { flex-wrap: nowrap; }
 .control-rail .formation-panel .quiet { margin: 0; white-space: nowrap; }
 .control-rail .command-panel > .button-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
-.control-rail .action-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.control-rail .action-list:empty { display: none; }
 .control-rail .piece-card { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 0; }
 .game-message { margin: 0; color: rgba(244, 240, 222, 0.78); font-size: 0.85rem; line-height: 1.5; }
 .history-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
@@ -1649,14 +1668,6 @@ button > svg { flex-shrink: 0; }
 @media (max-width: 599px) {
   .app-header { gap: 12px; }
   .app-header > .chessball-wordmark { font-size: 2.1rem; }
-  .control-rail .formation-panel { position: relative; }
-  .control-rail .formation-panel > h2 {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
   .control-rail .formation-picker { flex: 0 0 auto; gap: 8px; }
   .control-rail .formation-picker select { flex: 0 0 100px; width: 100px; min-width: 100px; padding-inline: 8px 20px; font-size: 0.75rem; }
   .control-rail .formation-heading label { font-size: 0.65rem; }
@@ -1667,3 +1678,15 @@ button > svg { flex-shrink: 0; }
 @media (prefers-reduced-motion: reduce) {
   .rules-dialog.menu-drawer { animation: none; }
 }
+
+.board-target-help {
+  position: sticky;
+  left: 0;
+  width: 100%;
+  padding: 6px 2px 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.board-target-help p { margin: 0; }
+.target-detail { min-height: 1.5em; color: rgba(244, 240, 222, 0.75); }

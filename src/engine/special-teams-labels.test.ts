@@ -75,17 +75,39 @@ describe.each(['home', 'away'] as const)('%s special teams', team => {
     expect(role(startNextDown(stopped), `${team}-qb`)).toBe('FS');
   });
 
-  it('uses the extra-point kicker instead of the old kickoff unit after a return touchdown', () => {
-    const touchdown = createGame({ phase: 'betweenDowns', possession: team, turn: team,
-      pendingKick: { kind: 'kickoff', kickingTeam: receivingTeam, receivingTeam: team, from: { x: 8, y: 5 }, distance: 7, roll: { die1: 3, die2: 4 } },
-      play: { actions: [], result: { type: 'touchdown', team } },
+  describe.each(['normal', 'fake', 'kickoff', 'punt'] as const)('%s touchdown labels', origin => {
+    it.each([true, false])('preserves every label through an extra point (good=%s) until the kickoff formation', good => {
+      let state = createGame({ possession: team, lineOfScrimmage: 12, phase: 'live' });
+      let carrierId = `${team}-qb`;
+      if (origin === 'fake') {
+        state = applyAction(createGame({ possession: team, lineOfScrimmage: 12, playType: 'fieldGoal', formationConfirmed: { offense: true, defense: true } }), { type: 'fakeFieldGoal' });
+        carrierId = `${team}-fb`;
+      } else if (origin === 'kickoff' || origin === 'punt') {
+        carrierId = `${team}-wr1`;
+        state = createGame({ phase: 'kickReturn', possession: team, turn: team, lineOfScrimmage: 12,
+          playType: origin === 'punt' ? 'punt' : 'normal',
+          pendingKick: { kind: origin, kickingTeam: receivingTeam, receivingTeam: team, from: { x: 8, y: 5 }, distance: 7, roll: { die1: 3, die2: 4 } },
+          ball: { kind: 'controlled', pieceId: carrierId },
+        });
+      }
+      state = { ...state, pieces: state.pieces.map(piece => piece.id === carrierId
+        ? { ...piece, coord: { x: team === 'home' ? 21 : 2, y: 5 } } : piece) };
+      const expected = labels(state);
+      const touchdown = applyAction(state, { type: 'move', pieceId: carrierId, to: { x: team === 'home' ? 22 : 1, y: 5 } });
+      expect(touchdown.play.result?.type).toBe('touchdown');
+      expect(labels(touchdown)).toEqual(expected);
+      const converted = applyAction(touchdown, { type: 'kick', kind: 'extraPoint', kickerId: `${team}-qb`, roll: good ? { die1: 5, die2: 5 } : { die1: 1, die2: 1 } });
+      expect(converted.play.result).toMatchObject({ type: 'extraPoint', good });
+      expect(converted.pieces).toEqual(touchdown.pieces);
+      expect(labels(converted)).toEqual(expected);
+      expect(converted.pieces.map(piece => activeRoleDescription(converted, piece)))
+        .toEqual(touchdown.pieces.map(piece => activeRoleDescription(touchdown, piece)));
+      const nextKickoff = startNextDown(converted);
+      expect(nextKickoff.phase).toBe('kickoff');
+      expect(role(nextKickoff, `${team}-qb`)).toBe('K');
+      expect(role(nextKickoff, `${team}-wr1`)).toBe('ST');
+      expect(role(nextKickoff, `${receivingTeam}-wr1`)).toBe('KR');
+      expect(labels(nextKickoff)).not.toEqual(expected);
     });
-    const converted = applyAction(touchdown, { type: 'kick', kind: 'extraPoint', kickerId: `${team}-qb`, roll: { die1: 5, die2: 5 } });
-    expect(role(converted, `${team}-qb`)).toBe('K');
-    expect(role(converted, `${receivingTeam}-qb`)).toBe('ST');
-    const nextKickoff = startNextDown(converted);
-    expect(nextKickoff.phase).toBe('kickoff');
-    expect(role(nextKickoff, `${team}-qb`)).toBe('K');
-    expect(role(nextKickoff, `${receivingTeam}-wr1`)).toBe('KR');
   });
 });

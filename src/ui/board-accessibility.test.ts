@@ -65,9 +65,11 @@ describe('describeBoardSquare', () => {
       legalMove: true,
       powerMove: true,
       passTarget: true,
+      handoffTarget: true,
+      recoveryTarget: true,
       tackleTarget: true,
       kickPlacement: true,
-    })).toBe('Square 3, 4; home QB; controlled ball; selected; legal move; power move; pass target; tackle target; kick placement');
+    })).toBe('Square 3, 4; home QB; controlled ball; selected; legal move; power move; pass target; handoff target; recover ball; tackle target; kick placement');
   });
 
   it('describes a loose ball without inventing occupant or action states', () => {
@@ -78,6 +80,8 @@ describe('describeBoardSquare', () => {
     const name = describeBoardSquare({
       coord: { x: 0, y: 0 },
       readOnly: true,
+      handoffTarget: true,
+      recoveryTarget: true,
       legalMove: true,
       powerMove: true,
       passTarget: true,

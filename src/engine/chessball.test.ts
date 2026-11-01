@@ -1770,7 +1770,7 @@ describe('game flow', () => {
     expect(next.forwardPassUsed).toBe(false);
     expect(next.formationShiftsRemaining).toEqual({ home: 2, away: 2 });
     expect(next.play.actions).toEqual([]);
-    expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('home-qb');
+    expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('home-ol3');
     expect(piece(next, 'home-qb').coord.x).toBe(next.lineOfScrimmage - 2);
     expect(piece(next, 'away-fb').coord.x).toBe(next.lineOfScrimmage + 1);
   });
@@ -1836,7 +1836,7 @@ describe('game flow', () => {
     expect(next.possession).toBe('away');
     expect(next.down).toBe(1);
     expect(next.lineOfScrimmage).toBe(5);
-    expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-qb');
+    expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-ol3');
   });
 
   it('spots a fourth-down tackle turnover where the carrier was stopped', () => {
@@ -1880,7 +1880,7 @@ describe('game flow', () => {
     expect(next.possession).toBe('away');
     expect(next.down).toBe(1);
     expect(next.lineOfScrimmage).toBe(9);
-    expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-qb');
+    expect(next.ball.kind === 'controlled' ? next.ball.pieceId : '').toBe('away-ol3');
   });
 
   it('spots interceptions at the defender square without overlapping the receiver', () => {

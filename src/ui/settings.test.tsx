@@ -61,7 +61,7 @@ describe('player appearance settings', () => {
       fireEvent.click(within(dialog).getByRole('radio', { name: label }));
       expect(board.querySelectorAll(`.piece--${style}`)).toHaveLength(22);
       expect(signature()).toEqual(before);
-      expect(board.querySelector('.football-marker')).toHaveAttribute('aria-label', 'Ball: controlled by QB');
+      expect(board.querySelector('.football-marker')).toHaveAttribute('aria-label', 'Ball: controlled by C');
     }
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(trigger).toHaveFocus();
@@ -138,11 +138,11 @@ it('shows pass odds before committing a pass', () => {
   render(<App initialGame={game} initialPlayers={humans} />);
   const qb = game.pieces.find(piece => piece.id === 'home-qb')!;
   fireEvent.click(screen.getByTitle(`${qb.coord.x},${qb.coord.y}`));
-  fireEvent.click(screen.getByRole('button', { name: 'Pass' }));
-  const passes = screen.getAllByRole('button', { name: /^Pass to .*% success/ });
-  expect(passes.length).toBeGreaterThan(0);
+  expect(screen.queryByRole('button', { name: 'Pass' })).not.toBeInTheDocument();
   expect(screen.getByRole('img', { name: 'Ball: controlled by QB' })).toBeInTheDocument();
   const targets = screen.getAllByRole('gridcell').filter(cell => cell.classList.contains('pass-target'));
-  expect(targets.length).toBe(passes.length);
+  expect(targets.length).toBeGreaterThan(0);
+  fireEvent.mouseEnter(targets[0]);
+  expect(screen.getByText(/Pass at .*% success/)).toBeInTheDocument();
   expect(targets.every(cell => cell.getAttribute('aria-description')?.includes('% success'))).toBe(true);
 });

@@ -18,6 +18,8 @@ export type BoardSquareDescription = {
   legalMove?: boolean;
   powerMove?: boolean;
   passTarget?: boolean;
+  handoffTarget?: boolean;
+  recoveryTarget?: boolean;
   tackleTarget?: boolean;
   kickPlacement?: boolean;
   readOnly?: boolean;
@@ -55,6 +57,8 @@ export function describeBoardSquare(square: BoardSquareDescription): string {
     if (square.legalMove) phrases.push('legal move');
     if (square.powerMove) phrases.push('power move');
     if (square.passTarget) phrases.push('pass target');
+    if (square.handoffTarget) phrases.push('handoff target');
+    if (square.recoveryTarget) phrases.push('recover ball');
     if (square.tackleTarget) phrases.push('tackle target');
     if (square.kickPlacement) phrases.push('kick placement');
   }

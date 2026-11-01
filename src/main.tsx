@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Menu, Play, RadioTower, RotateCcw, Settings, Shield, StepForward, X, Zap } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Flag, Goal, Menu, Play, RadioTower, RotateCcw, Settings, Shield, StepForward, X } from 'lucide-react';
 import {
   actionTeam,
   activeRoleCode,
@@ -24,6 +24,7 @@ import {
 import type { Action, CoinFace, Coord, DiceRoll, Formation, FormationSide, GameState, Piece, Team } from './engine/types';
 import { fieldSpotLabel } from './engine/field';
 import { specialTeamsDefensiveFormations, specialTeamsFormations } from './engine/special-teams';
+import { boardActions, boardCoordKey } from './ui/board-actions';
 import { AccessibleBoard } from './ui/AccessibleBoard';
 import { Modal } from './ui/Modal';
 import { GameMenu } from './ui/GameMenu';
@@ -35,7 +36,6 @@ import { chooseComputerAction, type PlayerControl, type PlayerKind } from './eng
 export { chooseComputerAction } from './engine/computer';
 import './styles.css';
 
-type TargetMode = 'move' | 'pass' | null;
 type HistoryEntry = {
   id: number;
   game: GameState;
@@ -71,11 +71,9 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const [autoPaused, setAutoPaused] = useState(false);
   const [computerMatchStarted, setComputerMatchStarted] = useState(false);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
-  const [targetMode, setTargetMode] = useState<TargetMode>(null);
   const [message, setMessage] = useState(initialGame ? 'Choose and confirm formations, optionally shift up to two pieces per side, then snap.' : 'Choose player types, then press Start Game.');
   const [showRules, setShowRules] = useState(false);
   const [reviewingFinal, setReviewingFinal] = useState(false);
-  const passButtonRef = useRef<HTMLButtonElement>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [readyForSnapGame, setReadyForSnapGame] = useState<GameState | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -112,11 +110,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
   const formationSideTeam = (side: FormationSide): Team => side === 'offense' ? game.possession : otherTeamForUi(game.possession);
   const canChooseFormationSide = (side: FormationSide): boolean =>
     !isViewingHistory && game.phase === 'formation' && players[formationSideTeam(side)] === 'human';
-  const ballCarrier = useMemo(() => {
-    const ball = game.ball;
-    return ball.kind === 'controlled' ? game.pieces.find((piece) => piece.id === ball.pieceId) : undefined;
-  }, [game]);
-  const selectedBallCarrier = selectedPiece && ballCarrier && selectedPiece.id === ballCarrier.id ? selectedPiece : undefined;
+  const humanActions = useMemo(() => isViewingHistory ? [] : legalActions.filter(action =>
+    players[actionTeam(game, action)] === 'human',
+  ), [game, legalActions, players, isViewingHistory]);
+  const targets = useMemo(() => boardActions(game, humanActions, selectedPiece?.id), [game, humanActions, selectedPiece?.id]);
   const lastRoll = useMemo(() => lastDiceRoll(game), [game]);
   const historyAnnouncement = isViewingHistory
     ? `Viewing history. Read-only. History position ${historyIndex + 1} of ${history.length}.`
@@ -183,21 +180,15 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       }
       if (resolvedAction.type === 'snap') {
         setSelectedPieceId(null);
-        setTargetMode(null);
       }
       if (actionClearsSelection(resolvedAction)) {
         setSelectedPieceId(null);
-        setTargetMode(null);
       }
       if (next.turn !== game.turn) {
         setSelectedPieceId(null);
-        setTargetMode(null);
-      } else if (next.phase !== 'live') {
-        setTargetMode(null);
       }
       if (resolvedAction.type === 'fakeFieldGoal' && source === 'human') {
         setSelectedPieceId(`${next.possession}-fb`);
-        setTargetMode('pass');
       }
     } catch (error) {
       const errorText = error instanceof Error ? error.message : 'Illegal action';
@@ -214,88 +205,28 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       if (!owner || players[owner] !== 'human') return;
     } else if (players[controlTeam] === 'computer') return;
 
-    if (game.phase === 'kickPlacement') {
-      runAction({ type: 'placeKick', at: coord });
+    const action = targets.get(boardCoordKey(coord));
+    if (action) {
+      runAction(action);
       return;
     }
-
-    if (targetMode === 'pass' && selectedBallCarrier?.team === game.turn) {
-      if (piece?.id === selectedBallCarrier.id) {
-        cancelPass();
-        return;
-      }
-      const pass = piece && legalActions.find((action): action is Extract<Action, { type: 'pass' }> =>
-        action.type === 'pass' &&
-        action.passerId === selectedBallCarrier.id &&
-        action.receiverId === piece.id,
-      );
-      if (pass) {
-        runAction(pass);
-        setTargetMode(null);
-      } else {
-        setMessage('Choose an eligible receiver.');
-      }
-      return;
-    }
-
-    if (piece && selectedPiece) {
-      const tackle = legalActions.find((action): action is Extract<Action, { type: 'tackle' }> =>
-        action.type === 'tackle' &&
-        action.defenderId === selectedPiece.id &&
-        action.targetId === piece.id,
-      );
-      if (tackle) {
-        runAction(tackle);
-        return;
-      }
-    }
-
     if (piece) {
       if (piece.id === selectedPieceId) {
         setSelectedPieceId(null);
-        setTargetMode(null);
         setMessage('Selection cleared.');
-        return;
+      } else {
+        setSelectedPieceId(piece.id);
+        setMessage(humanActions.some(action => action.type === 'recover' && action.pieceId === piece.id) ? `${activeRoleCode(game, piece)} selected. Click its R marker to recover the ball.` : `${activeRoleCode(game, piece)} selected.`);
       }
-
-      setSelectedPieceId(piece.id);
-      setTargetMode('move');
-      setMessage(`${activeRoleCode(game, piece)} selected.`);
       return;
     }
-
-    const isLegalMoveTarget = selectedPiece && legalActions.some((action) =>
-      (action.type === 'move' || action.type === 'shift') &&
-      action.pieceId === selectedPiece.id &&
-      sameCoord(action.to, coord),
-    );
-
-    const powerMove = selectedPiece && legalActions.find((action): action is Extract<Action, { type: 'powerMove' }> =>
-      action.type === 'powerMove' &&
-      action.pieceId === selectedPiece.id &&
-      sameCoord(action.to, coord),
-    );
-
-    if (selectedPiece && targetMode === 'move' && powerMove) {
-      runAction(powerMove);
-      setTargetMode(null);
-      return;
-    }
-
-    if (selectedPiece && targetMode === 'move' && isLegalMoveTarget) {
-      runAction({ type: game.phase === 'formation' ? 'shift' : 'move', pieceId: selectedPiece.id, to: coord });
-      setTargetMode(null);
-      return;
-    }
-
-    if (selectedPiece) setMessage('Choose a highlighted square or another piece.');
+    if (selectedPiece || game.phase === 'kickPlacement') setMessage('Choose a highlighted square or another piece.');
   };
 
   const snap = () => runAction({ type: 'snap' });
   const confirmFormation = (side: FormationSide) => {
     runAction({ type: 'confirmFormation', side });
     setSelectedPieceId(null);
-    setTargetMode(null);
     setMessage(`${side === 'offense' ? 'Offense' : 'Defense'} formation confirmed.`);
   };
   const flipCoin = () => runAction({ type: 'coinToss' });
@@ -317,34 +248,21 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     const team = game.play.result?.type === 'touchdown' ? game.play.result.team : game.possession;
     runAction({ type: 'startTwoPointTry', team });
   };
-  const cancelPass = () => {
-    setTargetMode('move');
-    setMessage('Pass cancelled. Choose a move or another action.');
-    passButtonRef.current?.focus();
-  };
-  const startPass = () => {
-    if (!selectedBallCarrier) return;
-    if (targetMode === 'pass') { cancelPass(); return; }
-    setTargetMode('pass');
-    setMessage(`Choose a receiver for ${activeRoleCode(game, selectedBallCarrier)}.`);
-  };
   useEffect(() => {
-    if (targetMode !== 'pass' || showMenu || showRules || showSettings || showNewGameConfirmation || isViewingHistory) return;
+    if (!selectedPieceId || showMenu || showRules || showSettings || showNewGameConfirmation || isViewingHistory) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
-      setTargetMode('move');
-      setMessage('Pass cancelled. Choose a move or another action.');
-      passButtonRef.current?.focus();
+      setSelectedPieceId(null);
+      setMessage('Selection cleared.');
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [targetMode, showMenu, showRules, showSettings, showNewGameConfirmation, isViewingHistory]);
+  }, [selectedPieceId, showMenu, showRules, showSettings, showNewGameConfirmation, isViewingHistory]);
 
   const chooseFormation = (side: FormationSide, formation: Formation) => {
     runAction({ type: 'chooseFormation', side, formationId: formation.id });
     setSelectedPieceId(null);
-    setTargetMode(null);
     setMessage(`${side === 'offense' ? 'Offense' : 'Defense'} formation: ${formation.name}.`);
   };
   const nextDown = () => {
@@ -359,7 +277,6 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       commitGame(next, label);
       setMessage(label);
       setSelectedPieceId(null);
-      setTargetMode(null);
     } catch (error) {
       const errorText = error instanceof Error ? error.message : 'Could not start next down';
       pushEvent(`Illegal action: ${errorText}`);
@@ -379,7 +296,6 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setAutoPaused(false);
     setComputerMatchStarted(false);
     setSelectedPieceId(null);
-    setTargetMode(null);
     setShowCoinToss(false);
     setReviewingFinal(false);
     setShowRules(false);
@@ -409,7 +325,6 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setAutoPaused(false);
     setComputerMatchStarted(false);
     setSelectedPieceId(null);
-    setTargetMode(null);
     setShowCoinToss(!bothComputers);
     setMessage(bothComputers ? 'New computer match. Coin toss resolved automatically.' : 'New Chessball match. Flip the coin to start.');
   };
@@ -513,10 +428,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               game={game}
               pieceStyle={pieceStyle}
               displayGame={boardGame}
-              legalActions={legalActions}
+              legalActions={humanActions}
               selectedPiece={selectedPiece}
-              selectedBallCarrier={selectedBallCarrier}
-              targetMode={targetMode}
               ballCoord={ballCoord(game)}
               showBallMarker={showBallMarker}
               readOnly={isViewingHistory}
@@ -534,30 +447,32 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           {showFormationPanel && (
             <div className="panel formation-panel">
               <h2>Formations</h2>
-              <FormationPicker
-                title="Offense"
-                formations={[...offensiveFormations, specialTeamsFormations.fieldGoal.offense, specialTeamsFormations.punt.offense]}
-                groups={[
-                  { label: 'Normal play', formations: offensiveFormations },
-                  { label: 'Field goal', formations: [specialTeamsFormations.fieldGoal.offense], disabled: Boolean(game.conversion) },
-                  { label: 'Punt', formations: [specialTeamsFormations.punt.offense], disabled: Boolean(game.conversion) },
-                ]}
-                activeId={game.playType === 'normal' ? game.formation.offense.id : specialTeamsFormations[game.playType].offense.id}
-                confirmed={game.formationConfirmed.offense}
-                disabled={!canChooseFormationSide('offense') || game.formationConfirmed.offense}
-                onChoose={(formation) => chooseFormation('offense', formation)}
-                onConfirm={() => confirmFormation('offense')}
-              />
-              <FormationPicker
-                title="Defense"
-                formations={game.playType === 'normal' ? defensiveFormations : specialTeamsDefensiveFormations[game.playType]}
-                activeId={game.playType === 'normal' ? game.formation.defense.id : kickingDefenseFormation(game).id}
-                confirmed={game.formationConfirmed.defense}
-                disabled={!canChooseFormationSide('defense') || game.formationConfirmed.defense}
-                onChoose={(formation) => chooseFormation('defense', formation)}
-                onConfirm={() => confirmFormation('defense')}
-              />
-              <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
+              <div className="formation-controls">
+                <FormationPicker
+                  title="Offense"
+                  formations={[...offensiveFormations, specialTeamsFormations.fieldGoal.offense, specialTeamsFormations.punt.offense]}
+                  groups={[
+                    { label: 'Normal play', formations: offensiveFormations },
+                    { label: 'Field goal', formations: [specialTeamsFormations.fieldGoal.offense], disabled: Boolean(game.conversion) },
+                    { label: 'Punt', formations: [specialTeamsFormations.punt.offense], disabled: Boolean(game.conversion) },
+                  ]}
+                  activeId={game.playType === 'normal' ? game.formation.offense.id : specialTeamsFormations[game.playType].offense.id}
+                  confirmed={game.formationConfirmed.offense}
+                  disabled={!canChooseFormationSide('offense') || game.formationConfirmed.offense}
+                  onChoose={(formation) => chooseFormation('offense', formation)}
+                  onConfirm={() => confirmFormation('offense')}
+                />
+                <FormationPicker
+                  title="Defense"
+                  formations={game.playType === 'normal' ? defensiveFormations : specialTeamsDefensiveFormations[game.playType]}
+                  activeId={game.playType === 'normal' ? game.formation.defense.id : kickingDefenseFormation(game).id}
+                  confirmed={game.formationConfirmed.defense}
+                  disabled={!canChooseFormationSide('defense') || game.formationConfirmed.defense}
+                  onChoose={(formation) => chooseFormation('defense', formation)}
+                  onConfirm={() => confirmFormation('defense')}
+                />
+                <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
+              </div>
             </div>
           )}
 
@@ -588,16 +503,6 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                 <button type="button" onClick={kickoff} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'kickoff'}>
                   <Goal size={17} /> Kickoff
                 </button>
-                <button
-                  type="button"
-                  ref={passButtonRef}
-                  aria-pressed={targetMode === 'pass'}
-                  onClick={startPass}
-                  disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'live' || selectedBallCarrier?.team !== game.turn || !legalActions.some(action => action.type === 'pass' && action.passerId === selectedBallCarrier.id)}
-                >
-                  <RadioTower size={17} /> Pass
-                </button>
-                {targetMode === 'pass' && <button type="button" onClick={cancelPass}>Cancel Pass</button>}
                 {game.phase === 'betweenDowns' && game.play.result?.type === 'touchdown' ? (
                   <>
                     <button type="button" onClick={extraPoint} disabled={isViewingHistory || players[controlTeam] === 'computer'}>
@@ -616,25 +521,6 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                 <p className="hint">Extra point: {oddsText(game, { type: 'kick', kind: 'extraPoint', kickerId: `${game.possession}-qb` })}</p>
               )}
               <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
-              <div className="action-list">
-                {legalActions
-                  .filter((action) => selectedPiece && actionForPiece(action, selectedPiece.id))
-                  .filter((action) => targetMode !== 'pass' || action.type === 'pass')
-                  .filter((action) => !(action.type === 'kick' && game.phase === 'formation'))
-                  .filter((action) => action.type !== 'move' && action.type !== 'shift' && action.type !== 'tackle' && (action.type !== 'pass' || targetMode === 'pass'))
-                  .map((action, index) => (
-                    <button key={`${action.type}-${index}`} type="button" disabled={isViewingHistory || players[actionTeam(game, action)] !== 'human'} onClick={() => runAction(action)}>
-                      <Zap size={15} /> {actionLabel(game, action)}
-                      <ActionOddsLabel game={game} action={action} />
-                    </button>
-                  ))}
-                {selectedPiece && (game.phase === 'live' || game.phase === 'kickReturn') && tackleActions(game, selectedPiece, legalActions).map((action) => (
-                  <button key={`${action.defenderId}-${action.targetId}`} type="button" disabled={isViewingHistory || players[actionTeam(game, action)] !== 'human'} onClick={() => runAction(action)}>
-                    <Shield size={15} /> {tackleLabel(game, action)}
-                    <ActionOddsLabel game={game} action={action} />
-                  </button>
-                ))}
-              </div>
               <p className="hint">{game.phase === 'kickPlacement' ? 'Choose a landing row on the exact rolled-distance column.' : 'Passes, tackles, and kicks roll 2d6. Longer distance means a higher target number.'}</p>
             </div>
           )}
@@ -816,11 +702,6 @@ function FinalResultModal({
   );
 }
 
-function ActionOddsLabel({ game, action }: { game: GameState; action: Action }) {
-  const text = oddsText(game, action);
-  return text ? <small className="action-odds">{text}</small> : null;
-}
-
 function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObject<HTMLElement | null>; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   return (
@@ -840,9 +721,12 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
           <li>Gain 10 yards in four downs by reaching the highlighted line to gain. Short gains and losses keep the same target for the next down. Reaching it earns first down and a new target two columns ahead; failing on fourth down turns the ball over.</li>
           <li>When a new line to gain would reach or pass the end zone, it becomes goal-to-go. You must score within the remaining downs; reaching the last field column does not renew first down. Losses keep the goal-to-go target.</li>
           <li>Choose an offense formation from the Normal play, Field goal, or Punt groups before confirming. Changing groups resets both confirmations. In normal play, confirm your formation to lock the preset and unlock up to two optional shifts before the snap. Each shift moves one piece one square horizontally or vertically on its own side of the line. Both formations must be confirmed before snapping. When defending against the computer, choose Ready for Snap after making or skipping your shifts. Kicking formations do not allow shifts. Defense can choose a standard or safe field-goal alignment, or the punt-return unit.</li>
+          <li>The Center (C) starts with the ball and snaps it to the QB. The Center follows OL movement and receiving rules; on kicking formations this player is the long snapper (LS).</li>
           <li>The offense acts first after the snap, then teams alternate one action at a time. A stopped play waits for Next; a touchdown first requires a conversion choice.</li>
           <li>A normal drive ends with a field-goal attempt, punt, interception, strip turnover, turnover on downs, safety, or completed touchdown conversion. Drive counts update on Next. Kickoff returns do not consume a normal drive; a punt return completes the kicking team's drive.</li>
         </ul>
+        <h3>Playing on the field</h3>
+        <p>Select a player to see all available actions at once. Click a circle to move, a diamond for a power move, H to hand off, P to pass, or T to tackle. Adjacent teammates are handoff targets instead of pass targets. Select a player standing on a loose ball, then click its R marker to recover. Press Escape to clear selection. Clicking the selected player also clears it unless its square is marked R, which recovers the ball. Point to or focus a marked square to see its action and dice odds.</p>
         <h3>Movement and possession</h3>
         <ul>
           <li>Base movement: QB/FS moves 1 square in any direction; RB/MLB moves up to 3 orthogonally, with one optional right-angle turn; FB/OLB moves up to 2 in a straight orthogonal line; WR/CB moves up to 5 straight or diagonally; TE/SS moves up to 3 straight or diagonally; OL/DL moves 1 orthogonally. A turning RB/MLB move uses its full movement allowance.</li>
@@ -866,9 +750,9 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
         <ul>
           <li>Special-teams labels: K = kicker, P = punter, KR = kick returner, PR = punt returner, ST = coverage, BL = blocker, LS = long snapper, and H = holder. The two receiver pieces serve as returners; any receiving-team piece may recover the kick. These labels remain through the stopped play, then normal positions return for the next scrimmage down.</li>
           <li>Kickoffs start from the kicking team's 35-yard line. Kickoffs and punts roll 2d6 for distance: each point moves the landing column 1 square, or 5 yards, from the kicker. The kicking team chooses the landing row on that column. Kicks beyond the board are capped at the farthest end-zone column.</li>
-          <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, use Recover. If the kicking team moves onto or recovers an untouched loose kick first, the play ends and the receiving team starts there. A normally tackled returner starts a fresh first down at the tackle spot, regardless of return yardage; a strip or safety still applies.</li>
+          <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, select that player and click its R marker to recover. If the kicking team moves onto or recovers an untouched loose kick first, the play ends and the receiving team starts there. A normally tackled returner starts a fresh first down at the tackle spot, regardless of return yardage; a strip or safety still applies.</li>
           <li>During returns, every role can move within a square radius: receiving team up to 2 squares, coverage team up to 3. Teammates may be crossed, opponents block the path, and the destination must be empty. Only movement, tackles, and recovery are available; passing, handoffs, power moves, and further kicks wait until normal play.</li>
-          <li>Select a formation in the Field goal or Punt group before the snap on any normal down. After both sides confirm, Snap & Kick resolves the field goal immediately; Snap & Punt rolls the kick and continues to placement and a possible return. The snap and kick are one action, with no intervening movement or block roll. Ordinary live plays and two-point tries do not allow kicks. After confirming a field-goal formation, Fake & Pass snaps the ball to the holder and starts normal live play from the same positions. Choose an eligible receiver using the normal passing rules, or continue with another legal live action. A fake cannot turn back into a kick. Safe field-goal defense protects against the fake but does not alter kick odds. Fake punts are not available.</li>
+          <li>Select a formation in the Field goal or Punt group before the snap on any normal down. After both sides confirm, Snap & Kick resolves the field goal immediately; Snap & Punt rolls the kick and continues to placement and a possible return. The snap and kick are one action, with no intervening movement or block roll. Ordinary live plays and two-point tries do not allow kicks. After confirming a field-goal formation, Fake & Pass snaps the ball to the holder and starts normal live play from the same positions. The selected holder can move, hand off, or pass by clicking a marked target. A fake cannot turn back into a kick. Safe field-goal defense protects against the fake but does not alter kick odds. Fake punts are not available.</li>
           <li>A field goal measures through the ten-yard end zone to the posts at the back edge/end line. Roll 2d6 and meet or beat 5 + half that grid distance, rounded up. A made field goal scores 3; a miss turns possession over at the kick spot.</li>
         </ul>
         <h3>Scoring and restarts</h3>
@@ -1232,51 +1116,6 @@ function squareClass(game: GameState, coord: Coord, piece: Piece | undefined, le
   return classes.join(' ');
 }
 
-function actionForPiece(action: Action, pieceId: string): boolean {
-  if (action.type === 'move' || action.type === 'powerMove' || action.type === 'shift' || action.type === 'recover') return action.pieceId === pieceId;
-  if (action.type === 'handoff') return action.fromId === pieceId || action.toId === pieceId;
-  if (action.type === 'pass') return action.passerId === pieceId;
-  if (action.type === 'kick') return action.kickerId === pieceId;
-  if (action.type === 'tackle') return action.defenderId === pieceId;
-  return false;
-}
-
-function tackleActions(_game: GameState, selected: Piece, legalActions: Action[]): Extract<Action, { type: 'tackle' }>[] {
-  return legalActions.filter((action): action is Extract<Action, { type: 'tackle' }> =>
-    action.type === 'tackle' && action.defenderId === selected.id,
-  );
-}
-
-function actionLabel(game: GameState, action: Action): string {
-  if (action.type === 'coinToss') return 'Flip coin';
-  if (action.type === 'chooseKickoffChoice') return capitalize(action.choice);
-  if (action.type === 'startTwoPointTry') return 'Two-point try';
-  if (action.type === 'placeKick') return `Place kick at ${coordLabel(action.at)}`;
-  if (action.type === 'handoff') {
-    const target = game.pieces.find((piece) => piece.id === action.toId);
-    return target
-      ? `Handoff to ${target.team} ${activeRoleCode(game, target)} at ${coordLabel(target.coord)}`
-      : `Handoff to ${action.toId.split('-')[1].toUpperCase()}`;
-  }
-  if (action.type === 'pass') {
-    const receiver = game.pieces.find(piece => piece.id === action.receiverId);
-    return receiver ? `Pass to ${activeRoleCode(game, receiver)} at ${coordLabel(receiver.coord)}` : 'Pass';
-  }
-  if (action.type === 'recover') return 'Recover ball';
-  if (action.type === 'powerMove') return `Power move to ${coordLabel(action.to)}`;
-  if (action.type === 'tackle') {
-    const target = game.pieces.find(piece => piece.id === action.targetId);
-    return `Tackle ${target ? activeRoleCode(game, target) : action.targetId.split('-')[1].toUpperCase()}`;
-  }
-  if (action.type === 'kick') {
-    if (action.kind === 'extraPoint') return 'Extra point';
-    if (action.kind === 'kickoff') return 'Kickoff';
-    if (action.kind === 'punt') return 'Punt';
-    return 'Field goal';
-  }
-  return action.type;
-}
-
 function describeAction(before: GameState, action: Action, after: GameState): string {
   if (action.type === 'coinToss') {
     const winner = after.coinToss.winner ?? before.turn;
@@ -1288,7 +1127,7 @@ function describeAction(before: GameState, action: Action, after: GameState): st
     return `Coin toss choice: ${capitalize(action.team)} chose to ${action.choice}. ${capitalize(receivingTeam)} will receive. ${capitalize(kickingTeam)} kicks off.`;
   }
   if (action.type === 'choosePlayType') return `Play type: ${action.playType === 'normal' ? 'Normal play' : action.playType === 'punt' ? 'Punt' : 'Field goal'}. Both sides must confirm their formations.`;
-  if (action.type === 'fakeFieldGoal') return `Fake field goal: ${before.possession} snapped to the holder. Choose an eligible receiver; normal passing rules apply.`;
+  if (action.type === 'fakeFieldGoal') return `Fake field goal: ${before.possession} snapped to the holder. Select a marked move, handoff, or pass target; normal live rules apply.`;
   if (action.type === 'snap') return `Snap: ${before.possession} started the play. ${capitalize(after.possession)} offense moves first; select a player to act.`;
   if (action.type === 'confirmFormation') return `Formation: ${capitalize(action.side)} confirmed.`;
   if (action.type === 'startTwoPointTry') return `Two-point try: ${action.team} lines up from the goal line.`;
@@ -1487,12 +1326,6 @@ function showsScrimmageMarkers(game: GameState): boolean {
 
 function markerYardLabel(game: GameState, column: number): string {
   return fieldSpotLabel(column, game.direction);
-}
-
-function tackleLabel(game: GameState, action: Extract<Action, { type: 'tackle' }>): string {
-  const target = game.pieces.find((piece) => piece.id === action.targetId);
-  if (!target) return `Tackle ${action.targetId}`;
-  return `Tackle ${target.team} ${activeRoleCode(game, target)} at ${coordLabel(target.coord)}`;
 }
 
 function coordLabel(coord: Coord): string {

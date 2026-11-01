@@ -12,41 +12,44 @@ const square = (x: number, y: number) => screen.getByTitle(`${x},${y}`);
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('assessment interaction regressions', () => {
-  it.each(['button', 'escape', 'toggle', 'carrier'])('cancels pass targeting with %s without spending a turn', method => {
+  it.each(['escape', 'carrier'])('clears all action targets with %s without spending a turn', method => {
     const state = applyAction(confirmed(createGame({ lineOfScrimmage: 12 })), { type: 'snap' });
-    render(<App initialGame={state} initialPlayers={humanPlayers} />);
+    const { container } = render(<App initialGame={state} initialPlayers={humanPlayers} />);
     fireEvent.click(square(10, 5));
-    fireEvent.click(screen.getByRole('button', { name: /^Pass$/ }));
-    expect(screen.getByRole('button', { name: 'Cancel Pass' })).toBeInTheDocument();
-    if (method === 'button') fireEvent.click(screen.getByRole('button', { name: 'Cancel Pass' }));
-    if (method === 'escape') fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
-    if (method === 'toggle') fireEvent.click(screen.getByRole('button', { name: /^Pass$/ }));
-    if (method === 'carrier') fireEvent.click(square(10, 5));
-    expect(screen.queryByRole('button', { name: 'Cancel Pass' })).not.toBeInTheDocument();
+    expect(container.querySelector('.pass-target')).not.toBeNull();
+    expect(container.querySelector('.handoff-target')).not.toBeNull();
+    expect(container.querySelector('.move-target')).not.toBeNull();
+    if (method === 'escape') fireEvent.keyDown(document.body, { key: 'Escape' });
+    else fireEvent.click(square(10, 5));
+    expect(container.querySelector('.pass-target, .handoff-target, .move-target')).toBeNull();
     expect(screen.getByRole('status')).toHaveTextContent(/home to act/i);
+    fireEvent.click(square(10, 5));
     fireEvent.click(square(10, 4));
     expect(screen.getByRole('status')).toHaveTextContent(/moved to 10,4.*away to act/i);
   });
 
-  it('lets a fake holder cancel the pass and move instead', () => {
+  it('lets a fake holder move immediately without cancelling pass targeting', () => {
     const setup = confirmed(createGame({ lineOfScrimmage: 12, playType: 'fieldGoal' }));
     const fake = applyAction(setup, { type: 'fakeFieldGoal' });
     const move = generateLegalActions(fake).find(a => a.type === 'move' && a.pieceId === 'home-fb');
     if (!move || move.type !== 'move') throw new Error('Fixture needs a holder move');
     render(<App initialGame={setup} initialPlayers={humanPlayers} />);
     fireEvent.click(screen.getByRole('button', { name: 'Fake & Pass' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel Pass' }));
+    expect(square(move.to.x, move.to.y)).toHaveClass('move-target');
     fireEvent.click(square(move.to.x, move.to.y));
     expect(screen.getByRole('status')).toHaveTextContent(/home H moved.*away to act/i);
   });
 
-  it('does not enter pass targeting with no eligible receivers', () => {
+  it('keeps movement available when the carrier has no eligible receivers', () => {
     const setup = createGame({ phase: 'live', lineOfScrimmage: 12 });
     setup.pieces = setup.pieces.filter(p => p.id === 'home-qb' || p.role === 'ol' || p.team === 'away');
-    render(<App initialGame={setup} initialPlayers={humanPlayers} />);
+    const { container } = render(<App initialGame={setup} initialPlayers={humanPlayers} />);
     fireEvent.click(square(10, 5));
-    expect(screen.getByRole('button', { name: /^Pass$/ })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Cancel Pass' })).not.toBeInTheDocument();
+    expect(container.querySelector('.pass-target')).toBeNull();
+    expect(container.querySelector('.move-target')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /^Pass$/ })).not.toBeInTheDocument();
+    fireEvent.click(square(10, 4));
+    expect(screen.getByRole('status')).toHaveTextContent(/moved to 10,4.*away to act/i);
   });
 
   it.each(['home', 'away'] as const)('lets human defense confirm, shift, and release %s computer offense to snap', possession => {

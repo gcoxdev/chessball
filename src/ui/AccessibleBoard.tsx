@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { PieceToken, type PieceStyle } from './PieceToken';
 import { oddsText } from './action-odds';
 import { activeRoleCode } from '../engine/rules';
 import type { Action, Coord, GameState, Piece } from '../engine/types';
 import { chooseBoardFocus, describeBoardSquare, moveBoardFocus } from './board-accessibility';
 
-type TargetMode = 'move' | 'pass' | null;
+import { boardActions, boardCoordKey } from './board-actions';
 
 export type AccessibleBoardProps = {
   game: GameState;
@@ -13,8 +13,6 @@ export type AccessibleBoardProps = {
   displayGame: GameState;
   legalActions: Action[];
   selectedPiece?: Piece;
-  selectedBallCarrier?: Piece;
-  targetMode: TargetMode;
   ballCoord: Coord;
   showBallMarker: boolean;
   readOnly: boolean;
@@ -27,6 +25,15 @@ export type AccessibleBoardProps = {
 };
 
 export function AccessibleBoard(props: AccessibleBoardProps) {
+  const targets = useMemo(() => boardActions(props.game, props.readOnly ? [] : props.legalActions, props.selectedPiece?.id),
+    [props.game, props.legalActions, props.selectedPiece?.id, props.readOnly]);
+  const [inspectedCoord, setInspectedCoord] = useState<Coord>();
+  const inspectedAction = inspectedCoord ? targets.get(boardCoordKey(inspectedCoord)) : undefined;
+  const inspectedOdds = inspectedAction ? oddsText(props.game, inspectedAction) : undefined;
+  const actionNames = { move: 'Move', shift: 'Shift', powerMove: 'Power move', pass: 'Pass', handoff: 'Handoff (no roll)', tackle: 'Tackle', recover: 'Recover ball', placeKick: 'Place kick' };
+  const availableTypes = new Set([...targets.values()].map(action => action.type));
+  const legend = ([['move', '● Move'], ['shift', '● Shift'], ['powerMove', '◆ Power'], ['handoff', 'H Handoff'], ['pass', 'P Pass'], ['tackle', 'T Tackle'], ['recover', 'R Recover'], ['placeKick', 'K Place kick']] as const)
+    .filter(([type]) => availableTypes.has(type)).map(([, label]) => label).join(' · ');
   const initialBall = props.showBallMarker ? props.ballCoord : undefined;
   const [activeCoord, setActiveCoord] = useState<Coord>(() => chooseBoardFocus({
     board: props.game.board,
@@ -75,6 +82,7 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
   };
 
   return (
+    <>
     <div
       aria-colcount={props.game.board.width}
       aria-describedby={props.describedBy}
@@ -90,35 +98,24 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
           const coord = { x, y };
           const piece = pieceAt(props.game, coord);
           const ballHere = props.showBallMarker && sameCoord(props.ballCoord, coord);
-          const legalMove = Boolean(props.selectedPiece && props.legalActions.some((action) =>
-            (action.type === 'move' || action.type === 'shift') &&
-            action.pieceId === props.selectedPiece?.id && sameCoord(action.to, coord),
-          ));
-          const powerMove = Boolean(props.selectedPiece && props.legalActions.some((action) =>
-            action.type === 'powerMove' && action.pieceId === props.selectedPiece?.id && sameCoord(action.to, coord),
-          ));
-          const passTarget = Boolean(props.selectedBallCarrier && props.targetMode === 'pass' && piece && props.legalActions.some((action) =>
-            action.type === 'pass' && action.passerId === props.selectedBallCarrier?.id && action.receiverId === piece.id,
-          ));
-          const tackleTarget = Boolean(props.selectedPiece && piece && props.legalActions.some((action) =>
-            action.type === 'tackle' && action.defenderId === props.selectedPiece?.id && action.targetId === piece.id,
-          ));
-          const kickPlacement = props.game.phase === 'kickPlacement' && props.legalActions.some((action) =>
-            action.type === 'placeKick' && sameCoord(action.at, coord),
-          );
-          const rollAction = props.legalActions.find(action =>
-            (passTarget && action.type === 'pass' && action.passerId === props.selectedBallCarrier?.id && action.receiverId === piece?.id) ||
-            (!passTarget && tackleTarget && action.type === 'tackle' && action.defenderId === props.selectedPiece?.id && action.targetId === piece?.id) ||
-            (powerMove && action.type === 'powerMove' && action.pieceId === props.selectedPiece?.id && sameCoord(action.to, coord)),
-          );
-          const odds = rollAction ? oddsText(props.game, rollAction) : undefined;
+          const action = targets.get(boardCoordKey(coord));
+          const legalMove = action?.type === 'move' || action?.type === 'shift';
+          const powerMove = action?.type === 'powerMove';
+          const passTarget = action?.type === 'pass';
+          const handoffTarget = action?.type === 'handoff';
+          const tackleTarget = action?.type === 'tackle';
+          const recoveryTarget = action?.type === 'recover';
+          const kickPlacement = action?.type === 'placeKick';
+          const odds = action ? oddsText(props.game, action) : undefined;
           const selected = Boolean(piece && piece.id === props.selectedPiece?.id);
-          const legal = legalMove || passTarget || kickPlacement;
+          const legal = legalMove || passTarget || handoffTarget || tackleTarget || recoveryTarget || kickPlacement;
           const stateClasses = [
             selected && 'is-selected',
             legalMove && 'move-target',
             powerMove && 'power-target',
             passTarget && 'pass-target',
+            handoffTarget && 'handoff-target',
+            recoveryTarget && 'recovery-target',
             tackleTarget && 'tackle-target',
             kickPlacement && 'kick-target',
           ].filter(Boolean).join(' ');
@@ -130,6 +127,8 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
             legalMove,
             powerMove,
             passTarget,
+            handoffTarget,
+            recoveryTarget,
             tackleTarget,
             kickPlacement,
             readOnly: props.readOnly,
@@ -148,7 +147,10 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
                 setActiveCoord(coord);
                 activate(coord);
               }}
-              onFocus={() => setActiveCoord(coord)}
+              onMouseEnter={() => setInspectedCoord(coord)}
+              onMouseLeave={() => setInspectedCoord(undefined)}
+              onFocus={() => { setActiveCoord(coord); setInspectedCoord(coord); }}
+              onBlur={() => setInspectedCoord(undefined)}
               onKeyDown={(event) => onKeyDown(event, coord)}
               ref={(node) => {
                 if (node) refs.current.set(coordKey(coord), node);
@@ -176,6 +178,13 @@ export function AccessibleBoard(props: AccessibleBoardProps) {
         </div>
       ))}
     </div>
+    {targets.size > 0 && <div className="board-target-help">
+      <p className="target-legend">{legend}</p>
+      <p className="target-detail">{inspectedAction && inspectedCoord
+        ? `${actionNames[inspectedAction.type]} at ${inspectedCoord.x},${inspectedCoord.y}${inspectedOdds ? ` — ${inspectedOdds}` : ''}`
+        : 'Click a marked target to act. Point to or focus a target for details.'}</p>
+    </div>}
+    </>
   );
 }
 

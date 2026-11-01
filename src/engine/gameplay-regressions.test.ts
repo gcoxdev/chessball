@@ -65,6 +65,11 @@ for (const team of ['home', 'away'] as const) {
       let state = createGame({ phase: 'live', possession: team, turn: opponent, lineOfScrimmage: line, ball: { kind: 'controlled', pieceId: `${team}-qb` } });
       expect(isGoalToGo(state)).toBe(true);
       for (let down = 1; down <= 4; down++) {
+        if (state.phase === 'formation') {
+          state = legalApply(state, { type: 'confirmFormation', side: 'offense' });
+          state = legalApply(state, { type: 'confirmFormation', side: 'defense' });
+          state = legalApply(state, { type: 'snap' });
+        }
         const at = down === 1 ? line - dir : line;
         state = arrange({ ...state, phase: 'live', turn: opponent }, { [`${team}-qb`]: { x: at, y: 5 }, [`${opponent}-wr1`]: { x: at, y: 6 } });
         state = legalApply(state, { type: 'tackle', defenderId: `${opponent}-wr1`, targetId: `${team}-qb`, roll });

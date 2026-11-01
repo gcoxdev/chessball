@@ -355,7 +355,7 @@ describe('Chessball UI interactions', () => {
     expect(rows).toHaveLength(11);
     rows.forEach((row) => expect(within(row).getAllByRole('gridcell')).toHaveLength(24));
     expect(cells).toHaveLength(264);
-    expect(cells.filter((cell) => cell.tabIndex === 0)).toEqual([screen.getByTitle('4,5')]);
+    expect(cells.filter((cell) => cell.tabIndex === 0)).toEqual([screen.getByTitle('5,5')]);
     expect(cells.filter((cell) => cell.tabIndex === -1)).toHaveLength(263);
   });
 
@@ -368,7 +368,6 @@ describe('Chessball UI interactions', () => {
         displayGame={game}
         legalActions={[]}
         selectedPiece={selectedPiece}
-        targetMode={null}
         ballCoord={{ x: 4, y: 5 }}
         showBallMarker
         readOnly={false}
@@ -400,8 +399,6 @@ describe('Chessball UI interactions', () => {
           { type: 'placeKick', at: { x: 8, y: 5 } },
         ]}
         selectedPiece={qb}
-        selectedBallCarrier={qb}
-        targetMode="pass"
         ballCoord={{ x: 4, y: 5 }}
         showBallMarker
         readOnly={false}
@@ -492,8 +489,8 @@ describe('Chessball UI interactions', () => {
     render(<App initialGame={fixtureGame()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Offense' }));
 
-    const qb = screen.getByTitle('4,5');
-    expect(qb).toHaveAccessibleName(/square 4, 5; home qb; controlled ball/i);
+    const center = screen.getByTitle('5,5');
+    expect(center).toHaveAccessibleName(/square 5, 5; home C; controlled ball/i);
     fireEvent.click(screen.getByTitle('4,1'));
     expect(screen.getByTitle('4,1')).toHaveAccessibleName(/selected/i);
     expect(screen.getByTitle('4,1')).toHaveAttribute('aria-selected', 'true');
@@ -827,6 +824,8 @@ describe('Chessball UI interactions', () => {
     render(<App initialGame={kickoff} initialPlayers={{ home: 'human', away: 'human' }} />);
     const kicker = screen.getByTitle('9,5');
     expect(kicker).toHaveAccessibleName(/home K\b/);
+    fireEvent.click(kicker);
+    expect(screen.getAllByRole('button', { name: /^Kickoff\b/ })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Kickoff' }));
     expect(kicker).toHaveAccessibleName(/home K\b/);
     expect(within(kicker).getByText('K')).toBeInTheDocument();
@@ -1321,8 +1320,9 @@ describe('Chessball UI interactions', () => {
 
     fireEvent.click(screen.getByTitle('4,5'));
 
-    expect(screen.getByRole('button', { name: /handoff to home ol at 4,4/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /handoff to home ol at 5,5/i })).toBeInTheDocument();
+    expect(screen.getByTitle('4,4')).toHaveAccessibleName(/home OL; handoff target/);
+    expect(screen.getByTitle('5,5')).toHaveAccessibleName(/home C; handoff target/);
+    expect(screen.queryByRole('button', { name: /handoff/i })).not.toBeInTheDocument();
   });
 
   it('highlights legal power-move targets differently from normal moves', () => {
@@ -1416,7 +1416,7 @@ describe('Chessball UI interactions', () => {
     expect(screen.getByText('No piece selected.')).toBeInTheDocument();
   });
 
-  it('only enables passing for the selected ball carrier', () => {
+  it('only marks pass targets when the ball carrier is selected', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.7);
     const ready = applyAction(
       applyAction(
@@ -1428,24 +1428,23 @@ describe('Chessball UI interactions', () => {
     const state = {
       ...ready,
       pieces: ready.pieces.map((piece) => {
-        if (piece.id === 'home-wr1') return { ...piece, coord: { x: 5, y: 4 } };
+        if (piece.id === 'home-wr1') return { ...piece, coord: { x: 5, y: 2 } };
         if (piece.id === 'home-ol2') return { ...piece, coord: { x: 3, y: 4 } };
         return piece;
       }),
     };
     render(<App initialGame={state} initialPlayers={{ home: 'human', away: 'human' }} />);
 
-    fireEvent.click(screen.getByTitle('5,4'));
-    expect(screen.getByRole('button', { name: /^pass$/i })).toBeDisabled();
+    fireEvent.click(screen.getByTitle('5,2'));
+    expect(screen.queryAllByRole('gridcell', { name: /pass target/i })).toHaveLength(0);
 
     fireEvent.click(screen.getByTitle('4,5'));
-    expect(screen.getByRole('button', { name: /^pass$/i })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /^pass$/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^pass$/i }));
-    expect(screen.getByTitle('5,4')).toHaveAccessibleName(/pass target/i);
-    fireEvent.click(screen.getByTitle('5,4'));
+    expect(screen.getByTitle('5,2')).toHaveAccessibleName(/pass target/i);
+    fireEvent.click(screen.getByTitle('5,2'));
 
-    expect(within(historyLog()).getByText(/completed pass: home hit WR at 5,4/i)).toBeInTheDocument();
+    expect(within(historyLog()).getByText(/completed pass: home hit WR at 5,2/i)).toBeInTheDocument();
   });
 
   it('logs incomplete passes clearly in the event log', () => {
@@ -1464,7 +1463,6 @@ describe('Chessball UI interactions', () => {
     render(<App initialGame={longPass} initialPlayers={{ home: 'human', away: 'human' }} />);
 
     fireEvent.click(screen.getByTitle('4,5'));
-    fireEvent.click(screen.getByRole('button', { name: /^pass$/i }));
     fireEvent.click(screen.getByTitle('20,1'));
 
     expect(within(historyLog()).getByText(/incomplete pass/i)).toBeInTheDocument();
@@ -1525,9 +1523,9 @@ describe('Chessball UI interactions', () => {
   it('shows a football marker in the corner of the controlled ball square', () => {
     render(<App initialGame={fixtureGame()} />);
 
-    const qbSquare = screen.getByTitle('4,5');
+    const centerSquare = screen.getByTitle('5,5');
 
-    expect(within(qbSquare).getByLabelText('Ball: controlled by QB')).toHaveClass('football-marker');
+    expect(within(centerSquare).getByLabelText('Ball: controlled by C')).toHaveClass('football-marker');
   });
 
   it('shows a football marker in the corner of a loose ball square', () => {
@@ -1594,7 +1592,7 @@ describe('Chessball UI interactions', () => {
     expect(historyLog()).not.toHaveTextContent(/distance 7/i);
   });
 
-  it('shows one clear tackle command for the selected defender only against the ball carrier', () => {
+  it('marks only the ball carrier as a tackle target for the selected defender', () => {
     const base = fixtureGame({ phase: 'live', turn: 'away' });
     const state = {
       ...base,
@@ -1609,10 +1607,10 @@ describe('Chessball UI interactions', () => {
     render(<App initialGame={state} initialPlayers={{ home: 'human', away: 'human' }} />);
     fireEvent.click(screen.getByTitle('8,6'));
 
-    expect(screen.getAllByRole('button', { name: /tackle home wr at 8,5/i })).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: /tackle wr2/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('gridcell', { name: /tackle target/i })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /tackle/i })).not.toBeInTheDocument();
     expect(screen.getByTitle('8,5')).toHaveAccessibleName(/tackle target/i);
-    expect(screen.getByTitle('8,5')).not.toHaveClass('legal');
+    expect(screen.getByTitle('8,5')).toHaveClass('tackle-target');
   });
 
   it('does not show tackle commands when selecting the ball carrier target', () => {

@@ -343,6 +343,7 @@ export function createGame(overrides: Partial<GameState> = {}): GameState {
   };
 
   const state = { ...base, ...overrides, pieces: overrides.pieces ?? base.pieces };
+  if (state.phase === 'formation' && !overrides.ball) state.ball = { kind: 'controlled', pieceId: `${possession}-ol3` };
   if (state.playType !== 'normal' && !overrides.pieces) {
     state.pieces = formationPieces(possession, lineOfScrimmage, { ...specialTeamsFormations[state.playType], defense: kickingDefenseFormation(state) });
   }
@@ -380,7 +381,9 @@ export function activeRoleCode(state: GameState, piece: Piece): string {
   // Possession changes when a kick lands, but the special-teams units stay
   // on the field until the next down. Use the kick's teams, not possession.
   const kickResult = state.play.result;
-  const scoringKick = state.phase === 'betweenDowns' && (kickResult?.type === 'fieldGoal' || kickResult?.type === 'extraPoint')
+  // Extra points resolve without lining up a new unit. Keep the touchdown's
+  // formation labels until startNextDown puts the kickoff teams on the field.
+  const scoringKick = state.phase === 'betweenDowns' && kickResult?.type === 'fieldGoal'
     ? kickResult : undefined;
   // A return's kick metadata survives a two-point try for drive accounting.
   // It must not keep special-teams labels on the conversion formation.
@@ -392,7 +395,7 @@ export function activeRoleCode(state: GameState, piece: Piece): string {
     const kickAction = state.play.actions.find((action): action is Extract<Action, { type: 'kick' }> => action.type === 'kick' && action.kind === kickKind);
     const kickerId = kickAction?.kickerId ?? `${kickingTeam}-qb`;
     if (piece.id === kickerId) return kickKind === 'punt' ? 'P' : 'K';
-    if (piece.team === kickingTeam && state.playType !== 'normal' && kickKind !== 'kickoff' && kickKind !== 'extraPoint') {
+    if (piece.team === kickingTeam && state.playType !== 'normal' && kickKind !== 'kickoff') {
       if (piece.id === `${kickingTeam}-ol3`) return 'LS';
       if (kickKind === 'fieldGoal' && piece.id === `${kickingTeam}-fb`) return 'H';
       if (kickKind === 'punt') return piece.role === 'wr' ? 'ST' : 'BL';
@@ -402,6 +405,8 @@ export function activeRoleCode(state: GameState, piece: Piece): string {
     if (piece.role === 'wr') return kickKind === 'punt' ? 'PR' : 'KR';
     return 'BL';
   }
+
+  if (piece.id === `${state.possession}-ol3`) return 'C';
 
   const roleCodes: Record<Role, [string, string]> = {
     qb: ['QB', 'FS'],
@@ -419,7 +424,7 @@ export function activeRoleDescription(state: GameState, piece: Piece): string {
   const specialTeams: Record<string, string> = {
     K: 'Kicker', P: 'Punter', KR: 'Kick returner', PR: 'Punt returner',
     ST: 'Special teams coverage', BL: 'Special teams blocker',
-    LS: 'Long snapper', H: 'Holder',
+    LS: 'Long snapper', H: 'Holder', C: 'Center',
   };
   return specialTeams[activeRoleCode(state, piece)] ?? piece.label;
 }
@@ -548,7 +553,9 @@ export function applyAction(state: GameState, action: Action): GameState {
     if (state.phase !== 'formation' || state.playType !== action.kind) throw new Error('Choose a matching kicking formation before the snap');
     if (!formationsReady(state)) throw new Error('Both formations must be confirmed before the kick');
     if (action.kickerId !== `${state.possession}-qb`) throw new Error('Only the designated kicker or punter may kick');
-    return kick({ ...state, turn: state.possession }, action);
+    if (state.ball.kind !== 'controlled' || ![`${state.possession}-ol3`, action.kickerId].includes(state.ball.pieceId)) throw new Error('The long snapper or kicker must control the ball');
+    // Snap & Kick/Punt is one action; transfer possession before resolving it.
+    return kick({ ...state, turn: state.possession, ball: { kind: 'controlled', pieceId: action.kickerId } }, action);
   }
   if (state.phase !== 'live' && state.phase !== 'kickReturn') throw new Error(`Cannot apply ${action.type} while phase is ${state.phase}`);
 
@@ -647,7 +654,7 @@ export function startNextDown(state: GameState): GameState {
     forwardPassUsed: false,
     formationShiftsRemaining: { home: 2, away: 2 },
     formationConfirmed: { offense: false, defense: false },
-    ball: { kind: 'controlled', pieceId: `${nextPossession}-qb` },
+    ball: { kind: 'controlled', pieceId: `${nextPossession}-ol3` },
     conversion: undefined,
     pendingKick: undefined,
     play: { actions: [] },
@@ -833,7 +840,7 @@ function chooseFormation(state: GameState, action: Extract<Action, { type: 'choo
       ...state.formationShiftsRemaining,
       [resetTeam]: 2,
     },
-    ball: { kind: 'controlled', pieceId: `${state.possession}-qb` },
+    ball: { kind: 'controlled', pieceId: `${state.possession}-ol3` },
     play: appendAction(state, action),
   };
 }
@@ -847,7 +854,7 @@ function choosePlayType(state: GameState, action: Extract<Action, { type: 'choos
     pieces: formationPieces(state.possession, state.lineOfScrimmage, action.playType === 'normal' ? state.formation : specialTeamsFormations[action.playType]),
     formationConfirmed: { offense: false, defense: false },
     formationShiftsRemaining: action.playType === 'normal' ? { home: 2, away: 2 } : { home: 0, away: 0 },
-    ball: { kind: 'controlled', pieceId: `${state.possession}-qb` },
+    ball: { kind: 'controlled', pieceId: `${state.possession}-ol3` },
     play: { actions: [action] },
   };
 }
@@ -964,7 +971,7 @@ function startTwoPointTry(state: GameState, action: Extract<Action, { type: 'sta
     formationConfirmed: { offense: false, defense: false },
     formationShiftsRemaining: { home: 2, away: 2 },
     pieces: formationPieces(action.team, lineOfScrimmage, state.formation),
-    ball: { kind: 'controlled', pieceId: `${action.team}-qb` },
+    ball: { kind: 'controlled', pieceId: `${action.team}-ol3` },
     conversion: { team: action.team },
     playType: 'normal',
     play: { actions: [action] },
