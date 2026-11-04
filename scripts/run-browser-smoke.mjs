@@ -16,14 +16,17 @@ async function retry(action, description) {
 const targets = await retry(async () => {
   try {
     const response = await fetch(`${cdp}/json`, { signal: AbortSignal.timeout(1000) });
-    return response.ok ? response.json() : null;
+    if (!response.ok) return null;
+    const targets = await response.json();
+    // Chrome can accept requests before its initial page target exists.
+    return targets.some(target => target.type === 'page' && target.webSocketDebuggerUrl) ? targets : null;
   } catch { return null; }
 }, 'Chromium debugging endpoint');
 await retry(async () => {
   try { return (await fetch(url, { signal: AbortSignal.timeout(1000) })).ok; }
   catch { return false; }
 }, 'production preview');
-const page = targets.find(target => target.type === 'page');
+const page = targets.find(target => target.type === 'page' && target.webSocketDebuggerUrl);
 assert.ok(page?.webSocketDebuggerUrl, 'Chromium must have an open page');
 const socket = new WebSocket(page.webSocketDebuggerUrl);
 const errors = [];

@@ -27,9 +27,49 @@ jobs:
       - name: Check the production app in Chromium
         shell: bash
         run: |
-          npm run preview -- --host 127.0.0.1 --port 4177 --strictPort > /tmp/chessball-preview.log 2>&1 &
+          browser_workdir=$(mktemp -d)
+          preview_pid=
+          browser_pid=
+          cleanup() {
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              for log in "$browser_workdir"/*.log; do
+                [ -f "$log" ] || continue
+                echo "::group::$(basename "$log")"
+                cat "$log"
+                echo "::endgroup::"
+              done
+            fi
+            for pid in "$preview_pid" "$browser_pid"; do
+              [ -n "$pid" ] || continue
+              kill "$pid" 2>/dev/null || true
+              wait "$pid" 2>/dev/null || true
+            done
+            # Chrome helpers may still be releasing the temporary profile.
+            rm -rf "$browser_workdir" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+
+          google-chrome --version
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4177 --strictPort > "$browser_workdir/preview.log" 2>&1 &
           preview_pid=$!
-          google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --remote-debugging-port=9224 --user-data-dir=/tmp/chessball-browser-smoke about:blank > /tmp/chessball-browser.log 2>&1 &
+          google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-first-run --no-default-browser-check --remote-debugging-address=127.0.0.1 --remote-debugging-port=9224 --user-data-dir="$browser_workdir/profile" about:blank > "$browser_workdir/browser.log" 2>&1 &
           browser_pid=$!
-          trap 'kill "$preview_pid" "$browser_pid" 2>/dev/null || true' EXIT
+
+          # Cold runner startup can outlast the smoke test's UI polling budget.
+          browser_ready_deadline=$((SECONDS + 60))
+          until curl --noproxy '*' --fail --silent --max-time 1 http://127.0.0.1:9224/json/version > /dev/null &&
+                curl --noproxy '*' --fail --silent --max-time 1 http://127.0.0.1:4177/ > /dev/null; do
+            if ! kill -0 "$browser_pid" 2>/dev/null || ! kill -0 "$preview_pid" 2>/dev/null; then
+              echo '::error::Browser or preview exited before becoming ready.'
+              exit 1
+            fi
+            if [ "$SECONDS" -ge "$browser_ready_deadline" ]; then
+              echo '::error::Browser or preview did not become ready within 60 seconds.'
+              exit 1
+            fi
+            sleep 0.25
+          done
           npm run test:browser
