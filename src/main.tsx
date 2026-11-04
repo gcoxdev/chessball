@@ -30,21 +30,13 @@ import { Modal } from './ui/Modal';
 import { GameMenu } from './ui/GameMenu';
 import { SettingsDialog } from './ui/SettingsDialog';
 import { loadPieceStyle, savePieceStyle, loadMatchLength, saveMatchLength, type MatchLength } from './ui/settings';
+import { clearSavedMatch, createOpeningGame, loadSavedMatch, saveMatch, type HistoryEntry, type EventEntry, type Transition } from './ui/saved-match';
 import { oddsText } from './ui/action-odds';
 import type { PieceStyle } from './ui/PieceToken';
 import { chooseComputerAction, type PlayerControl, type PlayerKind } from './engine/computer';
 export { chooseComputerAction } from './engine/computer';
 import './styles.css';
 
-type HistoryEntry = {
-  id: number;
-  game: GameState;
-  label: string;
-};
-type EventEntry = {
-  id: number;
-  text: string;
-};
 type MatchProgress = {
   completed: number;
   total: number;
@@ -54,6 +46,11 @@ type MatchProgress = {
 export const COMPUTER_ACTION_DELAY_MS = 120;
 
 export function App({ initialGame, initialPlayers }: { initialGame?: GameState; initialPlayers?: PlayerControl } = {}) {
+  // Supplied fixtures are isolated from the user's saved browser match.
+  const persistenceEnabled = initialGame === undefined;
+  const [saved, setSaved] = useState(() => persistenceEnabled ? loadSavedMatch() : {});
+  const savedGame = saved.match?.history[saved.match.history.length - 1].game;
+  const [saveFailed, setSaveFailed] = useState(false);
   const [matchLength, setMatchLength] = useState<MatchLength>(loadMatchLength);
   const changeMatchLength = (length: MatchLength) => {
     setMatchLength(length);
@@ -150,10 +147,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setEvents((current) => [entry, ...current].slice(0, 80));
   };
 
-  const commitGame = (next: GameState, label: string) => {
+  const commitGame = (next: GameState, label: string, transition: Transition) => {
     setHistory((current) => {
       const base = current.slice(0, historyIndex + 1);
-      return [...base, { id: base.length, game: next, label }];
+      return [...base, { id: base.length, game: next, label, transition }];
     });
     setHistoryIndex(historyIndex + 1);
     pushEvent(label);
@@ -171,9 +168,10 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       if (source === 'human' && players[owner] !== 'human') return;
       const resolvedAction = withDice(action);
       const next = applyAction(game, resolvedAction);
+      if (next.phase !== game.phase && document.activeElement?.closest('.command-panel')) workspaceHeadingRef.current?.focus();
       const label = describeAction(game, resolvedAction, next);
       const eventText = source === 'computer' ? `Computer ${owner}: ${label}` : label;
-      commitGame(next, eventText);
+      commitGame(next, eventText, { type: 'action', action: resolvedAction });
       setMessage(next.play.result ? resultText(next) : eventText);
       if (resolvedAction.type === 'chooseKickoffChoice') {
         setShowCoinToss(false);
@@ -273,8 +271,9 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
 
     try {
       const next = startNextDown(game);
+      if (document.activeElement?.closest('.command-panel')) workspaceHeadingRef.current?.focus();
       const label = describeNextDown(game, next);
-      commitGame(next, label);
+      commitGame(next, label, { type: 'nextDown' });
       setMessage(label);
       setSelectedPieceId(null);
     } catch (error) {
@@ -286,6 +285,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
 
   const reset = () => {
     if (isViewingHistory) return;
+    if (persistenceEnabled) setSaveFailed(!clearSavedMatch());
+    setSaved({});
     const pregame = createPregameGame(matchLength);
     const label = 'Pregame: choose player types, then press Start Game.';
     setHistory([{ id: 0, game: pregame, label }]);
@@ -310,6 +311,8 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     if (game.phase !== 'pregame' && game.phase !== 'final') return;
     setShowMenu(false);
     setReviewingFinal(false);
+    setSaved({});
+    setShowNewGameConfirmation(false);
     const opening = createOpeningGame(matchLength);
     const automaticCoinToss = bothComputers ? applyAction(opening, withDice({ type: 'coinToss' })) : opening;
     const next = automaticCoinToss.coinToss.winner
@@ -328,6 +331,35 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
     setShowCoinToss(!bothComputers);
     setMessage(bothComputers ? 'New computer match. Coin toss resolved automatically.' : 'New Chessball match. Flip the coin to start.');
   };
+
+  const resumeGame = () => {
+    const match = saved.match;
+    if (!match) return;
+    setHistory(match.history);
+    setHistoryIndex(match.history.length - 1);
+    setEvents(match.events);
+    eventId.current = Math.max(0, ...match.events.map(event => event.id)) + 1;
+    setPlayers(match.players);
+    setAutoPaused(match.autoPaused);
+    setComputerMatchStarted(match.computerMatchStarted);
+    setLargeBoard(match.largeBoard);
+    setSelectedPieceId(null);
+    setReadyForSnapGame(null);
+    setReviewingFinal(false);
+    const latest = match.history[match.history.length - 1];
+    setShowCoinToss(latest.game.phase === 'coinToss');
+    setShowMenu(false);
+    setSaved({});
+    setMessage(`Match resumed. ${latest.label}`);
+    workspaceHeadingRef.current?.focus();
+  };
+
+  // Always save the latest position, even when the user is viewing old moves.
+  // Selection, focus, and temporary dialogs are intentionally not game state.
+  useEffect(() => {
+    if (!persistenceEnabled || history[history.length - 1].game.phase === 'pregame') return;
+    setSaveFailed(!saveMatch({ history, events, players, autoPaused, computerMatchStarted, largeBoard }));
+  }, [persistenceEnabled, history, events, players, autoPaused, computerMatchStarted, largeBoard]);
 
   const setPlayerKind = (team: Team, kind: PlayerKind) => {
     if (isViewingHistory || playerSelectionLocked) return;
@@ -407,7 +439,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
         >
           <div className="field-toolbar">
             <DicePanel roll={lastRoll} />
-            {game.phase === 'pregame' && (
+            {game.phase === 'pregame' && !saved.match && (
               <button className="start-game-button" type="button" disabled={isViewingHistory} onClick={startGame}>
                 <Play size={18} /> Start Game
               </button>
@@ -422,6 +454,20 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               <span>{isViewingHistory ? `Viewing history ${historyIndex + 1}/${history.length}` : `${game.turn.toUpperCase()} to act`}</span>
             </div>
           </div>
+          {game.phase === 'pregame' && saved.match && (
+            <section className="panel resume-panel" aria-label="Saved match">
+              <div>
+                <h2>Saved match</h2>
+                <p>Home {savedGame?.score.home} — Away {savedGame?.score.away} · Quarter {savedGame?.quarter}</p>
+              </div>
+              <div className="button-grid">
+                <button type="button" onClick={resumeGame}><Play size={17} /> {savedGame?.phase === 'final' ? 'Review Saved Game' : 'Resume Game'}</button>
+                <button type="button" onClick={openNewGameConfirmation}>Start New Game</button>
+              </div>
+            </section>
+          )}
+          {game.phase === 'pregame' && saved.notice && <p className="hint" role="alert">{saved.notice}</p>}
+          {saveFailed && <p className="hint" role="alert">Your latest changes could not be saved. Keep this tab open to retain your match.</p>}
           <p className="visually-hidden" id="field-size-help">{largeBoard ? 'Swipe or scroll across the field.' : 'The whole field fits the screen. Change field size in Settings.'}</p>
           <div className={`board-scroller${largeBoard ? ' is-enlarged' : ''}`} ref={boardScrollerRef}>
             <AccessibleBoard
@@ -482,7 +528,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           {showCommandPanel && (
             <div className="panel command-panel">
               <h2>Command</h2>
-              <div className="button-grid">
+              {['formation', 'kickoff', 'betweenDowns'].includes(game.phase) && <div className="button-grid">
                 {humanDefenseSetup && <button type="button" onClick={() => setReadyForSnapGame(game)} disabled={isViewingHistory || !waitingForHumanDefense}>Ready for Snap</button>}
                 {game.phase === 'formation' && game.playType !== 'normal' ? (
                   <>
@@ -495,14 +541,14 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                       </button>
                     )}
                   </>
-                ) : (
+                ) : game.phase === 'formation' && !humanDefenseSetup ? (
                   <button type="button" onClick={snap} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'formation' || !canSnap}>
                     <StepForward size={17} /> Snap
                   </button>
-                )}
-                <button type="button" onClick={kickoff} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'kickoff'}>
+                ) : null}
+                {game.phase === 'kickoff' && <button type="button" onClick={kickoff} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'kickoff'}>
                   <Goal size={17} /> Kickoff
-                </button>
+                </button>}
                 {game.phase === 'betweenDowns' && game.play.result?.type === 'touchdown' ? (
                   <>
                     <button type="button" onClick={extraPoint} disabled={isViewingHistory || players[controlTeam] === 'computer'}>
@@ -513,15 +559,15 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
                     </button>
                   </>
                 ) : null}
-                <button type="button" onClick={nextDown} disabled={isViewingHistory || players[controlTeam] === 'computer' || game.phase !== 'betweenDowns' || game.play.result?.type === 'touchdown'}>
+                {game.phase === 'betweenDowns' && game.play.result?.type !== 'touchdown' && <button type="button" onClick={nextDown} disabled={isViewingHistory || players[controlTeam] === 'computer'}>
                   <Flag size={17} /> Next
-                </button>
-              </div>
+                </button>}
+              </div>}
               {game.phase === 'betweenDowns' && game.play.result?.type === 'touchdown' && (
                 <p className="hint">Extra point: {oddsText(game, { type: 'kick', kind: 'extraPoint', kickerId: `${game.possession}-qb` })}</p>
               )}
               <SelectionSummary selectedPiece={selectedPiece} game={boardGame} />
-              <p className="hint">{game.phase === 'kickPlacement' ? 'Choose a landing row on the exact rolled-distance column.' : 'Passes, tackles, and kicks roll 2d6. Longer distance means a higher target number.'}</p>
+              <p className="hint">{commandInstruction(game, players, isViewingHistory, waitingForHumanDefense, bothComputers && !computerMatchStarted, autoPaused)}</p>
             </div>
           )}
 
@@ -531,7 +577,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               <button type="button" onClick={() => setHistoryIndex(history.length - 1)}>Return to latest</button>
             </div>
           )}
-          <p className="game-message">{game.phase === 'pregame' ? 'Press Start Game to play. Choose players and match options in the menu.' : message}</p>
+          <p className="game-message">{game.phase === 'pregame' ? saved.match ? 'Resume your saved match or start a new game.' : 'Press Start Game to play. Choose players and match options in the menu.' : message}</p>
 
         </aside>
       </section>
@@ -579,6 +625,9 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
               </div>
             </div>
           </section>
+          {persistenceEnabled && <p className="hint">{saveFailed
+            ? 'Your latest changes could not be saved. Keep this tab open to retain your match.'
+            : game.phase !== 'pregame' ? 'Match saved automatically on this device.' : saved.notice ?? 'Matches save automatically on this device.'}</p>}
           <HistoryPanel
             history={history}
             historyIndex={historyIndex}
@@ -602,7 +651,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       )}
       {showSettings && <SettingsDialog pieceStyle={pieceStyle} onPieceStyleChange={changePieceStyle} matchLength={matchLength} onMatchLengthChange={changeMatchLength} largeBoard={largeBoard} onLargeBoardChange={setLargeBoard} fallbackFocus={workspaceHeadingRef} onClose={() => setShowSettings(false)} />}
       {showRules && <RulesDialog fallbackFocus={workspaceHeadingRef} onClose={() => setShowRules(false)} />}
-      {showNewGameConfirmation && game.phase !== 'pregame' && (
+      {showNewGameConfirmation && (game.phase !== 'pregame' || saved.match) && (
         <Modal
           label="New Game"
           dismissible
@@ -614,7 +663,7 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
           <p>Start a new game? Your current match and history will be lost.</p>
           <div className="button-grid">
             <button ref={cancelNewGameRef} type="button" onClick={() => setShowNewGameConfirmation(false)}>Cancel</button>
-            <button type="button" onClick={reset}>Confirm</button>
+            <button type="button" onClick={game.phase === 'pregame' ? startGame : reset}>Confirm</button>
           </div>
         </Modal>
       )}
@@ -622,6 +671,23 @@ export function App({ initialGame, initialPlayers }: { initialGame?: GameState; 
       </main>
     </div>
   );
+}
+
+function commandInstruction(game: GameState, players: PlayerControl, history: boolean, waitingForDefense: boolean, autoNotStarted: boolean, paused: boolean): string {
+  if (history) return 'Return to latest to continue play.';
+  if (autoNotStarted) return 'Choose Play Auto in the menu to start the computer match.';
+  if (paused) return 'Computer play is paused. Choose Resume Auto in the menu to continue.';
+  if (waitingForDefense) return 'Make any remaining shifts, then choose Ready for Snap.';
+  const controller = game.phase === 'betweenDowns' ? game.possession : game.turn;
+  if (players[controller] === 'computer') return `${capitalize(controller)} computer is playing.`;
+  if (game.phase === 'formation') return game.playType === 'normal'
+    ? 'Make any remaining shifts, then snap to start the play.'
+    : game.playType === 'punt' ? 'Snap and punt to roll the kick distance.' : 'Snap and kick, or fake the field goal to start a live play.';
+  if (game.phase === 'kickoff') return 'Kick off to roll the kick distance.';
+  if (game.phase === 'kickPlacement') return 'Choose a highlighted landing square on the rolled-distance column.';
+  if (game.phase === 'betweenDowns') return game.play.result?.type === 'touchdown'
+    ? 'Choose an extra point or a two-point try.' : 'Choose Next to line up for the next play.';
+  return `Select a ${capitalize(game.turn)} player, then click a highlighted player or square to act.`;
 }
 
 function CoinTossDialog({
@@ -862,18 +928,6 @@ function ScoreCard({ label, score, active }: { label: string; score: number; act
       <strong>{score}</strong>
     </div>
   );
-}
-
-function createOpeningGame(length: MatchLength): GameState {
-  return createGame({
-    phase: 'coinToss',
-    drivesPerTeamPerQuarter: length === 'short' ? 1 : 2,
-    possession: 'home',
-    turn: 'home',
-    openingKickoffTeam: 'home',
-    coinToss: {},
-    play: { actions: [] },
-  });
 }
 
 function createPregameGame(length: MatchLength): GameState {

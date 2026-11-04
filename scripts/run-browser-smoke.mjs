@@ -112,6 +112,19 @@ try {
     await button('Flip Coin');
     await button('Receive');
     await button('Kickoff');
+    await wait('Boolean(document.querySelector(".kick-target"))');
+    const boardBeforeRefresh = await evaluate("[...document.querySelectorAll('[role=gridcell]')].map(cell => cell.getAttribute('aria-label'))");
+    const diceBeforeRefresh = await evaluate("document.querySelector('[aria-label=\"Last dice roll\"]').textContent");
+    await send('Page.reload');
+    await wait('Boolean(document.querySelector(".resume-panel"))');
+    assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), `Resume panel overflow at ${width}`);
+    await button('Start New Game');
+    await button('Cancel');
+    await button('Resume Game');
+    await wait('Boolean(document.querySelector(".kick-target"))');
+    assert.deepEqual(await evaluate("[...document.querySelectorAll('[role=gridcell]')].map(cell => cell.getAttribute('aria-label'))"), boardBeforeRefresh, 'Board restored exactly');
+    assert.equal(await evaluate("document.querySelector('[aria-label=\"Last dice roll\"]').textContent"), diceBeforeRefresh, 'Original dice restored');
+    assert.equal(await evaluate("document.querySelectorAll('.command-panel button').length"), 0, 'Placement uses field targets only');
     await click('.kick-target');
     await wait("document.querySelector('[role=\"status\"]')?.textContent.includes('Return.') || document.querySelector('[role=\"status\"]')?.textContent.includes('Between Downs.')");
     await click('[aria-label="Open menu"]');
@@ -123,7 +136,7 @@ try {
     await wait('!document.querySelector("[role=dialog]")');
     await wait("document.querySelector('[role=\"status\"]')?.textContent.includes('Pregame.')");
     assert.ok(await evaluate("document.activeElement?.id === 'game-workspace'"), 'Reset focus');
-    results.push({ width, height, menu: true, rules: true, settings: true, kickoff: true, reset: true });
+    results.push({ width, height, menu: true, rules: true, settings: true, kickoff: true, resume: true, commands: true, reset: true });
   }
   assert.deepEqual(errors, [], 'Browser errors');
   console.log(JSON.stringify({ result: 'pass', url, results }, null, 2));

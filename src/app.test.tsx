@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SAVED_MATCH_KEY } from './ui/saved-match';
 import { App, chooseComputerAction, COMPUTER_ACTION_DELAY_MS } from './main';
 import { cleanup } from '@testing-library/react';
 import { applyAction, createGame, defensiveFormations, generateLegalActions, offensiveFormations } from './engine/rules';
@@ -34,6 +35,8 @@ const historyLog = () => {
 };
 
 const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+
+beforeEach(() => window.localStorage.removeItem(SAVED_MATCH_KEY));
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -1356,7 +1359,7 @@ describe('Chessball UI interactions', () => {
 
     expect(screen.getByRole('button', { name: /extra point/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /two-point try/i })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^next$/i })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^next$/i })).not.toBeInTheDocument();
   });
 
   it('sets up a two-point formation from the conversion choice', () => {
@@ -1709,7 +1712,7 @@ describe('Chessball UI interactions', () => {
 
     expect(screen.getAllByText(/viewing history/i).length).toBeGreaterThan(0);
     expect(within(screen.getByTitle('4,5')).getByLabelText('Ball: controlled by QB')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /snap/i })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^snap$/i })).not.toBeInTheDocument();
 
     fireEvent.click(menuButton(/next move/i));
 

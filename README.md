@@ -2,6 +2,10 @@
 
 A turn-based football board game with formations, dice, special teams, and computer opponents. The Rules dialog describes the game's custom rules.
 
+Matches save automatically in this browser. After refreshing or returning, choose **Resume Game** to restore the latest position, dice, player controls, and move history. Replacing a saved match from the resume screen requires confirmation. Saves stay on this device; clearing browser storage removes them.
+
+Save compatibility is versioned in `src/ui/saved-match.ts`. Increment `RULESET_VERSION` when a rules change would resolve recorded actions differently, so older matches receive an explanation instead of silently changing during replay.
+
 ## Development
 
 Use Node.js 26 (see `.nvmrc`) and its bundled npm. The maintenance baseline was verified with Node 26.8.1 and npm 12.0.2.
@@ -48,7 +52,7 @@ Use your Chrome executable instead of `chromium` if needed. Keep the debugging p
 npm run test:browser
 ```
 
-The smoke suite checks the built app at 320, 390, 768, and 1440 pixels: page overflow, menus, rules dismissal after scrolling, appearance/field settings, kickoff, and New Game cancellation/confirmation. It fails on browser errors. Override `CHESSBALL_PREVIEW_URL` or `CHESSBALL_CDP_HTTP` to use different local ports. Stop both processes when finished. The old playbook verification script forwards to this suite.
+The smoke suite checks the built app at 320, 390, 768, and 1440 pixels: page overflow, menus, rules dismissal after scrolling, appearance/field settings, kickoff, exact board/dice restoration after refresh, phase-specific commands, and New Game cancellation/confirmation. It fails on browser errors. Override `CHESSBALL_PREVIEW_URL` or `CHESSBALL_CDP_HTTP` to use different local ports. Stop both processes when finished. The old playbook verification script forwards to this suite.
 
 GitHub Actions runs the clean install, tests, build, simulation, dependency audit, and Chromium smoke checks on pushes and pull requests. Chromium emulation does not replace testing on real mobile devices or other browser engines.
 

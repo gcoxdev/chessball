@@ -1659,3 +1659,15 @@ button > svg { flex-shrink: 0; }
 
 .board-target-help p { margin: 0; }
 .target-detail { min-height: 1.5em; color: rgba(244, 240, 222, 0.75); }
+
+.resume-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.resume-panel h2 { margin-bottom: 4px; }
+.resume-panel p { margin: 0; }
+.resume-panel .button-grid { flex: 1 1 260px; max-width: 400px; }

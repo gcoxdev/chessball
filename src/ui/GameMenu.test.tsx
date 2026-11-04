@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { SAVED_MATCH_KEY } from './saved-match';
 import { App, COMPUTER_ACTION_DELAY_MS } from '../main';
 import { createGame } from '../engine/rules';
 
+beforeEach(() => window.localStorage.removeItem(SAVED_MATCH_KEY));
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 const humans = { home: 'human', away: 'human' } as const;
 const openMenu = () => fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
