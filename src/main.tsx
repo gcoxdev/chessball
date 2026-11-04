@@ -779,55 +779,68 @@ function RulesDialog({ fallbackFocus, onClose }: { fallbackFocus: React.RefObjec
         </button>
       </header>
       <div className="rules-content" role="region" aria-label="Rules text" tabIndex={0}>
-        <p>A match starts with a coin toss and kickoff. Heads means Home wins; tails means Away wins. The winner chooses to kick or receive. Computer players choose to receive. A 2d6 roll means rolling two six-sided dice and adding their results.</p>
-        <h3>Match and downs</h3>
-        <ul>
-          <li>There are {QUARTERS_PER_MATCH} quarters, with no game clock. A quarter ends when both teams have reached {DRIVES_PER_TEAM_PER_QUARTER} completed drives in Standard matches, or 1 each in Short matches. Choose the length in Settings before starting a new match. The match ends after the fourth quarter; equal scores remain a tie.</li>
-          <li>Home attacks right and Away attacks left throughout the match. Each field column represents 5 yards. A square's yard spot is its edge nearest the offense's own goal; the blue and gold lines mark those spots. Field labels identify the Home or Away half.</li>
-          <li>Gain 10 yards in four downs by reaching the highlighted line to gain. Short gains and losses keep the same target for the next down. Reaching it earns first down and a new target two columns ahead; failing on fourth down turns the ball over.</li>
-          <li>When a new line to gain would reach or pass the end zone, it becomes goal-to-go. You must score within the remaining downs; reaching the last field column does not renew first down. Losses keep the goal-to-go target.</li>
-          <li>Choose an offense formation from the Normal play, Field goal, or Punt groups before confirming. Changing groups resets both confirmations. In normal play, confirm your formation to lock the preset and unlock up to two optional shifts before the snap. Each shift moves one piece one square horizontally or vertically on its own side of the line. Both formations must be confirmed before snapping. When defending against the computer, choose Ready for Snap after making or skipping your shifts. Kicking formations do not allow shifts. Defense can choose a standard or safe field-goal alignment, or the punt-return unit.</li>
-          <li>The Center (C) starts with the ball and snaps it to the QB. The Center follows OL movement and receiving rules; on kicking formations this player is the long snapper (LS).</li>
-          <li>The offense acts first after the snap, then teams alternate one action at a time. A stopped play waits for Next; a touchdown first requires a conversion choice.</li>
-          <li>A normal drive ends with a field-goal attempt, punt, interception, strip turnover, turnover on downs, safety, or completed touchdown conversion. Drive counts update on Next. Kickoff returns do not consume a normal drive; a punt return completes the kicking team's drive.</li>
-        </ul>
-        <h3>Playing on the field</h3>
-        <p>Select a player to see all available actions at once. Click a circle to move or a diamond for a power move. Click a highlighted teammate to hand off or pass, or a highlighted opponent to tackle. Adjacent teammates are handoff targets instead of pass targets. Select a player standing on a loose ball, then click its highlighted square again to recover. Press Escape to clear selection. Clicking the selected player also clears it unless it is standing on a loose ball and highlighted for recovery. Point to or focus a marked square to see its action and dice odds.</p>
-        <h3>Movement and possession</h3>
-        <ul>
-          <li>Base movement: QB/FS moves 1 square in any direction; RB/MLB moves up to 3 orthogonally, with one optional right-angle turn; FB/OLB moves up to 2 in a straight orthogonal line; WR/CB moves up to 5 straight or diagonally; TE/SS moves up to 3 straight or diagonally; OL/DL moves 1 orthogonally. A turning RB/MLB move uses its full movement allowance.</li>
-          <li>When the offense controls the ball, its normal RB, FB, WR, and TE movement ranges are reduced by 1. QB and OL movement remains 1. This applies to the whole offense, not just the ball carrier; power moves use their separate ranges below.</li>
-          <li>Moves must end on an empty square inside the board. Normal movement can pass through teammates, but opponents block the path. An RB/MLB cannot turn on an occupied square.</li>
-          <li>Power moves travel straight orthogonally through at least one opponent: RB/MLB up to 3 squares, FB/OLB and OL/DL up to 2. They cannot pass through the ball carrier and must end on an empty square. Roll 2d6 and meet or beat 8 + 2 per opposing piece crossed. A failed power move stays put and uses the turn.</li>
-          <li>A handoff transfers the ball to an adjacent teammate, including diagonally, without a roll. Linemen may receive handoffs. Recover is available to a player already standing on a loose ball.</li>
-          <li>Pass and tackle distance is the larger of the horizontal and vertical gaps: count diagonally first, then straight. For example, from 4,5 to 5,9 is distance 4.</li>
-        </ul>
-        <h3>Passing and tackling</h3>
-        <ul>
-          <li>The ball carrier may pass to any teammate except an offensive lineman. A forward pass must start on or behind the line of scrimmage and can be attempted only once per down. Sideways and backward passes do not use that allowance, but still require a roll. Passes may travel through traffic.</li>
-          <li>Passes succeed on a 2d6 total of at least 5 + half the distance, rounded up. Snake eyes causes an interception only if a defender is within one square of the intended receiver, including diagonally. The interception ends the play at the defender's square.</li>
-          <li>Incomplete passes are dead balls, including failed sideways and backward passes. They stop play at the previous line of scrimmage and use a down; on fourth down, possession changes at that line.</li>
-          <li>Only the ball carrier may be tackled. A defender must be within its movement range, measured by the same distance rule as passing. Friendly pieces do not block the approach. With no opposing blockers, a tackle succeeds on 2d6 totaling at least 5 + distance.</li>
-          <li>RB/MLB, FB/OLB, and OL/DL may power tackle through opposing blockers. The target is 8 + distance + opposing blockers crossed. Other roles cannot tackle through opposing blockers.</li>
-          <li>Double sixes on a legal tackle causes an immediate strip turnover at the tackler's square, even if the normal target exceeds 12. A successful tackle in the carrier's own end zone is a safety instead. During a two-point try, a successful tackle or strip ends the try without points.</li>
-          <li>A failed tackle uses the turn and moves the defender one square toward the carrier if that square is empty and inside the board. A normal successful tackle stops play at the carrier's square; reaching the line to gain earns first down, otherwise a down is used.</li>
-        </ul>
-        <h3>Kicking and returns</h3>
-        <ul>
-          <li>Special-teams labels: K = kicker, P = punter, KR = kick returner, PR = punt returner, ST = coverage, BL = blocker, LS = long snapper, and H = holder. The two receiver pieces serve as returners; any receiving-team piece may recover the kick. These labels remain through the stopped play, then normal positions return for the next scrimmage down.</li>
-          <li>Kickoffs start from the kicking team's 35-yard line. Kickoffs and punts roll 2d6 for distance: each point moves the landing column 1 square, or 5 yards, from the kicker. The kicking team chooses the landing row on that column. Kicks beyond the board are capped at the farthest end-zone column.</li>
-          <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, select that player and click its highlighted square again to recover. If the kicking team moves onto or recovers an untouched loose kick first, the play ends and the receiving team starts there. A normally tackled returner starts a fresh first down at the tackle spot, regardless of return yardage; a strip or safety still applies.</li>
-          <li>During returns, every role can move within a square radius: receiving team up to 2 squares, coverage team up to 3. Teammates may be crossed, opponents block the path, and the destination must be empty. Only movement, tackles, and recovery are available; passing, handoffs, power moves, and further kicks wait until normal play.</li>
-          <li>Select a formation in the Field goal or Punt group before the snap on any normal down. After both sides confirm, Snap & Kick resolves the field goal immediately; Snap & Punt rolls the kick and continues to placement and a possible return. The snap and kick are one action, with no intervening movement or block roll. Ordinary live plays and two-point tries do not allow kicks. After confirming a field-goal formation, Fake & Pass snaps the ball to the holder and starts normal live play from the same positions. The selected holder can move, hand off, or pass by clicking a marked target. A fake cannot turn back into a kick. Safe field-goal defense protects against the fake but does not alter kick odds. Fake punts are not available.</li>
-          <li>A field goal measures through the ten-yard end zone to the posts at the back edge/end line. Roll 2d6 and meet or beat 5 + half that grid distance, rounded up. A made field goal scores 3; a miss turns possession over at the kick spot.</li>
-        </ul>
-        <h3>Scoring and restarts</h3>
-        <ul>
-          <li>Moving the ball carrier into the opponent's end zone, completing a pass there, or handing off to a teammate there scores a touchdown worth 6 points. A successful tackle of a carrier in their own end zone awards the defense a 2-point safety.</li>
-          <li>After a touchdown, choose an extra point kick or a two-point try. The extra point scores 1 on a 2d6 total of 5 or more. A two-point try starts with formations at the last field column before the opponent's end zone and scores 2 for reaching that end zone. An incomplete pass, interception, successful tackle, or strip ends the try without points; there is no second down and no kicking option.</li>
-          <li>After the conversion, successful or not, the touchdown team kicks off. A made field goal also leads to a kickoff by the scoring team. After a safety, the team that allowed it kicks. These restarts can be replaced by halftime or the end of the match when both drive counts are complete.</li>
-          <li>At halftime, the team that received the opening kickoff kicks to the other side.</li>
-        </ul>
+        <h3>Quick start</h3>
+        <p>Score more points over four drive-based quarters. Chessball uses custom, turn-based football rules with no game clock.</p>
+        <ol className="rules-quick-start">
+          <li><strong>Start a match.</strong> Choose human or computer players in the menu, then press Start Game. Flip the coin; the winner chooses to kick or receive.</li>
+          <li><strong>Kick and return.</strong> Kickoff rolls the distance. The kicking team picks a highlighted landing square. On a return, select a receiving player and move onto the loose ball to pick it up.</li>
+          <li><strong>Line up.</strong> Choose and confirm formations. For normal plays, confirmation unlocks up to two optional shifts per side. Snap sends the ball from the Center (C) to the QB. When defending against the computer, choose Ready for Snap.</li>
+          <li><strong>Select, then act.</strong> Offense goes first after the snap; teams alternate actions. Select a player, then a highlighted square or player to move, hand off, pass, or tackle. Dice roll automatically when needed; point to or focus a target to see its odds.</li>
+          <li><strong>Keep the drive going.</strong> Gain 10 yards in four downs to earn a new first down, or reach the end zone when goal-to-go. After a stopped play, choose Next. After a touchdown, choose an extra point or two-point try first.</li>
+        </ol>
+        <p><strong>Scoring:</strong> Touchdown 6 · Field goal 3 · Safety 2 · Extra point 1 · Two-point try 2.</p>
+        <details className="rules-reference">
+          <summary tabIndex={0}>Full rules and dice odds</summary>
+          <p>A match starts with a coin toss and kickoff. Heads means Home wins; tails means Away wins. The winner chooses to kick or receive. Computer players choose to receive. A 2d6 roll means rolling two six-sided dice and adding their results.</p>
+          <h3>Match and downs</h3>
+          <ul>
+            <li>There are {QUARTERS_PER_MATCH} quarters, with no game clock. A quarter ends when both teams have reached {DRIVES_PER_TEAM_PER_QUARTER} completed drives in Standard matches, or 1 each in Short matches. Choose the length in Settings before starting a new match. The match ends after the fourth quarter; equal scores remain a tie.</li>
+            <li>Home attacks right and Away attacks left throughout the match. Each field column represents 5 yards. A square's yard spot is its edge nearest the offense's own goal; the blue and gold lines mark those spots. Field labels identify the Home or Away half.</li>
+            <li>Gain 10 yards in four downs by reaching the highlighted line to gain. Short gains and losses keep the same target for the next down. Reaching it earns first down and a new target two columns ahead; failing on fourth down turns the ball over.</li>
+            <li>When a new line to gain would reach or pass the end zone, it becomes goal-to-go. You must score within the remaining downs; reaching the last field column does not renew first down. Losses keep the goal-to-go target.</li>
+            <li>Choose an offense formation from the Normal play, Field goal, or Punt groups before confirming. Changing groups resets both confirmations. In normal play, confirm your formation to lock the preset and unlock up to two optional shifts before the snap. Each shift moves one piece one square horizontally or vertically on its own side of the line. Both formations must be confirmed before snapping. When defending against the computer, choose Ready for Snap after making or skipping your shifts. Kicking formations do not allow shifts. Defense can choose a standard or safe field-goal alignment, or the punt-return unit.</li>
+            <li>The Center (C) starts with the ball and snaps it to the QB. The Center follows OL movement and receiving rules; on kicking formations this player is the long snapper (LS).</li>
+            <li>The offense acts first after the snap, then teams alternate one action at a time. A stopped play waits for Next; a touchdown first requires a conversion choice.</li>
+            <li>A normal drive ends with a field-goal attempt, punt, interception, strip turnover, turnover on downs, safety, or completed touchdown conversion. Drive counts update on Next. Kickoff returns do not consume a normal drive; a punt return completes the kicking team's drive.</li>
+          </ul>
+          <h3>Playing on the field</h3>
+          <p>Select a player to see all available actions at once. Click a circle to move or a diamond for a power move. Click a highlighted teammate to hand off or pass, or a highlighted opponent to tackle. Adjacent teammates are handoff targets instead of pass targets. Select a player standing on a loose ball, then click its highlighted square again to recover. Press Escape to clear selection. Clicking the selected player also clears it unless it is standing on a loose ball and highlighted for recovery. Point to or focus a marked square to see its action and dice odds.</p>
+          <h3>Movement and possession</h3>
+          <ul>
+            <li>Base movement: QB/FS moves 1 square in any direction; RB/MLB moves up to 3 orthogonally, with one optional right-angle turn; FB/OLB moves up to 2 in a straight orthogonal line; WR/CB moves up to 5 straight or diagonally; TE/SS moves up to 3 straight or diagonally; OL/DL moves 1 orthogonally. A turning RB/MLB move uses its full movement allowance.</li>
+            <li>When the offense controls the ball, its normal RB, FB, WR, and TE movement ranges are reduced by 1. QB and OL movement remains 1. This applies to the whole offense, not just the ball carrier; power moves use their separate ranges below.</li>
+            <li>Moves must end on an empty square inside the board. Normal movement can pass through teammates, but opponents block the path. An RB/MLB cannot turn on an occupied square.</li>
+            <li>Power moves travel straight orthogonally through at least one opponent: RB/MLB up to 3 squares, FB/OLB and OL/DL up to 2. They cannot pass through the ball carrier and must end on an empty square. Roll 2d6 and meet or beat 8 + 2 per opposing piece crossed. A failed power move stays put and uses the turn.</li>
+            <li>A handoff transfers the ball to an adjacent teammate, including diagonally, without a roll. Linemen may receive handoffs. Recover is available to a player already standing on a loose ball.</li>
+            <li>Pass and tackle distance is the larger of the horizontal and vertical gaps: count diagonally first, then straight. For example, from 4,5 to 5,9 is distance 4.</li>
+          </ul>
+          <h3>Passing and tackling</h3>
+          <ul>
+            <li>The ball carrier may pass to any teammate except an offensive lineman. A forward pass must start on or behind the line of scrimmage and can be attempted only once per down. Sideways and backward passes do not use that allowance, but still require a roll. Passes may travel through traffic.</li>
+            <li>Passes succeed on a 2d6 total of at least 5 + half the distance, rounded up. Snake eyes causes an interception only if a defender is within one square of the intended receiver, including diagonally. The interception ends the play at the defender's square.</li>
+            <li>Incomplete passes are dead balls, including failed sideways and backward passes. They stop play at the previous line of scrimmage and use a down; on fourth down, possession changes at that line.</li>
+            <li>Only the ball carrier may be tackled. A defender must be within its movement range, measured by the same distance rule as passing. Friendly pieces do not block the approach. With no opposing blockers, a tackle succeeds on 2d6 totaling at least 5 + distance.</li>
+            <li>RB/MLB, FB/OLB, and OL/DL may power tackle through opposing blockers. The target is 8 + distance + opposing blockers crossed. Other roles cannot tackle through opposing blockers.</li>
+            <li>Double sixes on a legal tackle causes an immediate strip turnover at the tackler's square, even if the normal target exceeds 12. A successful tackle in the carrier's own end zone is a safety instead. During a two-point try, a successful tackle or strip ends the try without points.</li>
+            <li>A failed tackle uses the turn and moves the defender one square toward the carrier if that square is empty and inside the board. A normal successful tackle stops play at the carrier's square; reaching the line to gain earns first down, otherwise a down is used.</li>
+          </ul>
+          <h3>Kicking and returns</h3>
+          <ul>
+            <li>Special-teams labels: K = kicker, P = punter, KR = kick returner, PR = punt returner, ST = coverage, BL = blocker, LS = long snapper, and H = holder. The two receiver pieces serve as returners; any receiving-team piece may recover the kick. These labels remain through the stopped play, then normal positions return for the next scrimmage down.</li>
+            <li>Kickoffs start from the kicking team's 35-yard line. Kickoffs and punts roll 2d6 for distance: each point moves the landing column 1 square, or 5 yards, from the kicker. The kicking team chooses the landing row on that column. Kicks beyond the board are capped at the farthest end-zone column.</li>
+            <li>A kick landing in an end zone is a touchback to the receiving team's 25-yard line. Otherwise it lands loose, and the receiving team acts first. Moving onto it gives a receiver control; if it lands under a receiver, select that player and click its highlighted square again to recover. If the kicking team moves onto or recovers an untouched loose kick first, the play ends and the receiving team starts there. A normally tackled returner starts a fresh first down at the tackle spot, regardless of return yardage; a strip or safety still applies.</li>
+            <li>During returns, every role can move within a square radius: receiving team up to 2 squares, coverage team up to 3. Teammates may be crossed, opponents block the path, and the destination must be empty. Only movement, tackles, and recovery are available; passing, handoffs, power moves, and further kicks wait until normal play.</li>
+            <li>Select a formation in the Field goal or Punt group before the snap on any normal down. After both sides confirm, Snap & Kick resolves the field goal immediately; Snap & Punt rolls the kick and continues to placement and a possible return. The snap and kick are one action, with no intervening movement or block roll. Ordinary live plays and two-point tries do not allow kicks. After confirming a field-goal formation, Fake & Pass snaps the ball to the holder and starts normal live play from the same positions. The selected holder can move, hand off, or pass by clicking a marked target. A fake cannot turn back into a kick. Safe field-goal defense protects against the fake but does not alter kick odds. Fake punts are not available.</li>
+            <li>A field goal measures through the ten-yard end zone to the posts at the back edge/end line. Roll 2d6 and meet or beat 5 + half that grid distance, rounded up. A made field goal scores 3; a miss turns possession over at the kick spot.</li>
+          </ul>
+          <h3>Scoring and restarts</h3>
+          <ul>
+            <li>Moving the ball carrier into the opponent's end zone, completing a pass there, or handing off to a teammate there scores a touchdown worth 6 points. A successful tackle of a carrier in their own end zone awards the defense a 2-point safety.</li>
+            <li>After a touchdown, choose an extra point kick or a two-point try. The extra point scores 1 on a 2d6 total of 5 or more. A two-point try starts with formations at the last field column before the opponent's end zone and scores 2 for reaching that end zone. An incomplete pass, interception, successful tackle, or strip ends the try without points; there is no second down and no kicking option.</li>
+            <li>After the conversion, successful or not, the touchdown team kicks off. A made field goal also leads to a kickoff by the scoring team. After a safety, the team that allowed it kicks. These restarts can be replaced by halftime or the end of the match when both drive counts are complete.</li>
+            <li>At halftime, the team that received the opening kickoff kicks to the other side.</li>
+          </ul>
+        </details>
       </div>
     </Modal>
   );

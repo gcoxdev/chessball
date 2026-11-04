@@ -1250,6 +1250,30 @@ button {
   outline-offset: -3px;
 }
 
+.rules-quick-start {
+  display: grid;
+  gap: 12px;
+  padding-left: 24px;
+}
+
+.rules-reference {
+  border-top: 1px solid rgba(244, 240, 222, 0.14);
+  margin-top: 20px;
+}
+
+.rules-reference summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+  color: #f4d06d;
+}
+
+.rules-reference summary:focus-visible {
+  outline: 2px solid #f4d06d;
+  outline-offset: 2px;
+}
+
 .coin-toss-dialog {
   width: min(440px, 100%);
 }

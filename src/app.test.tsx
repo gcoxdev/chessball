@@ -1476,6 +1476,13 @@ describe('Chessball UI interactions', () => {
     fireEvent.click(menuButton(/rules/i));
 
     expect(screen.getByRole('dialog', { name: /rules and how to play/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Quick start' })).toBeVisible();
+    const reference = screen.getByText('Full rules and dice odds');
+    expect(reference.closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByText(/incomplete passes are dead balls/i)).not.toBeVisible();
+    fireEvent.click(reference);
+    expect(reference.closest('details')).toHaveAttribute('open');
+    expect(screen.getByText(/incomplete passes are dead balls/i)).toBeVisible();
     expect(screen.getByText(/a match starts with a coin toss and kickoff/i)).toBeInTheDocument();
     expect(screen.getByText(/after a touchdown, choose an extra point kick or a two-point try/i)).toBeInTheDocument();
     expect(screen.getByText(/touchdown worth 6 points/i)).toBeInTheDocument();
@@ -1506,11 +1513,12 @@ describe('Chessball UI interactions', () => {
 
     const rulesText = within(dialog).getByRole('region', { name: 'Rules text' });
     expect(rulesText).not.toContainElement(close);
-    rulesText.focus();
-    fireEvent.keyDown(rulesText, { key: 'Tab' });
+    const fullRules = within(dialog).getByText('Full rules and dice odds');
+    fullRules.focus();
+    fireEvent.keyDown(fullRules, { key: 'Tab' });
     expect(close).toHaveFocus();
     fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
-    expect(rulesText).toHaveFocus();
+    expect(fullRules).toHaveFocus();
     fireEvent.keyDown(dialog, { key: 'Escape' });
 
     expect(screen.queryByRole('dialog', { name: /rules and how to play/i })).not.toBeInTheDocument();

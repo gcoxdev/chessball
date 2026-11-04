@@ -92,6 +92,9 @@ try {
     await click('[aria-label="Open menu"]');
     await button('Rules');
     await wait('Boolean(document.querySelector(".rules-content"))');
+    assert.equal(await evaluate('document.querySelector(".rules-reference").open'), false, 'Full rules start collapsed');
+    await click('.rules-reference summary');
+    assert.equal(await evaluate('document.querySelector(".rules-reference").open'), true, 'Full rules expand');
     await evaluate("document.querySelector('.rules-content').scrollTop = 10000");
     assert.ok(await evaluate(`(() => {
       const r = document.querySelector('[aria-label="Close rules"]').getBoundingClientRect();
